@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "125404866684",
+    "project_id": "sugudeni",
+    "storage_bucket": "sugudeni.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:125404866684:android:565066c7c8af8d0d1941f9",
+        "android_client_info": {
+          "package_name": "com.softthrive.sugudeni"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAh_TfPivquJRemEmWsq9_51A00isLDvnU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
