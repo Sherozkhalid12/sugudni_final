@@ -36,7 +36,17 @@ class _SellerSubCategoriesViewState extends State<SellerSubCategoriesView> {
   }
   @override
   Widget build(BuildContext context) {
-    String categoryId=ModalRoute.of(context)!.settings.arguments as String;
+    final arguments = ModalRoute.of(context)!.settings.arguments;
+    String categoryId;
+    bool isSelectionMode = false;
+    
+    if (arguments is Map) {
+      categoryId = arguments['categoryId'] as String;
+      isSelectionMode = arguments['isSelectionMode'] as bool? ?? false;
+    } else {
+      categoryId = arguments as String;
+    }
+    
     final categoryProvider=Provider.of<CategoryProvider>(context,listen: false);
 
     return PopScope(
@@ -131,95 +141,109 @@ class _SellerSubCategoriesViewState extends State<SellerSubCategoriesView> {
                             itemCount: filteredCategory.length,
                             itemBuilder: (c,index){
                               var categoryData=filteredCategory[index];
-                              String categoryId=categoryData.id;
-                              return Container(
-                                // height: 124.h,
-                                  margin: EdgeInsets.only(bottom: 10.h),
-                                  color: whiteColor,
-                                  child: Padding(
-                                    padding:  EdgeInsets.all(12.sp),
-                                    child: Row(
-                                      crossAxisAlignment: CrossAxisAlignment.center,
-                                      children: [
-                                        Flexible(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              MyText(text:capitalizeFirstLetter( categoryData.name),size: 10.sp,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                              3.height,
-                                              MyText(text: "${AppLocalizations.of(context)!.subcategoryid} : ${categoryData.id}",size: 8.sp,
-                                                color: textPrimaryColor.withOpacity(0.7),
-                                                fontWeight: FontWeight.w600,
-                                                overflow: TextOverflow.clip,
-                                              ),
-                                            ],
+                              String subCategoryId=categoryData.id;
+                              return GestureDetector(
+                                onTap: isSelectionMode ? () {
+                                  // Return selected subcategory data
+                                  Navigator.pop(context, {
+                                    'id': categoryData.id,
+                                    'name': categoryData.name,
+                                  });
+                                } : null,
+                                child: Container(
+                                  // height: 124.h,
+                                    margin: EdgeInsets.only(bottom: 10.h),
+                                    color: whiteColor,
+                                    child: Padding(
+                                      padding:  EdgeInsets.all(12.sp),
+                                      child: Row(
+                                        crossAxisAlignment: CrossAxisAlignment.center,
+                                        children: [
+                                          Flexible(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                MyText(text:capitalizeFirstLetter( categoryData.name),size: 10.sp,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                                3.height,
+                                                MyText(text: "${AppLocalizations.of(context)!.subcategoryid} : ${categoryData.id}",size: 8.sp,
+                                                  color: textPrimaryColor.withOpacity(0.7),
+                                                  fontWeight: FontWeight.w600,
+                                                  overflow: TextOverflow.clip,
+                                                ),
+                                              ],
+                                            ),
                                           ),
-                                        ),
-                                        10.height,
-                                        Flexible(
-                                          child: Row(
-                                            children: [
-                                              //  50.width,
-                                              Flexible(flex: 3,
-                                                child: RoundButton(
-                                                    height: 21.h,
-                                                    btnTextSize: 10.sp,
-                                                    borderColor: primaryColor,
-                                                    bgColor: transparentColor,
-                                                    textColor: primaryColor,
-                                                    borderRadius:
-                                                    BorderRadius.circular(10.r),
-                                                    title: AppLocalizations.of(context)!.edit,
-                                                    onTap: () {
-                                                      categoryProvider.setCategoryName(categoryData.name);
-                                                      context.showTextFieldDialog(
-                                                          title: AppLocalizations.of(context)!.entername,
-                                                          keyboardType: TextInputType.text,
-                                                          controller: categoryProvider.nameController,
-                                                          onNo: (){}, onYes: (){
+                                          if (!isSelectionMode) ...[
+                                            10.height,
+                                            Flexible(
+                                              child: Row(
+                                                children: [
+                                                  //  50.width,
+                                                  Flexible(flex: 3,
+                                                    child: RoundButton(
+                                                        height: 21.h,
+                                                        btnTextSize: 10.sp,
+                                                        borderColor: primaryColor,
+                                                        bgColor: transparentColor,
+                                                        textColor: primaryColor,
+                                                        borderRadius:
+                                                        BorderRadius.circular(10.r),
+                                                        title: AppLocalizations.of(context)!.edit,
+                                                        onTap: () {
+                                                          categoryProvider.setCategoryName(categoryData.name);
+                                                          context.showTextFieldDialog(
+                                                              title: AppLocalizations.of(context)!.entername,
+                                                              keyboardType: TextInputType.text,
+                                                              controller: categoryProvider.nameController,
+                                                              onNo: (){}, onYes: (){
 
-                                                        context.read<CategoryProvider>().updateSubCategory(categoryId, categoryData.id,context).then((v){
-                                                          // setState(() {});
-                                                        });
-                                                      });
-                                                    }),
-                                              ),
-
-                                              5.width,
-                                              Flexible(
-                                                flex: 3,
-                                                child: RoundButton(
-                                                    height: 21.h,
-                                                    btnTextSize: 10.sp,
-                                                    borderColor: primaryColor,
-                                                    bgColor: transparentColor,
-                                                    textColor: primaryColor,
-                                                    borderRadius:
-                                                    BorderRadius.circular(10.r),
-                                                    title: AppLocalizations.of(context)!.delete,
-                                                    onTap: () {
-                                                      context.showConfirmationDialog(
-                                                          title: AppLocalizations.of(context)!.areyousuretodelete,
-                                                          onYes: (){
-                                                            context.read<CategoryProvider>().deleteSubCategory(categoryId, categoryData.id,context).then((v){
+                                                            context.read<CategoryProvider>().updateSubCategory(categoryId, categoryData.id,context).then((v){
                                                               // setState(() {});
                                                             });
-                                                          },
-                                                          onNo: (){
+                                                          });
+                                                        }),
+                                                  ),
 
-                                                          }
-                                                      );
-                                                    }),
+                                                  5.width,
+                                                  Flexible(
+                                                    flex: 3,
+                                                    child: RoundButton(
+                                                        height: 21.h,
+                                                        btnTextSize: 10.sp,
+                                                        borderColor: primaryColor,
+                                                        bgColor: transparentColor,
+                                                        textColor: primaryColor,
+                                                        borderRadius:
+                                                        BorderRadius.circular(10.r),
+                                                        title: AppLocalizations.of(context)!.delete,
+                                                        onTap: () {
+                                                          context.showConfirmationDialog(
+                                                              title: AppLocalizations.of(context)!.areyousuretodelete,
+                                                              onYes: (){
+                                                                context.read<CategoryProvider>().deleteSubCategory(categoryId, categoryData.id,context).then((v){
+                                                                  // setState(() {});
+                                                                });
+                                                              },
+                                                              onNo: (){
+
+                                                              }
+                                                          );
+                                                        }),
+                                                  ),
+                                                  // 50.width,
+                                                ],
                                               ),
-                                              // 50.width,
-                                            ],
-                                          ),
-                                        )
-                                      ],
-                                    ),
-                                  )
+                                            )
+                                          ] else ...[
+                                            const Spacer(),
+                                            Icon(Icons.arrow_forward_ios, size: 14.sp, color: primaryColor),
+                                          ]
+                                        ],
+                                      ),
+                                    )
+                                ),
                               );
                             }),
                       );

@@ -16,6 +16,7 @@ import 'package:sugudeni/repositories/category/category-repository.dart';
 import 'package:sugudeni/utils/customWidgets/my-text.dart';
 import 'package:sugudeni/utils/customWidgets/round-button.dart';
 import 'package:sugudeni/utils/customWidgets/symetric-padding.dart';
+import 'package:sugudeni/utils/extensions/dialog-extension.dart';
 import 'package:sugudeni/utils/extensions/sizebox.dart';
 import 'package:sugudeni/utils/global-functions.dart';
 import 'package:sugudeni/view/seller/products/seller-my-products-view.dart';
@@ -273,8 +274,8 @@ class _SellerAddProductViewState extends State<SellerAddProductView> {
                           });
                         }),
                     10.height,
-                    Consumer<ProductsProvider>(builder: (context,provider,snapshot){
-                      return productProvider.categoryId==null? const SizedBox():  FutureBuilder(
+                    Consumer<ProductsProvider>(builder: (context,provider,child){
+                      return provider.categoryId==null? const SizedBox():  FutureBuilder(
                           future: CategoryRepository.allCategory(context),
                           builder: (context,snapshot){
                             if(snapshot.connectionState==ConnectionState.waiting){
@@ -302,15 +303,98 @@ class _SellerAddProductViewState extends State<SellerAddProductView> {
                                     );
                                   }
                                   if(subSnapshot.data!.getAllSubCategories.isEmpty){
-                                    return Center(
-                                      child: GestureDetector(
-                                        onTap: (){
-                                          context.read<CategoryProvider>().clearResources();
-
-                                          Navigator.pushNamed(context, RoutesNames.sellerMyCategoriesView);
-                                        },
-                                        child: MyText(text: AppLocalizations.of(context)!.addsubcategory,size: 13.sp,fontWeight: FontWeight.w500,),
-                                      ),
+                                    return Column(
+                                      children: [
+                                        text(title: AppLocalizations.of(context)!.selectsubcategory),
+                                        5.height,
+                                        GestureDetector(
+                                          onTap: () async {
+                                            // Navigate to subcategory selection screen even if empty
+                                            final result = await Navigator.pushNamed(
+                                              context,
+                                              RoutesNames.sellerSubCategoryView,
+                                              arguments: {
+                                                'categoryId': provider.categoryId!,
+                                                'isSelectionMode': true,
+                                              },
+                                            );
+                                            
+                                            if (result != null && result is Map) {
+                                              final selectedSubCategoryId = result['id'] as String;
+                                              final selectedSubCategoryName = result['name'] as String;
+                                              
+                                              customPrint("========== SUBCATEGORY SELECTED ==========");
+                                              customPrint("Selected SubCategory Name: $selectedSubCategoryName");
+                                              customPrint("Selected SubCategory ID: $selectedSubCategoryId");
+                                              
+                                              provider.changeSubCategoryList(selectedSubCategoryName);
+                                              provider.setSubCategoryId(selectedSubCategoryId);
+                                              
+                                              customPrint("After setting - SubCategory ID in provider: ${provider.subCategoryId}");
+                                              customPrint("After setting - SubCategory Name in provider: ${provider.subCategory}");
+                                              customPrint("===========================================");
+                                              
+                                              setState(() {});
+                                            }
+                                          },
+                                          child: Container(
+                                            width: double.infinity,
+                                            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 14.h),
+                                            decoration: BoxDecoration(
+                                              color: whiteColor,
+                                              borderRadius: BorderRadius.circular(5.r),
+                                              border: Border.all(color: borderColor, width: 1),
+                                            ),
+                                            child: Row(
+                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                              children: [
+                                                Expanded(
+                                                  child: MyText(
+                                                    text: AppLocalizations.of(context)!.subcategory,
+                                                    size: 12.sp,
+                                                    fontWeight: FontWeight.w400,
+                                                    color: textPrimaryColor.withOpacity(0.5),
+                                                  ),
+                                                ),
+                                                Icon(Icons.arrow_forward_ios, size: 14.sp, color: textPrimaryColor),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                        10.height,
+                                        RoundButton(
+                                          height: 40.h,
+                                          btnTextSize: 12.sp,
+                                          borderColor: primaryColor,
+                                          bgColor: transparentColor,
+                                          textColor: primaryColor,
+                                          borderRadius: BorderRadius.circular(5.r),
+                                          title: AppLocalizations.of(context)!.addsubcategory,
+                                          onTap: () {
+                                            final categoryProvider = context.read<CategoryProvider>();
+                                            categoryProvider.subcategoryNameController.clear();
+                                            context.showTextFieldDialog(
+                                              title: AppLocalizations.of(context)!.addsubcategory,
+                                              keyboardType: TextInputType.text,
+                                              controller: categoryProvider.subcategoryNameController,
+                                              confirmText: AppLocalizations.of(context)!.add,
+                                              declineText: AppLocalizations.of(context)!.cancel,
+                                              onNo: () {},
+                                              onYes: () {
+                                                if (categoryProvider.subcategoryNameController.text.trim().isEmpty) {
+                                                  showSnackbar(context, AppLocalizations.of(context)!.subcategorynamerequired, color: redColor);
+                                                  return;
+                                                }
+                                                categoryProvider.addSubCategory(provider.categoryId!, context).then((v) {
+                                                  // Refresh the FutureBuilder by triggering setState
+                                                  setState(() {});
+                                                });
+                                              },
+                                            );
+                                          },
+                                        ),
+                                        10.height,
+                                      ],
                                     );
                                   }
                                   var data =subSnapshot.data!;
@@ -323,21 +407,113 @@ class _SellerAddProductViewState extends State<SellerAddProductView> {
                                   }).toList();
                                   return Column(
                                     children: [
-                                      text(title: AppLocalizations.of(context)!.selectsubcategory),
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Expanded(
+                                            child: text(title: AppLocalizations.of(context)!.selectsubcategory),
+                                          ),
+                                          GestureDetector(
+                                            onTap: () {
+                                              final categoryProvider = context.read<CategoryProvider>();
+                                              categoryProvider.subcategoryNameController.clear();
+                                              context.showTextFieldDialog(
+                                                title: AppLocalizations.of(context)!.addsubcategory,
+                                                keyboardType: TextInputType.text,
+                                                controller: categoryProvider.subcategoryNameController,
+                                                confirmText: AppLocalizations.of(context)!.add,
+                                                declineText: AppLocalizations.of(context)!.cancel,
+                                                onNo: () {},
+                                                onYes: () {
+                                                  if (categoryProvider.subcategoryNameController.text.trim().isEmpty) {
+                                                    showSnackbar(context, AppLocalizations.of(context)!.subcategorynamerequired, color: redColor);
+                                                    return;
+                                                  }
+                                                  categoryProvider.addSubCategory(provider.categoryId!, context).then((v) {
+                                                    // Refresh the FutureBuilder by triggering setState
+                                                    setState(() {});
+                                                  });
+                                                },
+                                              );
+                                            },
+                                            child: Container(
+                                              padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                                              decoration: BoxDecoration(
+                                                color: primaryColor.withOpacity(0.1),
+                                                borderRadius: BorderRadius.circular(5.r),
+                                                border: Border.all(color: primaryColor, width: 1),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(Icons.add, size: 14.sp, color: primaryColor),
+                                                  4.width,
+                                                  MyText(
+                                                    text: AppLocalizations.of(context)!.addsubcategory,
+                                                    size: 10.sp,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: primaryColor,
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                       5.height,
-                                      DropDownWidget(
-                                        textName: AppLocalizations.of(context)!.subcategory,
-                                        initialValue: provider.subCategory,
-                                        list: extractedList.map((cat){
-                                          return cat['name']!;
-                                        }).toList(),
-                                        onChange: (value){
-                                          customPrint("Value================================$value");
-                                          provider.changeSubCategoryList(value!);
-                                          productProvider.setSubCategoryId(extractedList
-                                              .firstWhere((category) => category['name'] == value)['id']!);
-
+                                      GestureDetector(
+                                        onTap: () async {
+                                          // Navigate to subcategory selection screen
+                                          final result = await Navigator.pushNamed(
+                                            context,
+                                            RoutesNames.sellerSubCategoryView,
+                                            arguments: {
+                                              'categoryId': provider.categoryId!,
+                                              'isSelectionMode': true,
+                                            },
+                                          );
+                                          
+                                          if (result != null && result is Map) {
+                                            final selectedSubCategoryId = result['id'] as String;
+                                            final selectedSubCategoryName = result['name'] as String;
+                                            
+                                            customPrint("========== SUBCATEGORY SELECTED ==========");
+                                            customPrint("Selected SubCategory Name: $selectedSubCategoryName");
+                                            customPrint("Selected SubCategory ID: $selectedSubCategoryId");
+                                            
+                                            provider.changeSubCategoryList(selectedSubCategoryName);
+                                            provider.setSubCategoryId(selectedSubCategoryId);
+                                            
+                                            customPrint("After setting - SubCategory ID in provider: ${provider.subCategoryId}");
+                                            customPrint("After setting - SubCategory Name in provider: ${provider.subCategory}");
+                                            customPrint("===========================================");
+                                            
+                                            setState(() {});
+                                          }
                                         },
+                                        child: Container(
+                                          width: double.infinity,
+                                          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 14.h),
+                                          decoration: BoxDecoration(
+                                            color: whiteColor,
+                                            borderRadius: BorderRadius.circular(5.r),
+                                            border: Border.all(color: borderColor, width: 1),
+                                          ),
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Expanded(
+                                                child: MyText(
+                                                  text: provider.subCategory ?? AppLocalizations.of(context)!.subcategory,
+                                                  size: 12.sp,
+                                                  fontWeight: FontWeight.w400,
+                                                  color: provider.subCategory != null ? blackColor : textPrimaryColor.withOpacity(0.5),
+                                                ),
+                                              ),
+                                              Icon(Icons.arrow_forward_ios, size: 14.sp, color: textPrimaryColor),
+                                            ],
+                                          ),
+                                        ),
                                       ),
                                       10.height,
                                     ],

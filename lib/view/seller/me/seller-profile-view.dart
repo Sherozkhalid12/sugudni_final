@@ -135,7 +135,13 @@ class _SellerProfileViewState extends State<SellerProfileView> {
                             );
                           });
                     },),
-                     SellerProfileWidget(title: AppLocalizations.of(context)!.notifications,isShowImage: true,),
+                     SellerProfileWidget(
+                       title: AppLocalizations.of(context)!.notifications,
+                       isShowImage: true,
+                       onPressed: () {
+                         Navigator.pushNamed(context, RoutesNames.notificationsView);
+                       },
+                     ),
                     //  SellerProfileWidget(title: AppLocalizations.of(context)!.chatwithus,onPressed: (){
                     //   Navigator.pushNamed(context, RoutesNames.sellerMessageDetailDetailView,arguments: 'SUGUDENI');
                     // },),

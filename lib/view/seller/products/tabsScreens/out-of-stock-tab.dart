@@ -21,6 +21,7 @@ import 'package:sugudeni/utils/customWidgets/my-text.dart';
 import 'package:sugudeni/utils/customWidgets/round-button.dart';
 import 'package:sugudeni/utils/extensions/sizebox.dart';
 import 'package:sugudeni/utils/customWidgets/shimmer-widgets.dart';
+import 'package:sugudeni/utils/customWidgets/empty-state-widget.dart';
 
 class OutOfStockTab extends StatefulWidget {
   const OutOfStockTab({super.key});
@@ -72,13 +73,11 @@ class _OutOfStockTabState extends State<OutOfStockTab> {
                     style: const TextStyle(color: redColor))));
       }
       if (provider.filteredProductList.isEmpty) {
-        return SizedBox(
-            height: 500.h,
-            child: Center(
-                child: MyText(
-              text: AppLocalizations.of(context)!.empty,
-              size: 12.sp,
-            )));
+        return EmptyStateWidget(
+          title: 'No Out of Stock Products',
+          description: 'Excellent! All your products are in stock. Keep managing your inventory well.',
+          icon: Icons.inventory_2_outlined,
+        );
       }
       WidgetsBinding.instance.addPostFrameCallback((_) {
         double screenHeight = MediaQuery.of(context).size.height;

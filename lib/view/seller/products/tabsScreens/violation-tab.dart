@@ -26,6 +26,7 @@ import 'package:sugudeni/utils/customWidgets/my-text.dart';
 import 'package:sugudeni/utils/customWidgets/round-button.dart';
 import 'package:sugudeni/utils/extensions/sizebox.dart';
 import 'package:sugudeni/utils/customWidgets/shimmer-widgets.dart';
+import 'package:sugudeni/utils/customWidgets/empty-state-widget.dart';
 
 import '../../../../utils/routes/routes-name.dart';
 
@@ -78,10 +79,11 @@ class _ViolationTabState extends State<ViolationTab> {
                     child: Text(provider.errorText, style: const TextStyle(color: redColor))));
           }
           if (provider.filteredProductList.isEmpty) {
-            return SizedBox(
-                height: 500.h,
-                child: Center(
-                    child: MyText(text: AppLocalizations.of(context)!.empty,size: 12.sp,)));
+            return EmptyStateWidget(
+              title: 'No Violation Products',
+              description: 'Great! You don\'t have any products with violations. Keep up the good work!',
+              icon: Icons.check_circle_outline,
+            );
           }
           WidgetsBinding.instance.addPostFrameCallback((_) {
             double screenHeight = MediaQuery.of(context).size.height;

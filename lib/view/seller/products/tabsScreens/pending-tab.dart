@@ -22,6 +22,7 @@ import 'package:sugudeni/utils/customWidgets/my-text.dart';
 import 'package:sugudeni/utils/customWidgets/round-button.dart';
 import 'package:sugudeni/utils/extensions/sizebox.dart';
 import 'package:sugudeni/utils/customWidgets/shimmer-widgets.dart';
+import 'package:sugudeni/utils/customWidgets/empty-state-widget.dart';
 
 class PendingTab extends StatefulWidget {
   const PendingTab({super.key});
@@ -70,10 +71,11 @@ class _PendingTabState extends State<PendingTab> {
                 child: Text(provider.errorText, style: const TextStyle(color: redColor))));
       }
       if (provider.filteredProductList.isEmpty) {
-        return SizedBox(
-            height: 500.h,
-            child: Center(
-                child: MyText(text: AppLocalizations.of(context)!.empty,size: 12.sp,)));
+        return EmptyStateWidget(
+          title: 'No Pending QC Products',
+          description: 'You don\'t have any products pending quality check. All your products have been reviewed.',
+          icon: Icons.hourglass_empty_outlined,
+        );
       }
       WidgetsBinding.instance.addPostFrameCallback((_) {
         double screenHeight = MediaQuery.of(context).size.height;

@@ -47,6 +47,7 @@ class RoutesNames{
   static const String sellerMessageDetailDetailView = 'seller-message-detail-view';
   static const String sellerAddAddressView = 'seller-add-address-view';
   static const String sellerAddressView = 'seller-address-view';
+  static const String notificationsView = 'notifications-view';
 
   /// customer routes
   static const String customerBottomNav = 'customer-bottom-nav-view';

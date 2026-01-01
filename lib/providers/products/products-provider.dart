@@ -95,8 +95,10 @@ class ProductsProvider extends ChangeNotifier{
     categoryId=id;
   }
   setSubCategoryId(String id){
-    customPrint("Category id ==========================$id");
+    customPrint("SubCategory id ==========================$id");
     subCategoryId=id;
+    customPrint("SubCategory id after setting ==========================$subCategoryId");
+    notifyListeners();
   }
   setDraftLoading(){
     publishLoading=false;
@@ -188,6 +190,22 @@ class ProductsProvider extends ChangeNotifier{
   }
   Future<void> publishProduct(BuildContext context) async {
     final loadingProvider = Provider.of<LoadingProvider>(context, listen: false);
+    
+    // Debug: Print all product data
+    customPrint("========== PUBLISH PRODUCT DEBUG ==========");
+    customPrint("Files count: ${_files.length}");
+    customPrint("Product Title: ${productTitleController.text}");
+    customPrint("Category ID: $categoryId");
+    customPrint("SubCategory ID: $subCategoryId");
+    customPrint("SubCategory Name: $subCategory");
+    customPrint("Weight: $weight");
+    customPrint("Color: $color");
+    customPrint("Size: $size");
+    customPrint("Description: ${discriptionController.text}");
+    customPrint("Quantity: ${quantityController.text}");
+    customPrint("Price: ${priceController.text}");
+    customPrint("===========================================");
+    
     if (_files.isEmpty) {
       showSnackbar(context, AppLocalizations.of(context)!.pleaseuploadproductimages, color: redColor);
       return;
@@ -201,6 +219,7 @@ class ProductsProvider extends ChangeNotifier{
       return;
     }
        if (subCategoryId==null ) {
+      customPrint("ERROR: SubCategory ID is NULL! SubCategory name is: $subCategory");
       showSnackbar(context, AppLocalizations.of(context)!.pleasechoosesubcategory, color: redColor);
       return;
     }
@@ -247,6 +266,19 @@ class ProductsProvider extends ChangeNotifier{
       });
 
       // Add text fields
+      customPrint("========== REQUEST DATA BEING SENT ==========");
+      customPrint("sellerid: $sellerId");
+      customPrint("title: ${productTitleController.text.trim()}");
+      customPrint("weight: ${weight!}");
+      customPrint("color: ${color!}");
+      customPrint("size: ${size!}");
+      customPrint("price: ${priceController.text.trim()}");
+      customPrint("quantity: ${quantityController.text.trim()}");
+      customPrint("descripton: ${discriptionController.text.trim()}");
+      customPrint("category: ${categoryId!}");
+      customPrint("subcategory: ${subCategoryId!}");
+      customPrint("===========================================");
+      
       request.fields.addAll({
         'sellerid': sellerId,
         'title': productTitleController.text.trim(),

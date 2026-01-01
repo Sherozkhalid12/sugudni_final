@@ -173,10 +173,12 @@ class _SellerMyProductsViewState extends State<SellerMyProductsView> {
               ],
             )),
             10.height,
-            Consumer<SellerProductsTabProvider>(
-                builder: (context,provider,child){
-              return provider.showTab();
-            })
+            Expanded(
+              child: Consumer<SellerProductsTabProvider>(
+                  builder: (context,provider,child){
+                return provider.showTab();
+              }),
+            ),
           ],
         ),
       ),

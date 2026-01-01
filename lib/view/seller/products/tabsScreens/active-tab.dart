@@ -435,6 +435,8 @@ import 'package:sugudeni/utils/extensions/sizebox.dart';
 import 'package:sugudeni/utils/global-functions.dart';
 import 'package:sugudeni/utils/product-status.dart';
 import 'package:sugudeni/utils/customWidgets/shimmer-widgets.dart';
+import 'package:sugudeni/utils/customWidgets/empty-state-widget.dart';
+import 'package:sugudeni/utils/routes/routes-name.dart';
 
 import '../../../../api/api-endpoints.dart';
 import '../../../../l10n/app_localizations.dart';
@@ -488,10 +490,17 @@ class _ActiveTabState extends State<ActiveTab> {
               child: Text(provider.errorText, style: const TextStyle(color: redColor))));
         }
         if (provider.filteredProductList.isEmpty) {
-          return SizedBox(
-              height: 500.h,
-              child: Center(
-                  child: MyText(text: AppLocalizations.of(context)!.empty,size: 12.sp,)));
+          return EmptyStateWidget(
+            title: 'No Active Products',
+            description: 'You don\'t have any active products yet. Add your first product to start selling.',
+            icon: Icons.check_circle_outline,
+            showButton: true,
+            buttonText: 'Add Product',
+            onButtonPressed: () {
+              context.read<ProductsProvider>().clearResources();
+              Navigator.pushNamed(context, RoutesNames.sellerAddProductView);
+            },
+          );
         }
         WidgetsBinding.instance.addPostFrameCallback((_) {
           double screenHeight = MediaQuery.of(context).size.height;

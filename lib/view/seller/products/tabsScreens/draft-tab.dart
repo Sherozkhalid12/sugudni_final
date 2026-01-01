@@ -23,6 +23,7 @@ import 'package:sugudeni/utils/customWidgets/my-text.dart';
 import 'package:sugudeni/utils/customWidgets/round-button.dart';
 import 'package:sugudeni/utils/extensions/sizebox.dart';
 import 'package:sugudeni/utils/customWidgets/shimmer-widgets.dart';
+import 'package:sugudeni/utils/customWidgets/empty-state-widget.dart';
 
 class DraftTab extends StatefulWidget {
   const DraftTab({super.key});
@@ -74,10 +75,17 @@ class _DraftTabState extends State<DraftTab> {
                 child: Text(provider.errorText, style: const TextStyle(color: redColor))));
       }
       if (provider.filteredProductList.isEmpty) {
-        return SizedBox(
-            height: 500.h,
-            child: Center(
-                child: MyText(text: AppLocalizations.of(context)!.empty,size: 12.sp,)));
+        return EmptyStateWidget(
+          title: 'No Draft Products',
+          description: 'You don\'t have any draft products. Start creating your first product draft.',
+          icon: Icons.edit_outlined,
+          showButton: true,
+          buttonText: 'Create Draft',
+          onButtonPressed: () {
+            context.read<ProductsProvider>().clearResources();
+            Navigator.pushNamed(context, RoutesNames.sellerAddProductView);
+          },
+        );
       }
       WidgetsBinding.instance.addPostFrameCallback((_) {
         double screenHeight = MediaQuery.of(context).size.height;

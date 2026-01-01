@@ -65,6 +65,7 @@ import 'package:sugudeni/view/seller/products/seller-my-products-view.dart';
 import 'package:sugudeni/view/seller/review/seller-manage-review-view.dart';
 import 'package:sugudeni/view/seller/setting/seller-setting-view.dart';
 import 'package:sugudeni/view/splash/splash-view.dart';
+import 'package:sugudeni/view/notifications/notifications-view.dart';
 
 class Routes {
   static Route<dynamic> generateRoute(RouteSettings routeSettings) {
@@ -209,6 +210,9 @@ class Routes {
       case RoutesNames.sellerAddAddressView:
         return MaterialPageRoute(
             builder: (BuildContext context) =>  const SellerAddAddressView());
+      case RoutesNames.notificationsView:
+        return MaterialPageRoute(
+            builder: (BuildContext context) =>  const NotificationsView());
         // case RoutesNames.sellerMessageDetailDetailView:
         // return MaterialPageRoute(
         //     builder: (BuildContext context) =>  const SellerMessageDetailView(),settings: routeSettings);

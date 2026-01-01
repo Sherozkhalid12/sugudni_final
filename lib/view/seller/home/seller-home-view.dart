@@ -44,8 +44,12 @@ class SellerHomeView extends StatelessWidget {
         automaticallyImplyLeading: false,
         title: AppBarTitleWidget(title: AppLocalizations.of(context)!.sellercenter),
         actions: [
-          const RoundIconButton(iconUrl: AppAssets.bellIcon),
-
+          RoundIconButton(
+            iconUrl: AppAssets.bellIcon,
+            onPressed: () {
+              Navigator.pushNamed(context, RoutesNames.notificationsView);
+            },
+          ),
           15.width,
         ],
       ),

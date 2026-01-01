@@ -222,6 +222,7 @@ import 'package:sugudeni/utils/extensions/dialog-extension.dart';
 import 'package:sugudeni/utils/extensions/sizebox.dart';
 import 'package:sugudeni/utils/product-status.dart';
 import 'package:sugudeni/utils/customWidgets/shimmer-widgets.dart';
+import 'package:sugudeni/utils/customWidgets/empty-state-widget.dart';
 
 import '../../../../l10n/app_localizations.dart';
 import '../../../../repositories/products/product-repository.dart';
@@ -275,10 +276,11 @@ class _InActiveTabState extends State<InActiveTab> {
                 child: Text(provider.errorText, style: const TextStyle(color: redColor))));
       }
       if (provider.productList.isEmpty) {
-        return SizedBox(
-            height: 500.h,
-            child: Center(
-                child: MyText(text: AppLocalizations.of(context)!.empty,size: 12.sp,)));
+        return EmptyStateWidget(
+          title: 'No Inactive Products',
+          description: 'You don\'t have any inactive products. All your products are currently active.',
+          icon: Icons.pause_circle_outline,
+        );
       }
       WidgetsBinding.instance.addPostFrameCallback((_) {
         double screenHeight = MediaQuery.of(context).size.height;
