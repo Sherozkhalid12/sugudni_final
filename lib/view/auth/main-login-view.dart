@@ -180,7 +180,7 @@ class _MainLoginViewState extends State<MainLoginView> {
                         width: 200.w,
                         child: MyText(
                           overflow: TextOverflow.clip,
-                          text: AppLocalizations.of(context)!.loginwithmobilenumber,size: 15.sp,fontWeight: FontWeight.w500,color: whiteColor,),
+                          text: AppLocalizations.of(context)!.loginwithmobilenumber,size: 14.sp,fontWeight: FontWeight.w500,color: whiteColor,),
                       ),
                       20.width,
                       const Spacer()

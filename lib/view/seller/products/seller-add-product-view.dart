@@ -48,6 +48,7 @@ class _SellerAddProductViewState extends State<SellerAddProductView> {
   final _flashOnController = TextEditingController(text: 'Flash on');
   final _flashOffController = TextEditingController(text: 'Flash off');
   final _cancelController = TextEditingController(text: 'Cancel');
+
   Future<void> _scan() async {
     try {
       final result = await BarcodeScanner.scan(
@@ -83,6 +84,7 @@ class _SellerAddProductViewState extends State<SellerAddProductView> {
       });
     }
   }
+
   @override
   Widget build(BuildContext context) {
     final productProvider=Provider.of<ProductsProvider>(context,listen: false);

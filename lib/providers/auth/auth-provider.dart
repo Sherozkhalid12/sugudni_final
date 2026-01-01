@@ -37,6 +37,17 @@ class AuthProvider extends ChangeNotifier {
   String otpPreference = 'sms'; // Default for phone sign-up
   String countryCode = '+33';
 
+  bool _showPassword = false;
+
+  bool get showPassword => _showPassword;
+  ValueKey<bool> get passwordFieldKey => ValueKey(_showPassword);
+
+  void togglePasswordVisibility() {
+    _showPassword = !_showPassword;
+    print("Password visibility toggled: $_showPassword"); // Add this
+    notifyListeners();
+  }
+
   void toggleSignUpMethod(bool useEmail) {
     isEmail = useEmail;
     if (!isEmail) {
@@ -266,6 +277,7 @@ class AuthProvider extends ChangeNotifier {
   //     }
   //   }
   // }
+
   Future<void> verifyOtp(BuildContext context, String otp) async {
     final roleProvider = Provider.of<SelectRoleProvider>(context, listen: false);
     final loadingProvider = Provider.of<LoadingProvider>(context, listen: false);
@@ -556,6 +568,7 @@ class AuthProvider extends ChangeNotifier {
     signUpPhoneController.clear();
     phoneController.clear();
     otpController.clear();
+    _showPassword = false;
     isSignUp = true;
     isEmail = true;
   }}

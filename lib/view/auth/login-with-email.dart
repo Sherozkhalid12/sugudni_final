@@ -30,15 +30,12 @@ class LoginWithEmailView extends StatefulWidget {
 class _LoginWithEmailViewState extends State<LoginWithEmailView> {
   @override
   void initState() {
-    // TODO: implement initState
-    Provider.of<AuthProvider>(context,listen: false).clearResources();
-
+    Provider.of<AuthProvider>(context, listen: false).clearResources();
     super.initState();
   }
+
   @override
   Widget build(BuildContext context) {
-    final signUpProvider=Provider.of<AuthProvider>(context,listen: false);
-
     return Scaffold(
       backgroundColor: bgColor,
       body: SafeArea(
@@ -50,23 +47,40 @@ class _LoginWithEmailViewState extends State<LoginWithEmailView> {
                 40.height,
                 Row(
                   children: [
-                    MyText(text: "${AppLocalizations.of(context)!.hi} !",color: textPrimaryColor,size: 22.sp,fontWeight: FontWeight.w700,),
+                    MyText(
+                      text: "${AppLocalizations.of(context)!.hi} !",
+                      color: textPrimaryColor,
+                      size: 22.sp,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ],
                 ),
-                MyText(text: AppLocalizations.of(context)!.welcometotelimani,color: textPrimaryColor.withOpacity(0.8),size: 22.sp,fontWeight: FontWeight.w700,),
-                MyText(text:  AppLocalizations.of(context)!.pleasesigininwithemail,color: textPrimaryColor.withOpacity(0.8),size: 16.sp,fontWeight: FontWeight.w500,),
+                MyText(
+                  text: AppLocalizations.of(context)!.welcometotelimani,
+                  color: textPrimaryColor.withOpacity(0.8),
+                  size: 22.sp,
+                  fontWeight: FontWeight.w700,
+                ),
+                MyText(
+                  text: AppLocalizations.of(context)!.pleasesigininwithemail,
+                  color: textPrimaryColor.withOpacity(0.8),
+                  size: 16.sp,
+                  fontWeight: FontWeight.w500,
+                ),
                 20.height,
 
                 Center(
                   child: Image.asset(
-                      height: 200.h,
-                      width: 300.w,
-                      AppAssets.appLogo),
+                    AppAssets.appLogo,
+                    height: 200.h,
+                    width: 300.w,
+                  ),
                 ),
                 20.height,
-                CustomTextFiled(
-                  controller: signUpProvider.emailController,
 
+                // Email Field
+                CustomTextFiled(
+                  controller: context.read<AuthProvider>().emailController,
                   borderRadius: 15.r,
                   isBorder: true,
                   isShowPrefixIcon: true,
@@ -74,67 +88,73 @@ class _LoginWithEmailViewState extends State<LoginWithEmailView> {
                   hintText: AppLocalizations.of(context)!.enteryouremail,
                   isShowPrefixImage: true,
                   prefixImgUrl: AppAssets.emailIcon,
-
                 ),
                 10.height,
-                CustomTextFiled(
-                  controller: signUpProvider.passwordController,
-                  borderRadius: 15.r,
-                  isShowPrefixIcon: true,
-                  isBorder: true,
-                  isPassword: true,
 
-                  isFilled: true,
-                  hintText: AppLocalizations.of(context)!.enteryourpassword,
-                  isShowPrefixImage: true,
-                  prefixImgUrl: AppAssets.passwordIcon,
-
+                // Password Field - Using Provider State
+                Consumer<AuthProvider>(
+                  builder: (context, authProvider, child) {
+                    return CustomTextFiled(
+                      key: authProvider.passwordFieldKey, // THIS IS THE KEY FIX
+                      controller: authProvider.passwordController,
+                      borderRadius: 15.r,
+                      isShowPrefixIcon: true,
+                      isBorder: true,
+                      isFilled: true,
+                      hintText: AppLocalizations.of(context)!.enteryourpassword,
+                      isShowPrefixImage: true,
+                      prefixImgUrl: AppAssets.passwordIcon,
+                      isPassword: true,
+                      showPassword: authProvider.showPassword, // From provider
+                      passwordFunction: authProvider.togglePasswordVisibility, // Toggle via provider
+                    );
+                  },
                 ),
+                10.height,
+
                 Row(
                   children: [
-                   Consumer<AuthProvider>(builder: (context,provider,child){
-                     return  Checkbox(
-                         fillColor: const WidgetStatePropertyAll(textFieldColor),
-                         side: const BorderSide(
-                           color: primaryColor,
-                         ),
-                         value: provider.isRemember, onChanged: (v){
-                           provider.toggleRemember(v!);
-                     });
-                   }),
-                    MyText(text: AppLocalizations.of(context)!.rememberinformation,size: 14.sp,)
+                    Consumer<AuthProvider>(builder: (context, provider, child) {
+                      return Checkbox(
+                        fillColor: const WidgetStatePropertyAll(textFieldColor),
+                        side: const BorderSide(color: primaryColor),
+                        value: provider.isRemember,
+                        onChanged: (v) {
+                          provider.toggleRemember(v!);
+                        },
+                      );
+                    }),
+                    MyText(
+                      text: AppLocalizations.of(context)!.rememberinformation,
+                      size: 14.sp,
+                    ),
                   ],
                 ),
                 40.height,
+
                 Align(
-                    alignment: Alignment.bottomRight,
-                    child: GestureDetector(
-                      onTap: (){
-                        Navigator.pushNamed(context, RoutesNames.forgetPasswordEmailView);
-
-                      },
-                      child: MyText(text: AppLocalizations.of(context)!.forgetpassword,size: 12.sp,
-                        fontWeight: FontWeight.w600,
-                        color: primaryColor,),
-                    )),
+                  alignment: Alignment.bottomRight,
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.pushNamed(context, RoutesNames.forgetPasswordEmailView);
+                    },
+                    child: MyText(
+                      text: AppLocalizations.of(context)!.forgetpassword,
+                      size: 12.sp,
+                      fontWeight: FontWeight.w600,
+                      color: primaryColor,
+                    ),
+                  ),
+                ),
                 10.height,
+
                 RoundButton(
-                    isLoad: true,
-                    title: AppLocalizations.of(context)!.signin, onTap: ()async{
-                  // final provider=Provider.of<SelectRoleProvider>(context,listen: false);
-                  //
-                  // provider.selectedRole==UserRoles.customer? setUserRegistered(true):setUserRegistered(false);
-                  // navigateBasedOnRole(provider.selectedRole, context);
-
-                // await context.read<ProductsProvider>().getAllProducts(context);
-                 //await context.read<ProductsProvider>().getSpecificProduct('67bc15707e19eff41f9a34e7',context);
-                // await context.read<ProductsProvider>().deleteProduct('67bee3eeb021a551f943dbd8',context);
-                // await context.read<CategoryProvider>().deleteCategory('6537c7f68785709b48ad896f',context);
-
-
-                  await signUpProvider.signInUser(context);
-
-                }),
+                  isLoad: true,
+                  title: AppLocalizations.of(context)!.signin,
+                  onTap: () async {
+                    await context.read<AuthProvider>().signInUser(context);
+                  },
+                ),
                 100.height,
                 const HaventSignupWidget(),
                 10.height,
