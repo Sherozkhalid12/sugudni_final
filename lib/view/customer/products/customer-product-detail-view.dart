@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:sugudeni/api/api-endpoints.dart';
 import 'package:sugudeni/models/cart/AddToCartModel.dart';
-import 'package:sugudeni/models/wishlist/AddWishListModel.dart';
+import 'package:sugudeni/providers/wishlist-provider.dart';
 import 'package:sugudeni/repositories/carts/cart-repository.dart';
 import 'package:sugudeni/repositories/review/review-repositoy.dart';
 import 'package:sugudeni/repositories/user-repository.dart';
-import 'package:sugudeni/repositories/wishlist/wishlist-repository.dart';
+import 'package:provider/provider.dart';
 import 'package:sugudeni/utils/customWidgets/cached-network-image.dart';
 import 'package:sugudeni/utils/customWidgets/loading-dialog.dart';
 import 'package:sugudeni/utils/customWidgets/round-button.dart';
@@ -39,6 +39,16 @@ class CustomerProductDetailPage extends StatefulWidget {
 class _CustomerProductDetailPageState extends State<CustomerProductDetailPage> {
   int initialPage=1;
   final PageController pageController = PageController(initialPage: 0);
+
+  @override
+  void initState() {
+    super.initState();
+    // Load wishlist data when the view initializes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final wishlistProvider = Provider.of<WishlistProvider>(context, listen: false);
+      wishlistProvider.getWishlistProducts(context);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -291,19 +301,33 @@ class _CustomerProductDetailPageState extends State<CustomerProductDetailPage> {
                              const Spacer(),
 
 
-                             GestureDetector(
-                                 onTap: ()async{
-                                   String userId=await getUserId();
-                                   if(userId.isEmpty){
-                                     showSnackbar(context, AppLocalizations.of(context)!.pleaselogintouseacount,color: redColor);
-                                     return;
-                                   }
-                                   var model=AddToWishlistModel(productId: product.id);
-                                   await WishlistRepository.addProductToWishlist(model, context).then((v){
-                                     showSnackbar(context, AppLocalizations.of(context)!.producthasbeenaddedtowishlish,color: greenColor);
-                                   });
-                                 },
-                                 child: Image.asset(AppAssets.heartIcon,scale: 3)),
+                             Consumer<WishlistProvider>(
+                               builder: (context, wishlistProvider, child) {
+                                 bool isInWishlist = wishlistProvider.isProductInWishlist(product.id);
+                                 return GestureDetector(
+                                   onTap: () async {
+                                     String userId = await getUserId();
+                                     if (userId.isEmpty) {
+                                       showSnackbar(context, AppLocalizations.of(context)!.pleaselogintouseacount, color: redColor);
+                                       return;
+                                     }
+
+                                     bool success = await wishlistProvider.toggleWishlist(product.id, context);
+                                     if (success) {
+                                       String message = isInWishlist
+                                           ? "Product removed from wishlist"
+                                           : AppLocalizations.of(context)!.producthasbeenaddedtowishlish;
+                                       showSnackbar(context, message, color: greenColor);
+                                     }
+                                   },
+                                   child: Icon(
+                                     isInWishlist ? Icons.favorite : Icons.favorite_border,
+                                     color: isInWishlist ? Colors.red : primaryColor,
+                                     size: 24.sp,
+                                   ),
+                                 );
+                               },
+                             ),
                              10.width,
                             // Image.asset(AppAssets.productShareIcon,scale: 3),
 

@@ -1,27 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:provider/provider.dart';
 import 'package:sugudeni/api/api-endpoints.dart';
-import 'package:sugudeni/models/cart/AddToCartModel.dart';
-import 'package:sugudeni/models/products/ProductListResponse.dart';
-import 'package:sugudeni/models/wishlist/AddWishListModel.dart';
-import 'package:sugudeni/repositories/carts/cart-repository.dart';
-import 'package:sugudeni/repositories/products/product-repository.dart';
-import 'package:sugudeni/repositories/user-repository.dart';
-import 'package:sugudeni/repositories/wishlist/wishlist-repository.dart';
-import 'package:sugudeni/utils/constants/fonts.dart';
-import 'package:sugudeni/utils/constants/screen-sizes.dart';
+import 'package:sugudeni/providers/wishlist-provider.dart';
+import 'package:sugudeni/utils/constants/colors.dart';
 import 'package:sugudeni/utils/customWidgets/cached-network-image.dart';
-import 'package:sugudeni/utils/customWidgets/loading-dialog.dart';
 import 'package:sugudeni/utils/customWidgets/round-button.dart';
 import 'package:sugudeni/utils/customWidgets/shimmer-widgets.dart';
-import 'package:sugudeni/utils/customWidgets/symetric-padding.dart';
-import 'package:sugudeni/utils/extensions/media-query.dart';
 import 'package:sugudeni/utils/extensions/sizebox.dart';
 import 'package:sugudeni/utils/global-functions.dart';
-import 'package:sugudeni/utils/product-status.dart';
 import 'package:sugudeni/utils/routes/routes-name.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../../utils/constants/colors.dart';
 import '../../../utils/customWidgets/my-text.dart';
 
 class CustomerAllWishListView extends StatefulWidget {
@@ -32,8 +21,18 @@ class CustomerAllWishListView extends StatefulWidget {
 }
 
 class _CustomerAllWishListViewState extends State<CustomerAllWishListView> {
-  final searchController=TextEditingController();
-  String query='';
+  final searchController = TextEditingController();
+  String query = '';
+
+  @override
+  void initState() {
+    super.initState();
+    // Load wishlist data when the view initializes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final wishlistProvider = Provider.of<WishlistProvider>(context, listen: false);
+      wishlistProvider.getWishlistProducts(context);
+    });
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -97,28 +96,31 @@ class _CustomerAllWishListViewState extends State<CustomerAllWishListView> {
           ],
         ),
       ),
-      body: FutureBuilder(
-          future: WishlistRepository.getWishlistProducts(context),
-          builder: (context,snapshot){
-            if(snapshot.connectionState==ConnectionState.waiting){
-              return const ProductGridShimmer(
-                crossAxisCount: 2,
-                aspectRatio: 0.8,
-              );
-            }
-            if(snapshot.hasError){
-              return  Center(
-                child: MyText(text: snapshot.error.toString()),
-              );
-            }if(snapshot.data!.getAllUserWishList.isEmpty){
-              return  Center(
-                child: MyText(text: AppLocalizations.of(context)!.emptywishlist),
-              );
-            }
-            var data=snapshot.data!.getAllUserWishList;
-            var filteredList=data.where((d){
-              return query.isEmpty||d.title.toString().toLowerCase().contains(query.toLowerCase().toString());
-            }).toList();
+      body: Consumer<WishlistProvider>(
+        builder: (context, wishlistProvider, child) {
+          if (wishlistProvider.isLoading) {
+            return const ProductGridShimmer(
+              crossAxisCount: 2,
+              aspectRatio: 0.8,
+            );
+          }
+
+          if (wishlistProvider.errorMessage != null) {
+            return Center(
+              child: MyText(text: wishlistProvider.errorMessage!),
+            );
+          }
+
+          if (wishlistProvider.wishlistResponse == null || wishlistProvider.wishlistResponse!.getAllUserWishList.isEmpty) {
+            return Center(
+              child: MyText(text: AppLocalizations.of(context)!.emptywishlist),
+            );
+          }
+
+          var data = wishlistProvider.wishlistResponse!.getAllUserWishList;
+          var filteredList = data.where((d) {
+            return query.isEmpty || d.title.toString().toLowerCase().contains(query.toLowerCase().toString());
+          }).toList();
         return ListView.builder(
             itemCount: filteredList.length,
             itemBuilder: (context,index){
@@ -182,14 +184,11 @@ class _CustomerAllWishListViewState extends State<CustomerAllWishListView> {
                         textColor: primaryColor,
                         borderRadius: BorderRadius.circular(10.r),
                         title: AppLocalizations.of(context)!.removefromwishlish,
-                        onTap: () async{
-                          var model=AddToWishlistModel(productId: wishlistData.id);
-                          await WishlistRepository.removeFromWishlist(model, context).then((v){
-                            showSnackbar(context, AppLocalizations.of(context)!.producthasbeenaddedtowishlish,color: greenColor);
-                            setState(() {
-
-                            });
-                          });
+                        onTap: () async {
+                          bool success = await wishlistProvider.removeFromWishlist(wishlistData.id, context);
+                          if (success) {
+                            showSnackbar(context, "Product removed from wishlist", color: greenColor);
+                          }
                         },
                       ),
                     ],
@@ -198,8 +197,9 @@ class _CustomerAllWishListViewState extends State<CustomerAllWishListView> {
               ),
             ),
           );
-        });
-      }),
+        },
+      );
+    }),
     );
   }
 }

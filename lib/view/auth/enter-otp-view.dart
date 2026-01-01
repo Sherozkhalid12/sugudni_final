@@ -28,7 +28,6 @@ class _EnterOtpViewState extends State<EnterOtpView> {
   @override
   void dispose() {
     _isDisposed = true;
-    otpController.dispose();
     super.dispose();
   }
 

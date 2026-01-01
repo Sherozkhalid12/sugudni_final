@@ -140,15 +140,33 @@ class _CustomerCheckOutViewState extends State<CustomerCheckOutView> {
          );
        }),
           Consumer<CartProvider>(builder: (context,provider,child){
-            return  Expanded(
+            if (provider.cartResponse == null) {
+              return const Expanded(
+                flex: 21,
+                child: Center(
+                  child: CircularProgressIndicator(),
+                ),
+              );
+            }
+
+            if (provider.cartResponse!.cart.cartItem.isEmpty) {
+              return const Expanded(
+                flex: 21,
+                child: Center(
+                  child: Text('Your cart is empty'),
+                ),
+              );
+            }
+
+            return Expanded(
               flex: 21,
               child: ListView.builder(
-                  itemCount:provider.cartResponse!.cart.cartItem.length ,
+                  itemCount: provider.cartResponse!.cart.cartItem.length,
                   itemBuilder: (context,index){
-                    var cartData=provider.cartResponse!.cart.cartItem[index];
-                    return   Padding(
+                    var cartData = provider.cartResponse!.cart.cartItem[index];
+                    return Padding(
                       padding: const EdgeInsets.only(bottom: 8.0),
-                      child:  CheckOutWidget(
+                      child: CheckOutWidget(
                         img: cartData.productId.imgCover,
                         productId: cartData.productId.id,
                         bulk: cartData.productId.bulk,
@@ -166,7 +184,9 @@ class _CustomerCheckOutViewState extends State<CustomerCheckOutView> {
                           provider.toggleItem(cartData.productId.id);
                         },
                         isSelected: provider.selectedIndex.contains(cartData.productId.id),
-                        deliverySlot: "${provider.deliverySlot!.startTime}-${provider.deliverySlot!.endTime} ${capitalizeFirstLetter(provider.deliverySlot!.title)}",
+                        deliverySlot: provider.deliverySlot != null
+                            ? "${provider.deliverySlot!.startTime}-${provider.deliverySlot!.endTime} ${capitalizeFirstLetter(provider.deliverySlot!.title)}"
+                            : "Select delivery slot",
                       ),
                     );
                   }),
@@ -186,9 +206,11 @@ class _CustomerCheckOutViewState extends State<CustomerCheckOutView> {
                   Row(
                     children: [
                       MyText(text: AppLocalizations.of(context)!.merchandisesubtotal,size: 12.sp,fontWeight: FontWeight.w600,),
-                      MyText(text: " (${cartProvider.cartResponse!.cart.cartItem.length} ${AppLocalizations.of(context)!.items})",size: 10.sp,fontWeight: FontWeight.w600,color: textSecondaryColor,),
+                      MyText(text: cartProvider.cartResponse != null ? " (${cartProvider.cartResponse!.cart.cartItem.length} ${AppLocalizations.of(context)!.items})" : " (0 items)",size: 10.sp,fontWeight: FontWeight.w600,color: textSecondaryColor,),
                       const Spacer(),
-                      FindCurrency(usdAmount:cartProvider.cartResponse!.cart.discount==0? cartProvider.cartResponse!.cart.totalPrice:cartProvider.cartResponse!.cart.totalPriceAfterDiscount,size: 12.sp,fontWeight: FontWeight.w600,color: blackColor,)
+                      cartProvider.cartResponse != null
+                          ? FindCurrency(usdAmount:cartProvider.cartResponse!.cart.discount==0? cartProvider.cartResponse!.cart.totalPrice:cartProvider.cartResponse!.cart.totalPriceAfterDiscount,size: 12.sp,fontWeight: FontWeight.w600,color: blackColor,)
+                          : const MyText(text: "\$0.00", size: 12, fontWeight: FontWeight.w600, color: Colors.black),
                       //MyText(text: "\$. ${cartProvider.cartResponse!.cart.totalPrice}",size: 12.sp,fontWeight: FontWeight.w600,),
 
 
@@ -286,7 +308,9 @@ class _CustomerCheckOutViewState extends State<CustomerCheckOutView> {
                       Row(
                         children: [
                           MyText(text: "${AppLocalizations.of(context)!.total} : ",size: 12.sp,fontWeight: FontWeight.w600),
-                          FindCurrency(usdAmount: cartProvider.cartResponse!.cart.discount==0? cartProvider.cartResponse!.cart.totalPrice:cartProvider.cartResponse!.cart.totalPriceAfterDiscount,size: 12.sp,fontWeight: FontWeight.w600,color: primaryColor),
+                          cartProvider.cartResponse != null
+                              ? FindCurrency(usdAmount: cartProvider.cartResponse!.cart.discount==0? cartProvider.cartResponse!.cart.totalPrice:cartProvider.cartResponse!.cart.totalPriceAfterDiscount,size: 12.sp,fontWeight: FontWeight.w600,color: primaryColor)
+                              : const MyText(text: "\$0.00", size: 12, fontWeight: FontWeight.w600, color: Colors.red),
                           // MyText(text: "\$ ${cartProvider.cartResponse!.cart.totalPrice}",size: 12.sp,fontWeight: FontWeight.w600,color: primaryColor,),
 
                         ],
@@ -306,6 +330,10 @@ class _CustomerCheckOutViewState extends State<CustomerCheckOutView> {
                     onTap: (){
                       if(cartProvider.shippingId==null){
                         showSnackbar(context, AppLocalizations.of(context)!.pleaseselectyourdeliveryaddress,color: redColor);
+                        return;
+                      }
+                      if(cartProvider.deliverySlotId==null){
+                        showSnackbar(context, "Please select a delivery slot",color: redColor);
                         return;
                       }
                       Navigator.pushNamed(context, RoutesNames.customerSelectPaymentMethodView);

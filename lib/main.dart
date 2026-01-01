@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sugudeni/providers/auth/auth-provider.dart';
 import 'package:sugudeni/providers/auth/social-provider.dart';
 import 'package:sugudeni/providers/carts/cart-provider.dart';
+import 'package:sugudeni/providers/wishlist-provider.dart';
 import 'package:sugudeni/providers/category/category-provider.dart';
 import 'package:sugudeni/providers/chatSocketProvider/chat-socket-provider.dart';
 import 'package:sugudeni/providers/customer-chat-add-doc-provider.dart';
@@ -104,6 +105,7 @@ class MyApp extends StatelessWidget {
       ChangeNotifierProvider(create: (_)=>SellerInActiveTabProductProvider()),
       ChangeNotifierProvider(create: (_)=>ChatSocketProvider()),
       ChangeNotifierProvider(create: (_)=>CartProvider()),
+      ChangeNotifierProvider(create: (_)=>WishlistProvider()),
       ChangeNotifierProvider(create: (_)=>CustomerFetchProductProvider()),
       ChangeNotifierProvider(create: (_)=>UserProfileProvider()),
       ChangeNotifierProvider(create: (_)=>SellerReviewProvider()),
