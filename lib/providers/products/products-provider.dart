@@ -325,7 +325,7 @@ class ProductsProvider extends ChangeNotifier{
 
         loadingProvider.setLoading(false);
         if (context.mounted) {
-          //clearResources();
+          clearResources();
           showSnackbar(context, AppLocalizations.of(context)!.youproductwasaddedsuccessfully, color: greenColor);
           resetLoading();
         }
@@ -473,7 +473,7 @@ class ProductsProvider extends ChangeNotifier{
 
         loadingProvider.setLoading(false);
         if (context.mounted) {
-          //clearResources();
+          clearResources();
           showSnackbar(context, AppLocalizations.of(context)!.youproductwasaddedsuccessfully, color: greenColor);
          resetLoading();
         }

@@ -284,6 +284,7 @@ class _SellerAddProductViewState extends State<SellerAddProductView> {
                     10.height,
                     Consumer<ProductsProvider>(builder: (context,provider,child){
                       return provider.categoryId==null? const SizedBox():  FutureBuilder(
+                          key: ValueKey('category_${provider.categoryId}'),
                           future: CategoryRepository.allCategory(context),
                           builder: (context,snapshot){
                             if(snapshot.connectionState==ConnectionState.waiting){
@@ -303,6 +304,7 @@ class _SellerAddProductViewState extends State<SellerAddProductView> {
                               };
                             }).toList();
                             return  FutureBuilder(
+                                key: ValueKey('subcategory_${provider.categoryId}'),
                                 future: CategoryRepository.allSubCategory(provider.categoryId!, context),
                                 builder: (context,subSnapshot){
                                   if(subSnapshot.connectionState==ConnectionState.waiting){
@@ -394,8 +396,8 @@ class _SellerAddProductViewState extends State<SellerAddProductView> {
                                                   return;
                                                 }
                                                 categoryProvider.addSubCategory(provider.categoryId!, context).then((v) {
-                                                  // Refresh the FutureBuilder by triggering setState
-                                                  setState(() {});
+                                                  // Only refresh if needed - the FutureBuilder will rebuild automatically
+                                                  // Don't call setState here to prevent flicker
                                                 });
                                               },
                                             );
