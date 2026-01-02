@@ -3,6 +3,7 @@ import 'package:animated_notch_bottom_bar/animated_notch_bottom_bar/animated_not
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
+import 'package:sugudeni/providers/bottom_navigation_provider.dart';
 import 'package:sugudeni/providers/chatSocketProvider/chat-socket-provider.dart';
 import 'package:sugudeni/utils/constants/fonts.dart';
 import 'package:sugudeni/view/customer/account/customer-account-view.dart';
@@ -24,18 +25,20 @@ class CustomerBottomNavBar extends StatefulWidget {
 
 class _CustomerBottomNavBarState extends State<CustomerBottomNavBar> {
   /// Controller to handle bottom nav bar and also handles initial page
-  final NotchBottomBarController _controller = NotchBottomBarController(index: 0);
-  
-  int _currentIndex = 0;
+  late NotchBottomBarController _controller;
 
   int maxCount = 4;
+
   @override
   void initState() {
     // TODO: implement initState
     context.read<ChatSocketProvider>().connectSocketInInitial(context);
 
-    super.initState();
+    // Initialize controller with provider's current index
+    final bottomNavProvider = context.read<BottomNavigationProvider>();
+    _controller = NotchBottomBarController(index: bottomNavProvider.currentIndex);
 
+    super.initState();
   }
   @override
   void dispose() {
@@ -52,14 +55,18 @@ class _CustomerBottomNavBarState extends State<CustomerBottomNavBar> {
       const CustomerCategoriesView(),
       const CustomerCartView(),
       const CustomerAccountView()
-
-
     ];
-    return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: bottomBarPages,
-      ),
+
+    return Consumer<BottomNavigationProvider>(
+      builder: (context, bottomNavProvider, child) {
+        // Update controller when provider index changes
+        _controller = NotchBottomBarController(index: bottomNavProvider.currentIndex);
+
+        return Scaffold(
+          body: IndexedStack(
+            index: bottomNavProvider.currentIndex,
+            children: bottomBarPages,
+          ),
       extendBody: true,
       bottomNavigationBar: (bottomBarPages.length <= maxCount)
           ? AnimatedNotchBottomBar(
@@ -111,13 +118,13 @@ class _CustomerBottomNavBarState extends State<CustomerBottomNavBar> {
 
         ],
         onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
+          context.read<BottomNavigationProvider>().setIndex(index);
         },
         kIconSize: 18.sp,
       )
           : null,
+        );
+      },
     );
   }
 }

@@ -225,7 +225,7 @@ class ShopNowProductGridTow extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Container(
-                          height: 130.h,
+                          height: 110.h,
                           // width: 108.w,
                           decoration:  BoxDecoration(
                               image: DecorationImage(image: NetworkImage(

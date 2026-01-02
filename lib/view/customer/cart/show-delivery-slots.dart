@@ -77,22 +77,11 @@ void showDeliverySlots(BuildContext context, bool isComFromOrderAgain) {
                           return GestureDetector(
                         onTap: () async {
                           provider.setDeliveryId(slotsData.id, slotsData);
-
-                          // Close the modal - try both approaches to ensure it closes
-                          try {
                             Navigator.of(context).pop();
-                          } catch (e) {
-                            try {
-                              Navigator.of(context, rootNavigator: true).pop();
-                            } catch (e2) {
-                              // Modal might already be closed or context invalid
-                            }
-                          }
+
 
                           if (!isComFromOrderAgain) {
                             // Wait for modal animation to complete
-                            await Future.delayed(const Duration(milliseconds: 400));
-
                             // Navigate to checkout view
                             if (context.mounted) {
                               Navigator.of(context).pushNamed(RoutesNames.customerCheckoutView);

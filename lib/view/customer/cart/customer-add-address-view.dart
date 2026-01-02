@@ -163,13 +163,10 @@ class _CustomerAddAddressViewState extends State<CustomerAddAddressView> {
       ),
       body: Consumer<CustomerAddressProvider>(
           builder: (context,provider,child){
-        return Column(
-          children: [
-            Expanded(
-              flex: 1,
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
+        return SingleChildScrollView(
+          child: Column(
+            children: [
+                
                     SymmetricPadding(
                       child: Column(
                         spacing: 10.h,
@@ -200,7 +197,7 @@ class _CustomerAddAddressViewState extends State<CustomerAddAddressView> {
                           text(title: AppLocalizations.of(context)!.regioncitydistrict),
                           CustomTextFiled(
                             controller: provider.cityController,
-
+          
                             borderRadius: 10.r,
                             isBorder: true,
                             isShowPrefixIcon: false,
@@ -210,7 +207,7 @@ class _CustomerAddAddressViewState extends State<CustomerAddAddressView> {
                           ),  text(title: AppLocalizations.of(context)!.country),
                           CustomTextFiled(
                             controller: provider.countryController,
-
+          
                             borderRadius: 10.r,
                             isBorder: true,
                             isShowPrefixIcon: false,
@@ -221,7 +218,7 @@ class _CustomerAddAddressViewState extends State<CustomerAddAddressView> {
                           text(title: AppLocalizations.of(context)!.address),
                           CustomTextFiled(
                             controller: provider.addressController,
-
+          
                             borderRadius: 10.r,
                             isBorder: true,
                             isShowPrefixIcon: false,
@@ -236,7 +233,7 @@ class _CustomerAddAddressViewState extends State<CustomerAddAddressView> {
                           ),
                           CustomTextFiled(
                             controller: provider.landMarkController,
-
+          
                             borderRadius: 10.r,
                             isBorder: true,
                             isShowPrefixIcon: false,
@@ -270,21 +267,16 @@ class _CustomerAddAddressViewState extends State<CustomerAddAddressView> {
                           //     ),
                           //   ],
                           // ),
-
-
+          
+          
                         ],
                       ),
                     ),
-
-
-                  ],
-                ),
-              ),
-            ),
-            Expanded(
-              flex: 1,
-              child: Column(
-                children: [
+          
+          
+          
+            
+              
                   SymmetricPadding(
                     child: Row(
                       spacing: 5.w,
@@ -319,7 +311,7 @@ class _CustomerAddAddressViewState extends State<CustomerAddAddressView> {
                               ),
                             },
                             onTap:  provider.onMapTapped,
-
+          
                             onCameraMove:  provider.onCameraMove, // Listen for map movement
                             onCameraIdle:provider.onCameraIdle, // Called when user stops moving map/ Detect user tap on map
                           ),
@@ -329,7 +321,7 @@ class _CustomerAddAddressViewState extends State<CustomerAddAddressView> {
                     padding: const EdgeInsets.all(8.0),
                     child: Text("${AppLocalizations.of(context)!.address}: ${ provider.selectedAddress}"),
                   ),
-
+          
                   // Container(
                   //   height: 143.h,
                   //   width: double.infinity,
@@ -342,16 +334,15 @@ class _CustomerAddAddressViewState extends State<CustomerAddAddressView> {
                     child: RoundButton(
                         isLoad: true,
                         title:provider.isUpdate==true?AppLocalizations.of(context)!.update: AppLocalizations.of(context)!.save, onTap: (){
-
+          
                       provider.isUpdate==true?  provider.updateAddress(context): provider.addAddress(context);
-
+          
                     }),
                   ),
                   10.height,
                 ],
-              ),
-            )
-          ],
+            
+          ),
         );
       }),
     );

@@ -5,8 +5,6 @@ import 'package:sugudeni/repositories/orders/customer-order-repository.dart';
 import 'package:sugudeni/utils/customWidgets/my-text.dart';
 import 'package:sugudeni/utils/customWidgets/symetric-padding.dart';
 import 'package:sugudeni/utils/extensions/sizebox.dart';
-import 'package:sugudeni/utils/global-functions.dart';
-import 'package:sugudeni/view/customer/cart/show-delivery-slots.dart';
 import 'package:sugudeni/view/customer/home/order-again-widget.dart';
 
 import '../../../l10n/app_localizations.dart';
@@ -35,7 +33,7 @@ class OrderAgainHome extends StatelessWidget {
             );
           }
           var data=snapshot.data;
-          if(data!.orders.isEmpty){
+          if(data == null || data.orders.isEmpty){
             return const SizedBox();
           }
           return   Column(
@@ -47,7 +45,7 @@ class OrderAgainHome extends StatelessWidget {
                 height: 220.h,
                 child: ListView.builder(
                     scrollDirection: Axis.horizontal,
-                    itemCount: data!.orders.length,
+                    itemCount: data.orders.length,
                     itemBuilder: (context,index){
                       var orderData=data.orders[index];
                       return   OrderAgain(
@@ -105,6 +103,7 @@ class OrderAgainHome extends StatelessWidget {
                                                     return GestureDetector(
                                                       onTap: () {
                                                         provider.setDeliveryId(slotsData.id, slotsData);
+                                                        Navigator.of(context).pop(); // Close the bottom sheet
                                                         Navigator.push(context, MaterialPageRoute(builder: (context)=>CustomerOrderDetailView(orderSellerResponse: orderData,isOrderAgain: true,)));
 
                                                       },
@@ -118,7 +117,7 @@ class OrderAgainHome extends StatelessWidget {
                                                           ),
                                                         ),
                                                         alignment: Alignment.center,
-                                                        padding: const EdgeInsets.symmetric(vertical: 10),
+                                                        padding: const EdgeInsets.symmetric(vertical: 5),
                                                         child: Column(
                                                           mainAxisAlignment: MainAxisAlignment.center,
                                                           children: [

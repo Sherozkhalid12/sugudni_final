@@ -286,6 +286,8 @@ class CustomerAddressProvider extends ChangeNotifier{
         showSnackbar(context, AppLocalizations.of(context)!.shippingaddressaddedsuccessfully,color: greenColor);
         clearResources();
         loadingProvider.setLoading(false);
+        fetchUserData(context); // Refresh address list
+        Navigator.of(context).pop(); // Go back to address selection screen
       }).onError((e,err){
         loadingProvider.setLoading(false);
       });
@@ -321,6 +323,8 @@ class CustomerAddressProvider extends ChangeNotifier{
       await UserRepository.updateCustomerAddress(addressId!,model, context).then((v){
         showSnackbar(context, AppLocalizations.of(context)!.shippingaddressupdatedsuccessfully,color: greenColor);
         loadingProvider.setLoading(false);
+        fetchUserData(context); // Refresh address list
+        Navigator.of(context).pop(); // Go back to address selection screen
       }).onError((e,err){
         loadingProvider.setLoading(false);
       });

@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sugudeni/providers/auth/auth-provider.dart';
 import 'package:sugudeni/providers/auth/social-provider.dart';
+import 'package:sugudeni/providers/bottom_navigation_provider.dart';
 import 'package:sugudeni/providers/carts/cart-provider.dart';
 import 'package:sugudeni/providers/wishlist-provider.dart';
 import 'package:sugudeni/providers/category/category-provider.dart';
@@ -119,6 +120,7 @@ class MyApp extends StatelessWidget {
       ChangeNotifierProvider(create: (_)=>SellerPendingQCTabProductProvider()),
       ChangeNotifierProvider(create: (_)=>SellerViolationTabProductProvider()),
       ChangeNotifierProvider(create: (_)=>SellerOutOfStockTabProductProvider()),
+      ChangeNotifierProvider(create: (_)=>BottomNavigationProvider()),
       ChangeNotifierProvider(create: (_)=>ChangeLanguageProvider()),
       ChangeNotifierProvider(create: (_)=>ResetPasswordProvider()),
     ],child: ScreenUtilInit(

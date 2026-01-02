@@ -177,9 +177,9 @@ class _CustomerAllProductsByCategoryViewState extends State<CustomerAllProductsB
                   physics: const AlwaysScrollableScrollPhysics(),
                   gridDelegate:  const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2, // Number of columns
-                    crossAxisSpacing: 2, // Space between columns
-                    mainAxisSpacing: 8, // Space between rows
-                    childAspectRatio:0.8, // Adjusts the size ratio of grid items
+                    crossAxisSpacing: 8, // Space between columns
+                    mainAxisSpacing: 12, // Space between rows
+                    childAspectRatio:0.85, // Adjusts the size ratio of grid items
                   ),
                   itemCount: provider.filteredProductList.length, // Number of items
                   itemBuilder: (context, index) {
@@ -190,9 +190,8 @@ class _CustomerAllProductsByCategoryViewState extends State<CustomerAllProductsB
                         Navigator.pushNamed(context, RoutesNames.customerProductDetailView,arguments: d);
                       },
                       child: Container(
-                        // height: 204.h,
-                        margin: EdgeInsets.symmetric(horizontal: 8.w,vertical: 10),
-                        width: 108.w,
+                        margin: EdgeInsets.symmetric(horizontal: 4.w,vertical: 3.h),
+                        width: double.infinity,
                         decoration: BoxDecoration(
                             color: whiteColor,
                             borderRadius: BorderRadius.circular(4.r),
@@ -209,7 +208,7 @@ class _CustomerAllProductsByCategoryViewState extends State<CustomerAllProductsB
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Container(
-                              height: 130.h,
+                              height: 110.h,
                               // width: 108.w,
                               decoration:  BoxDecoration(
                                   image: DecorationImage(image: NetworkImage(
@@ -266,28 +265,42 @@ class _CustomerAllProductsByCategoryViewState extends State<CustomerAllProductsB
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  MyText(text: d.title,size:10.sp,fontWeight: FontWeight.w600,),
-                                  MyText(text: d.size,size:9.sp,fontWeight: FontWeight.w600,color: textPrimaryColor.withOpacity(0.7),),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: MyText(text: d.title,size:10.sp,fontWeight: FontWeight.w600,maxLine: 1, overflow: TextOverflow.ellipsis,),
+                                  ),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: MyText(text: d.size,size:9.sp,fontWeight: FontWeight.w600,color: textPrimaryColor.withOpacity(0.7),maxLine: 1, overflow: TextOverflow.ellipsis,),
+                                  ),
                                   Row(
                                     children: [
-                                      d.saleDiscount==0?FindCurrency(usdAmount: d.price??1.0):FindCurrency(usdAmount: d.priceAfterDiscount??1.0),
-                                      //MyText(text:d.saleDiscount==0? "\$ ${d.price}":"\$ ${d.priceAfterDiscount}",size:10.sp,fontWeight: FontWeight.w600,color: appPinkColor,),
+                                      d.saleDiscount==0?FindCurrency(usdAmount: d.price.toDouble()):FindCurrency(usdAmount: d.priceAfterDiscount.toDouble()),
                                       5.width,
                                       d.saleDiscount==0? const SizedBox():
-                                      FindCurrency(usdAmount: d.price??85.25,color: greyColor,textDecoration: TextDecoration.lineThrough),
+                                      FindCurrency(usdAmount: d.price.toDouble(),color: greyColor,textDecoration: TextDecoration.lineThrough),
                                     ],
                                   ),
                                   3.height,
-                                  Row(
-                                    crossAxisAlignment: CrossAxisAlignment.center,
-                                    children: [
-                                      Image.asset(AppAssets.starIcon,scale: 4,),
-                                      1.width,
-                                      MyText(text: " ${d.ratingAvg}",size:10.sp,fontWeight: FontWeight.w600,color: greyColor,),
-                                      MyText(text: "( ${d.ratingCount})",size:8.sp,fontWeight: FontWeight.w600,color: greyColor,),
-                                      MyText(text: " | ${d.sold} ${AppLocalizations.of(context)!.sold}",size:8.sp,fontWeight: FontWeight.w600,color: greyColor,),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: Row(
+                                      crossAxisAlignment: CrossAxisAlignment.center,
+                                      children: [
+                                        Image.asset(AppAssets.starIcon,scale: 4,),
+                                        1.width,
+                                        Expanded(
+                                          child: MyText(text: " ${d.ratingAvg}",size:10.sp,fontWeight: FontWeight.w600,color: greyColor,),
+                                        ),
+                                        Expanded(
+                                          child: MyText(text: "( ${d.ratingCount})",size:8.sp,fontWeight: FontWeight.w600,color: greyColor,),
+                                        ),
+                                        Expanded(
+                                          child: MyText(text: " | ${d.sold} ${AppLocalizations.of(context)!.sold}",size:8.sp,fontWeight: FontWeight.w600,color: greyColor,),
+                                        ),
 
-                                    ],
+                                      ],
+                                    ),
                                   ),
                                 ],
                               ),
@@ -334,7 +347,6 @@ class _CustomerAllProductsByCategoryViewState extends State<CustomerAllProductsB
 }
 void _showFilterDialog(BuildContext context) {
   final filterProvider=Provider.of<CustomerFetchProductByCategoryProvider>(context,listen: false);
-  RangeValues selectedRange = RangeValues(filterProvider.minPrice, filterProvider.maxPrice);
 
   showDialog(
     context: context,
