@@ -68,116 +68,105 @@ class _SellerMyProductsViewState extends State<SellerMyProductsView> {
         ),
         body: Column(
           children: [
-            SymmetricPadding(child: Column(
-              children: [
-                 SearchProductTextField(
-                   controller: searchController,
-                   onChange: (v){
-                     sellerActiveTab.changeQuery(v!);
-                   },
-
-                 ),
-                10.height,
-                10.height,
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Consumer<SellerProductsTabProvider>(
-                          builder: (context, provider, child) {
-                            return SellerTabBarWidget(
-                                onPressed: () {
-                                  context.read<SellerActiveTabProductProvider>().checkMoreData();
-                                  provider.changeProductTab(SellerProductTabs.active);
-                                },                            width: 60.w,
-
-                                selected:
-                                provider.selectedProductTab == SellerProductTabs.active,
-                                title: AppLocalizations.of(context)!.active);
-                          }),
-                      Consumer<SellerProductsTabProvider>(
-                          builder: (context, provider, child) {
-                            return SellerTabBarWidget(
-                                onPressed: () {
-                                  context.read<SellerInActiveTabProductProvider>().checkMoreData();
-
-                                  provider.changeProductTab(SellerProductTabs.inActive);
-                                },
-                                width: 60.w,
-                                selected:
-                                provider.selectedProductTab == SellerProductTabs.inActive,
-                                title: AppLocalizations.of(context)!.inactive);
-                          }),
-                      Consumer<SellerProductsTabProvider>(
-                          builder: (context, provider, child) {
-                            return SellerTabBarWidget(
-                                onPressed: () {
-                                  context.read<SellerActiveTabProductProvider>().checkMoreData();
-
-                                  provider.changeProductTab(SellerProductTabs.draft);
-                                },
-                                selected:
-                                provider.selectedProductTab == SellerProductTabs.draft,
-                                title: AppLocalizations.of(context)!.draft);
-                          }),
-
-                      Consumer<SellerProductsTabProvider>(
-                          builder: (context, provider, child) {
-                            return SellerTabBarWidget(
-                                onPressed: () {
-                                  context.read<SellerActiveTabProductProvider>().checkMoreData();
-
-                                  provider.changeProductTab(SellerProductTabs.pendingQc);
-                                },
-                                width: 70.w,
-
-
-                                selected:
-                                provider.selectedProductTab == SellerProductTabs.pendingQc,
-                                title: AppLocalizations.of(context)!.pendingqc);
-                          }),
-
-                      Consumer<SellerProductsTabProvider>(
-                          builder: (context, provider, child) {
-                            return SellerTabBarWidget(
-                                onPressed: () {
-                                  context.read<SellerActiveTabProductProvider>().checkMoreData();
-
-                                  provider.changeProductTab(SellerProductTabs.violation);
-                                },
-                                width: 60.w,
-
-                                selected:
-                                provider.selectedProductTab == SellerProductTabs.violation,
-                                title: AppLocalizations.of(context)!.violation);
-                          }),
-                      Consumer<SellerProductsTabProvider>(
-                          builder: (context, provider, child) {
-                            return SellerTabBarWidget(
-                                onPressed: () {
-                                  context.read<SellerActiveTabProductProvider>().checkMoreData();
-
-                                  provider.changeProductTab(SellerProductTabs.outOfStock);
-                                },
-                                width: 60.w,
-
-                                selected:
-                                provider.selectedProductTab == SellerProductTabs.outOfStock,
-                                title: AppLocalizations.of(context)!.outofstock);
-                          }),
-
-                    ],
+            SymmetricPadding(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SearchProductTextField(
+                    controller: searchController,
+                    onChange: (v) {
+                      sellerActiveTab.changeQuery(v!);
+                    },
                   ),
-                ),
-              ],
-            )),
-            10.height,
+                  10.height,
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Consumer<SellerProductsTabProvider>(
+                            builder: (context, provider, child) {
+                              return SellerTabBarWidget(
+                                  onPressed: () {
+                                    context.read<SellerActiveTabProductProvider>().checkMoreData();
+                                    provider.changeProductTab(SellerProductTabs.active);
+                                  },
+                                  width: 60.w,
+                                  selected:
+                                  provider.selectedProductTab == SellerProductTabs.active,
+                                  title: AppLocalizations.of(context)!.active);
+                            }),
+                        Consumer<SellerProductsTabProvider>(
+                            builder: (context, provider, child) {
+                              return SellerTabBarWidget(
+                                  onPressed: () {
+                                    context.read<SellerInActiveTabProductProvider>().checkMoreData();
+                                    provider.changeProductTab(SellerProductTabs.inActive);
+                                  },
+                                  width: 60.w,
+                                  selected:
+                                  provider.selectedProductTab == SellerProductTabs.inActive,
+                                  title: AppLocalizations.of(context)!.inactive);
+                            }),
+                        Consumer<SellerProductsTabProvider>(
+                            builder: (context, provider, child) {
+                              return SellerTabBarWidget(
+                                  onPressed: () {
+                                    context.read<SellerActiveTabProductProvider>().checkMoreData();
+                                    provider.changeProductTab(SellerProductTabs.draft);
+                                  },
+                                  selected:
+                                  provider.selectedProductTab == SellerProductTabs.draft,
+                                  title: AppLocalizations.of(context)!.draft);
+                            }),
+                        Consumer<SellerProductsTabProvider>(
+                            builder: (context, provider, child) {
+                              return SellerTabBarWidget(
+                                  onPressed: () {
+                                    context.read<SellerActiveTabProductProvider>().checkMoreData();
+                                    provider.changeProductTab(SellerProductTabs.pendingQc);
+                                  },
+                                  width: 70.w,
+                                  selected:
+                                  provider.selectedProductTab == SellerProductTabs.pendingQc,
+                                  title: AppLocalizations.of(context)!.pendingqc);
+                            }),
+                        Consumer<SellerProductsTabProvider>(
+                            builder: (context, provider, child) {
+                              return SellerTabBarWidget(
+                                  onPressed: () {
+                                    context.read<SellerActiveTabProductProvider>().checkMoreData();
+                                    provider.changeProductTab(SellerProductTabs.violation);
+                                  },
+                                  width: 60.w,
+                                  selected:
+                                  provider.selectedProductTab == SellerProductTabs.violation,
+                                  title: AppLocalizations.of(context)!.violation);
+                            }),
+                        Consumer<SellerProductsTabProvider>(
+                            builder: (context, provider, child) {
+                              return SellerTabBarWidget(
+                                  onPressed: () {
+                                    context.read<SellerActiveTabProductProvider>().checkMoreData();
+                                    provider.changeProductTab(SellerProductTabs.outOfStock);
+                                  },
+                                  width: 60.w,
+                                  selected:
+                                  provider.selectedProductTab == SellerProductTabs.outOfStock,
+                                  title: AppLocalizations.of(context)!.outofstock);
+                            }),
+                      ],
+                    ),
+                  ),
+                  10.height,
+                ],
+              ),
+            ),
             Expanded(
               child: Consumer<SellerProductsTabProvider>(
-                  builder: (context,provider,child){
-                return provider.showTab();
-              }),
+                  builder: (context, provider, child) {
+                    return provider.showTab();
+                  }),
             ),
           ],
         ),

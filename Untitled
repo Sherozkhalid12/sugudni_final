@@ -1,0 +1,18 @@
+
+The specific RenderFlex in question is: RenderFlex#043c8 relayoutBoundary=up1 OVERFLOWING:
+  needs compositing
+  creator: Column ← KeyedSubtree-[GlobalKey#1ee11] ← _BodyBuilder ← MediaQuery ←
+    LayoutId-[<_ScaffoldSlot.body>] ← CustomMultiChildLayout ← _ActionsScope ← Actions ←
+    AnimatedBuilder ← DefaultTextStyle ← AnimatedDefaultTextStyle ← _InkFeatures-[GlobalKey#44972 ink
+    renderer] ← ⋯
+  parentData: offset=Offset(0.0, 150.1); id=_ScaffoldSlot.body (can use size)
+  constraints: BoxConstraints(0.0<=w<=448.0, 0.0<=h<=847.3)
+  size: Size(448.0, 847.3)
+  direction: vertical
+  mainAxisAlignment: start
+  mainAxisSize: max
+  crossAxisAlignment: center
+  verticalDirection: down
+  spacing: 0.0
+◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤
+════════════════════════════════════════════════════════════════════════════════════════════════════

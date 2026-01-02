@@ -267,10 +267,16 @@ class _SellerAddProductViewState extends State<SellerAddProductView> {
                               onChange: (value){
                                 customPrint("Value================================$value");
                                 provider.changeCategoryList(value!);
-                                productProvider.setCategoryId(extractedList
-                                    .firstWhere((category) => category['name'] == value)['id']!);
-
-
+                                final newCategoryId = extractedList
+                                    .firstWhere((category) => category['name'] == value)['id']!;
+                                
+                                // Only clear subcategory if category actually changed
+                                if (productProvider.categoryId != newCategoryId) {
+                                  productProvider.changeSubCategoryList('');
+                                  productProvider.subCategoryId = null;
+                                  productProvider.notifyListeners();
+                                }
+                                productProvider.setCategoryId(newCategoryId);
                               },
                             );
                           });

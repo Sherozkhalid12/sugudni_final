@@ -43,9 +43,9 @@ class _SellerMyCategoriesViewState extends State<SellerMyCategoriesView> {
   Widget build(BuildContext context) {
     final categoryProvider=Provider.of<CategoryProvider>(context,listen: false);
     return PopScope(
-       onPopInvokedWithResult: (didPop, result) {
-         categoryProvider.clearQuery();
-       },
+      onPopInvokedWithResult: (didPop, result) {
+        categoryProvider.clearQuery();
+      },
       child: Scaffold(
         resizeToAvoidBottomInset: false,
         appBar: AppBar(
@@ -58,10 +58,10 @@ class _SellerMyCategoriesViewState extends State<SellerMyCategoriesView> {
               RoundIconButton(onPressed: (){
                 Navigator.pop(context);
               },iconUrl: AppAssets.arrowBack),
-               AppBarTitleWidget(title: AppLocalizations.of(context)!.mycategories),
+              AppBarTitleWidget(title: AppLocalizations.of(context)!.mycategories),
               RoundIconButton(onPressed: (){
-        context.read<CategoryProvider>().clearResources();
-          Navigator.pushNamed(context, RoutesNames.sellerAddCategoryView);
+                context.read<CategoryProvider>().clearResources();
+                Navigator.pushNamed(context, RoutesNames.sellerAddCategoryView);
               },iconUrl: AppAssets.addIconT),
             ],
           ),
@@ -74,12 +74,12 @@ class _SellerMyCategoriesViewState extends State<SellerMyCategoriesView> {
               children: [
                 SymmetricPadding(child: Column(
                   children: [
-                     SearchProductTextField(
-                       hintText: AppLocalizations.of(context)!.searchyoucategory,
-                       onChange: (v){
-                         provider.changeQuery(v!);
-                       },
-                       controller: categoryProvider.nameController,),
+                    SearchProductTextField(
+                      hintText: AppLocalizations.of(context)!.searchyoucategory,
+                      onChange: (v){
+                        provider.changeQuery(v!);
+                      },
+                      controller: categoryProvider.nameController,),
                     10.height,
 
                   ],
@@ -289,7 +289,6 @@ class _SellerMyCategoriesViewState extends State<SellerMyCategoriesView> {
                                                           });
                                                         },
                                                         onNo: (){
-
                                                         }
                                                     );
                                                   }),

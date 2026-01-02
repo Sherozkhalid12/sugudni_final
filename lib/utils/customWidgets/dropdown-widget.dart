@@ -40,10 +40,8 @@ class DropDownWidget extends StatelessWidget {
         onChanged: onChange,
         buttonStyleData:  ButtonStyleData(
           decoration: BoxDecoration(
-
             color: whiteColor,
             borderRadius: BorderRadius.circular(5.r),
-
           ),
           padding: EdgeInsets.symmetric(horizontal: 10.sp),
           height: 46.h,
@@ -51,9 +49,28 @@ class DropDownWidget extends StatelessWidget {
         ),
         menuItemStyleData:  MenuItemStyleData(
           height: 40.h,
-
-
         ),
+        dropdownStyleData: DropdownStyleData(
+          maxHeight: 300.h,
+          decoration: BoxDecoration(
+            color: whiteColor,
+            borderRadius: BorderRadius.circular(8.r),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 10,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          offset: const Offset(0, -5),
+          scrollbarTheme: ScrollbarThemeData(
+            radius: Radius.circular(4.r),
+            thickness: MaterialStateProperty.all(4),
+            thumbVisibility: MaterialStateProperty.all(true),
+          ),
+        ),
+        openWithLongPress: false,
       ),
     );
   }

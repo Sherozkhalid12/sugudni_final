@@ -94,7 +94,7 @@ class ProductsProvider extends ChangeNotifier{
     customPrint("Category id ==========================$id");
     categoryId=id;
   }
-  setSubCategoryId(String id){
+  setSubCategoryId(String? id){
     customPrint("SubCategory id ==========================$id");
     subCategoryId=id;
     customPrint("SubCategory id after setting ==========================$subCategoryId");
@@ -972,15 +972,37 @@ class ProductsProvider extends ChangeNotifier{
 
   setValues(Product data){
     productTitleController.text=data.title;
-  weightsList.contains(data.weight)? data.weight:'100 grams';
- categoryList.contains(data.color)? data.color:'Black';
-  sizeList.contains(data.size)?data.size:'Small';
+    
+    // Set weight, color, size - use actual values from product
+    weight = data.weight.isNotEmpty ? data.weight : null;
+    color = data.color.isNotEmpty ? data.color : null;
+    size = data.size.isNotEmpty ? data.size : null;
+    
     discriptionController.text=data.description;
     quantityController.text=data.quantity.toString();
     priceController.text=data.price.toString();
-    categoryId=data.category!.id;
-    subCategoryId=data.subcategory!.id;
-
+    
+    // Set category
+    if(data.category != null) {
+      categoryId = data.category!.id;
+      category = data.category!.name;
+    }
+    
+    // Set subcategory - CRITICAL: Set both ID and name
+    if(data.subcategory != null) {
+      subCategoryId = data.subcategory!.id;
+      subCategory = data.subcategory!.name;
+      customPrint("========== SET VALUES - SUBCATEGORY ==========");
+      customPrint("SubCategory ID: ${data.subcategory!.id}");
+      customPrint("SubCategory Name: ${data.subcategory!.name}");
+      customPrint("Provider SubCategory ID: $subCategoryId");
+      customPrint("Provider SubCategory Name: $subCategory");
+      customPrint("===========================================");
+    } else {
+      customPrint("WARNING: Product has no subcategory!");
+    }
+    
+    notifyListeners();
   }
 
   clearResources(){
