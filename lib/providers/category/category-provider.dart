@@ -289,10 +289,12 @@ class CategoryProvider extends ChangeNotifier{
 
         loadingProvider.setLoading(false);
         if(context.mounted){
-          showSnackbar(context, AppLocalizations.of(context)!.subcategorycreatedsuccessfully,color: greenColor);
           subcategoryNameController.clear();
-          Navigator.pop(context);
-
+          // Close only the dialog, not the entire screen
+          if (Navigator.canPop(context)) {
+            Navigator.pop(context);
+          }
+          showSnackbar(context, AppLocalizations.of(context)!.subcategorycreatedsuccessfully,color: greenColor);
         }
       }).onError((err,e){
         loadingProvider.setLoading(false);

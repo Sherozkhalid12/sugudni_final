@@ -31,11 +31,30 @@ import '../messages/seller-message-detailed-screen.dart';
 import '../products/seller-my-products-view.dart';
 import '../../../models/orders/GetAllOrderSellerResponseModel.dart';
 
-class SellerHomeView extends StatelessWidget {
+class SellerHomeView extends StatefulWidget {
   const SellerHomeView({super.key});
 
   @override
+  State<SellerHomeView> createState() => _SellerHomeViewState();
+}
+
+class _SellerHomeViewState extends State<SellerHomeView> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  // Cache the seller data future
+  late Future<dynamic> _sellerDataFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    // Cache the future to prevent reloading on every build
+    _sellerDataFuture = UserRepository.getSellerData(context);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    super.build(context); // Required for AutomaticKeepAliveClientMixin
 
     return Scaffold(
       appBar: AppBar(
@@ -57,7 +76,7 @@ class SellerHomeView extends StatelessWidget {
         child: SymmetricPadding(
           child: Column(
             children: [
-              const SellerInfoWidget(isForProfile: true,),
+              SellerInfoWidget(isForProfile: true, cachedFuture: _sellerDataFuture,),
               20.height,
              Consumer<ShippingProvider>(
                  builder: (context,provider,child){
@@ -252,15 +271,16 @@ class SellerHomeView extends StatelessWidget {
 class SellerInfoWidget extends StatelessWidget {
   final bool? isShowLastIcon;
   final bool? isForProfile;
+  final Future<dynamic>? cachedFuture;
 
-  const SellerInfoWidget({super.key, this.isShowLastIcon=false, this.isForProfile=false});
+  const SellerInfoWidget({super.key, this.isShowLastIcon=false, this.isForProfile=false, this.cachedFuture});
 
   @override
   Widget build(BuildContext context) {
     final provider=Provider.of<ImagePickerProviders>(context,listen: false);
 
     return FutureBuilder(
-        future: UserRepository.getSellerData(context),
+        future: cachedFuture ?? UserRepository.getSellerData(context),
         builder: (context,snapshot){
           if(snapshot.connectionState==ConnectionState.waiting){
             return ShimmerEffects().shimmerForChats();
