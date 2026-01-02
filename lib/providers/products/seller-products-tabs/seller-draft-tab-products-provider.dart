@@ -93,6 +93,11 @@ class SellerDraftTabProductProvider extends ChangeNotifier {
     _filterProducts(); // Reapply filter after removal
     notifyListeners();
   }
+  
+  /// Remove Product (alias for consistency)
+  void removeProduct(String productId) {
+    removeProductById(productId);
+  }
 
   /// Update Product Price
   void updateProductPrice(String productId, double newPrice) {

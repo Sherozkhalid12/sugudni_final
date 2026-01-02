@@ -21,6 +21,7 @@ import 'package:sugudeni/utils/global-functions.dart';
 import 'package:sugudeni/utils/sharePreference/save-user-token.dart';
 import 'package:sugudeni/utils/shimmer/shimmer-effects.dart';
 import 'package:sugudeni/utils/customWidgets/shimmer-widgets.dart';
+import 'package:sugudeni/utils/customWidgets/empty-state-widget.dart';
 import 'package:sugudeni/view/seller/messages/seller-message-detailed-screen.dart';
 import 'package:sugudeni/view/seller/orders/seller-specific-order-detail-view.dart';
 
@@ -50,17 +51,22 @@ class SellerFailedOrderTab extends StatelessWidget {
           }
           var data=snapshot.data;
           if (data == null || data.orders == null) {
-            return  Center(child: MyText(text: AppLocalizations.of(context)!.noordersfound));
+            return EmptyStateWidget(
+              title: 'No Failed Orders',
+              description: 'Great news! You don\'t have any failed orders. All your orders are processing successfully.',
+              icon: Icons.error_outline,
+            );
           }
           var filteredOrders = data.orders!.where((order) => order.cartItem.isNotEmpty).toList();
           var toShipOrders = filteredOrders.where((order) => order.trackingStatus==DeliveryStatus.failed).toList();
 
-          // // Filter out null products
-          // var filteredOrders = data.orders!.cartItem.where((order) => order.product != null).toList();
-          //
-          // if (filteredOrders.isEmpty) {
-          //   return const Center(child: MyText(text: "No valid products found."));
-          // }
+          if (toShipOrders.isEmpty) {
+            return EmptyStateWidget(
+              title: 'No Failed Orders',
+              description: 'Great news! You don\'t have any failed orders. All your orders are processing successfully.',
+              icon: Icons.error_outline,
+            );
+          }
 
           return Expanded(
               child: ListView.builder(

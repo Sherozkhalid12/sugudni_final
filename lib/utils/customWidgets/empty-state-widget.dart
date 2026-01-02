@@ -5,22 +5,23 @@ import 'package:sugudeni/utils/customWidgets/my-text.dart';
 import 'package:sugudeni/utils/customWidgets/round-button.dart';
 import 'package:sugudeni/utils/extensions/sizebox.dart';
 
+/// Professional empty state widget for consistent empty state handling
 class EmptyStateWidget extends StatelessWidget {
-  final String? title;
-  final String? description;
-  final IconData? icon;
+  final String title;
+  final String description;
+  final IconData icon;
+  final bool showButton;
   final String? buttonText;
   final VoidCallback? onButtonPressed;
-  final bool showButton;
 
   const EmptyStateWidget({
     super.key,
-    this.title,
-    this.description,
-    this.icon,
+    required this.title,
+    required this.description,
+    required this.icon,
+    this.showButton = false,
     this.buttonText,
     this.onButtonPressed,
-    this.showButton = false,
   });
 
   @override
@@ -39,22 +40,21 @@ class EmptyStateWidget extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                icon ?? Icons.inventory_2_outlined,
+                icon,
                 size: 64.sp,
                 color: textPrimaryColor.withOpacity(0.3),
               ),
             ),
             24.height,
             MyText(
-              text: title ?? 'No Products Found',
+              text: title,
               size: 18.sp,
               fontWeight: FontWeight.w600,
               color: textPrimaryColor,
             ),
             12.height,
             MyText(
-              text: description ?? 
-                    'You don\'t have any products in this category yet. Start by adding your first product to get started.',
+              text: description,
               size: 14.sp,
               fontWeight: FontWeight.w400,
               color: textPrimaryColor.withOpacity(0.6),
@@ -66,8 +66,6 @@ class EmptyStateWidget extends StatelessWidget {
                 title: buttonText!,
                 onTap: onButtonPressed!,
                 width: 200.w,
-                height: 45.h,
-                btnTextSize: 14.sp,
               ),
             ],
           ],
@@ -76,6 +74,4 @@ class EmptyStateWidget extends StatelessWidget {
     );
   }
 }
-
-
 

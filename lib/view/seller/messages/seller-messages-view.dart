@@ -16,6 +16,8 @@ import 'package:sugudeni/utils/global-functions.dart';
 import 'package:sugudeni/utils/sharePreference/save-user-token.dart';
 import 'package:sugudeni/utils/shimmer/shimmer-effects.dart';
 import 'package:sugudeni/utils/customWidgets/shimmer-widgets.dart';
+import 'package:sugudeni/utils/customWidgets/empty-state-widget.dart';
+import 'package:sugudeni/utils/customWidgets/spinkit-loader.dart';
 import 'package:sugudeni/view/seller/messages/seller-message-detailed-screen.dart';
 
 import '../../../l10n/app_localizations.dart';
@@ -86,41 +88,50 @@ class _SellerMessagesViewState extends State<SellerMessagesView> {
                      if(snapshot.connectionState==ConnectionState.waiting){
                        return const SizedBox();
                      }
-                     var data=snapshot.data!.count;
-                 return  Consumer<SellerMessagesProvider>(
-                     builder: (context, provider, child) {
-                       return SellerTabBarWidget(
-                           onPressed: () {
-                             provider.changeMessageTab(SellerMessagesTabs.customer);
-                           },
-                           width: 70.w,
-                           selected:
-                           provider.selectMessageTab == SellerMessagesTabs.customer,
-                           title: "${AppLocalizations.of(context)!.customer} ($data)");
-                     });
-               }),
-                40.width,
-                Consumer<SellerMessagesProvider>(
-                    builder: (context, provider, child) {
-                      return SellerTabBarWidget(
-                          onPressed: () {
-                            provider.changeMessageTab(SellerMessagesTabs.system);
-                          },
-                          width: 50.w,
-
-                          selected:
-                          provider.selectMessageTab == SellerMessagesTabs.system,
-                          title: AppLocalizations.of(context)!.system);
-                    }),
+                     final totalUnread = snapshot.data?.count ?? 0;
+                     
+                     return Consumer2<ChatSocketProvider, SellerMessagesProvider>(
+                       builder: (context, chatProvider, messagesProvider, _) {
+                         // Calculate unread counts dynamically from threads
+                         final threads = chatProvider.sellerThreads?.threads ?? [];
+                         final totalThreadUnread = threads.fold<int>(0, (sum, thread) => sum + thread.unreadCount);
+                         
+                         // Use thread unread if available, otherwise use API count
+                         final displayCount = threads.isNotEmpty ? totalThreadUnread : totalUnread;
+                         
+                         return Row(
+                           children: [
+                             SellerTabBarWidget(
+                                 onPressed: () {
+                                   messagesProvider.changeMessageTab(SellerMessagesTabs.customer);
+                                 },
+                                 width: 70.w,
+                                 selected:
+                                 messagesProvider.selectMessageTab == SellerMessagesTabs.customer,
+                                 title: "${AppLocalizations.of(context)!.customer} ($displayCount)"),
+                             40.width,
+                             SellerTabBarWidget(
+                                 onPressed: () {
+                                   messagesProvider.changeMessageTab(SellerMessagesTabs.system);
+                                 },
+                                 width: 50.w,
+                                 selected:
+                                 messagesProvider.selectMessageTab == SellerMessagesTabs.system,
+                                 title: AppLocalizations.of(context)!.system),
+                           ],
+                         );
+                       }
+                     );
+                   }),
 
 
               ],
             ),
-            Consumer<ChatSocketProvider>(builder: (context,provider,child){
+            Consumer2<ChatSocketProvider, SellerMessagesProvider>(builder: (context, provider, messagesProvider, child){
               if (provider.isLoading) {
-                return SizedBox(
-                    height: 500.h,
-                    child: const Center(child: CircularProgressIndicator()));
+                return FullScreenSpinKitLoader(
+                  message: 'Loading messages...',
+                );
               }
 
               if (provider.errorMessage != null) {
@@ -132,13 +143,28 @@ class _SellerMessagesViewState extends State<SellerMessagesView> {
 
               if (provider.sellerThreads == null ||
                   provider.sellerThreads!.threads.isEmpty) {
-                return  SizedBox(
-                  height: 550.h,
-                  child:  Center(
-                    child: Text(AppLocalizations.of(context)!.nochatfound),
-                  ),
+                return EmptyStateWidget(
+                  title: AppLocalizations.of(context)!.nochatfound,
+                  description: 'You don\'t have any conversations yet. Messages from customers will appear here once they contact you.',
+                  icon: Icons.chat_bubble_outline,
                 );
               }
+              
+              // For now, show all threads in customer tab (system tab implementation pending API support)
+              final allThreads = provider.sellerThreads!.threads;
+              final filteredThreads = allThreads;
+              
+              if (filteredThreads.isEmpty) {
+                final isCustomerTab = messagesProvider.selectMessageTab == SellerMessagesTabs.customer;
+                return EmptyStateWidget(
+                  title: isCustomerTab ? 'No Customer Messages' : 'No System Messages',
+                  description: isCustomerTab 
+                      ? 'You don\'t have any customer conversations yet.'
+                      : 'You don\'t have any system messages yet.',
+                  icon: Icons.chat_bubble_outline,
+                );
+              }
+              
               return  Expanded(
                 child: FutureBuilder(
                     future: getUserId(),
@@ -148,9 +174,9 @@ class _SellerMessagesViewState extends State<SellerMessagesView> {
                         onRefresh: () => provider.fetchThreads(context),
                         child: ListView.builder(
                             physics: const AlwaysScrollableScrollPhysics(),
-                            itemCount:provider.sellerThreads!.threads.length,
+                            itemCount: filteredThreads.length,
                             itemBuilder: (context,index){
-                              final sortedThreads = provider.sellerThreads!.threads;
+                              final sortedThreads = List.from(filteredThreads);
                               sortedThreads.sort((a, b) => b.lastMessageTimestamp.compareTo(a.lastMessageTimestamp));
 
                               final data=sortedThreads[index];

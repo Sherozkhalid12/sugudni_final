@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:sugudeni/utils/constants/colors.dart';
 import 'package:sugudeni/utils/customWidgets/my-text.dart';
+import 'package:sugudeni/utils/customWidgets/spinkit-loader.dart';
 import 'package:sugudeni/utils/extensions/sizebox.dart';
 
 class LoadingDialog extends StatelessWidget {
@@ -18,13 +19,10 @@ class LoadingDialog extends StatelessWidget {
       content: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          SizedBox(
-            width: 24.w,
-            height: 24.h,
-            child: CircularProgressIndicator(
-              strokeWidth: 2.5,
-              valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
-            ),
+          SpinKitLoader(
+            color: primaryColor,
+            size: 24.sp,
+            type: SpinKitType.circle,
           ),
           15.width,
           Flexible(

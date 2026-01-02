@@ -23,6 +23,15 @@ class CategoryProvider extends ChangeNotifier{
   final slugController=TextEditingController();
   String query='';
   String subQuery='';
+  
+  // Subcategory refresh notifier
+  int _subcategoryRefreshKey = 0;
+  int get subcategoryRefreshKey => _subcategoryRefreshKey;
+  
+  void refreshSubcategories() {
+    _subcategoryRefreshKey++;
+    notifyListeners();
+  }
   changeQuery(String v){
     query=v;
     notifyListeners();
@@ -290,10 +299,9 @@ class CategoryProvider extends ChangeNotifier{
         loadingProvider.setLoading(false);
         if(context.mounted){
           subcategoryNameController.clear();
-          // Close only the dialog, not the entire screen
-          if (Navigator.canPop(context)) {
-            Navigator.pop(context);
-          }
+          // Don't pop here - the dialog already closes itself
+          // Just trigger subcategory refresh
+          refreshSubcategories();
           showSnackbar(context, AppLocalizations.of(context)!.subcategorycreatedsuccessfully,color: greenColor);
         }
       }).onError((err,e){

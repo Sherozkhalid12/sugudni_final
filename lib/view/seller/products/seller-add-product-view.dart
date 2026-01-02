@@ -13,12 +13,14 @@ import 'package:sugudeni/providers/category/category-provider.dart';
 import 'package:sugudeni/providers/products/products-provider.dart';
 import 'package:sugudeni/providers/seller-add-product-provider.dart';
 import 'package:sugudeni/repositories/category/category-repository.dart';
+import 'package:sugudeni/models/category/SubCategoryListResponse.dart';
 import 'package:sugudeni/utils/customWidgets/my-text.dart';
 import 'package:sugudeni/utils/customWidgets/round-button.dart';
 import 'package:sugudeni/utils/customWidgets/symetric-padding.dart';
 import 'package:sugudeni/utils/extensions/dialog-extension.dart';
 import 'package:sugudeni/utils/extensions/sizebox.dart';
 import 'package:sugudeni/utils/global-functions.dart';
+import 'package:sugudeni/utils/customWidgets/spinkit-loader.dart';
 import 'package:sugudeni/view/seller/products/seller-my-products-view.dart';
 
 import '../../../l10n/app_localizations.dart';
@@ -37,6 +39,8 @@ class SellerAddProductView extends StatefulWidget {
 }
 
 class _SellerAddProductViewState extends State<SellerAddProductView> {
+  // Cache subcategory futures to prevent reloading on every state change
+  final Map<String, Future<SubCategoryListResponse>> _subcategoryFutures = {};
 
   var _aspectTolerance = 0.00;
   var _numberOfCameras = 0;
@@ -233,8 +237,11 @@ class _SellerAddProductViewState extends State<SellerAddProductView> {
                         future: CategoryRepository.allCategory(context),
                         builder: (context,snapshot){
                           if(snapshot.connectionState==ConnectionState.waiting){
-                            return const Center(
-                              child: SizedBox(),
+                            return Center(
+                              child: SpinKitLoader(
+                                type: SpinKitType.fadingCircle,
+                                size: 30.sp,
+                              ),
                             );
                           }
                           if(snapshot.data!.getAllCategories.isEmpty){
@@ -303,13 +310,40 @@ class _SellerAddProductViewState extends State<SellerAddProductView> {
                                 'name': category.name,
                               };
                             }).toList();
-                            return  FutureBuilder(
-                                key: ValueKey('subcategory_${provider.categoryId}'),
-                                future: CategoryRepository.allSubCategory(provider.categoryId!, context),
+                            return Consumer<CategoryProvider>(
+                              builder: (context, categoryProvider, _) {
+                                // Cache the future to prevent reloading on every state change
+                                Future<SubCategoryListResponse> cachedFuture;
+                                if (_subcategoryFutures.containsKey(provider.categoryId!)) {
+                                  cachedFuture = _subcategoryFutures[provider.categoryId!]!;
+                                } else {
+                                  cachedFuture = CategoryRepository.allSubCategory(provider.categoryId!, context);
+                                  _subcategoryFutures[provider.categoryId!] = cachedFuture;
+                                }
+                                
+                                return FutureBuilder<SubCategoryListResponse>(
+                                    key: ValueKey('subcategory_${provider.categoryId}_${categoryProvider.subcategoryRefreshKey}'),
+                                    future: cachedFuture,
                                 builder: (context,subSnapshot){
-                                  if(subSnapshot.connectionState==ConnectionState.waiting){
-                                    return const Center(
-                                      child: SizedBox(),
+                                  // Only show loader on initial load when there's no data at all
+                                  if(subSnapshot.connectionState==ConnectionState.waiting && !subSnapshot.hasData){
+                                    return Center(
+                                      child: SpinKitLoader(
+                                        type: SpinKitType.fadingCircle,
+                                        size: 30.sp,
+                                      ),
+                                    );
+                                  }
+                                  // If we have data, show it even if we're refreshing
+                                  if(subSnapshot.hasData){
+                                    // Continue to show the data below
+                                  } else if(subSnapshot.hasError){
+                                    return Center(
+                                      child: MyText(
+                                        text: 'Error loading subcategories',
+                                        color: redColor,
+                                        size: 12.sp,
+                                      ),
                                     );
                                   }
                                   if(subSnapshot.data!.getAllSubCategories.isEmpty){
@@ -396,8 +430,10 @@ class _SellerAddProductViewState extends State<SellerAddProductView> {
                                                   return;
                                                 }
                                                 categoryProvider.addSubCategory(provider.categoryId!, context).then((v) {
-                                                  // Only refresh if needed - the FutureBuilder will rebuild automatically
-                                                  // Don't call setState here to prevent flicker
+                                                  // Trigger refresh to show new subcategory
+                                                  if (mounted) {
+                                                    setState(() {});
+                                                  }
                                                 });
                                               },
                                             );
@@ -407,8 +443,13 @@ class _SellerAddProductViewState extends State<SellerAddProductView> {
                                       ],
                                     );
                                   }
-                                  var data =subSnapshot.data!;
-                                  var catList=data.getAllSubCategories;
+                                  // Ensure we have valid data
+                                  if(!subSnapshot.hasData || subSnapshot.data == null){
+                                    return const SizedBox.shrink();
+                                  }
+                                  var data = subSnapshot.data!;
+                                  var catList = data.getAllSubCategories;
+                                  // Safely map the subcategories to the required format
                                   List<Map<String, String>> extractedList = catList.map((category) {
                                     return {
                                       'id': category.id,
@@ -440,8 +481,15 @@ class _SellerAddProductViewState extends State<SellerAddProductView> {
                                                     return;
                                                   }
                                                   categoryProvider.addSubCategory(provider.categoryId!, context).then((v) {
+                                                    // Clear the cache and create a new future to reload with fresh data
+                                                    _subcategoryFutures.remove(provider.categoryId!);
+                                                    // Create new future for fresh data
+                                                    _subcategoryFutures[provider.categoryId!] = 
+                                                        CategoryRepository.allSubCategory(provider.categoryId!, context);
                                                     // Refresh the FutureBuilder by triggering setState
-                                                    setState(() {});
+                                                    if (mounted) {
+                                                      setState(() {});
+                                                    }
                                                   });
                                                 },
                                               );
@@ -529,6 +577,8 @@ class _SellerAddProductViewState extends State<SellerAddProductView> {
                                     ],
                                   );
                                 });
+                              }
+                            );
                           });
                     }),
                     text(title: AppLocalizations.of(context)!.selectweight),

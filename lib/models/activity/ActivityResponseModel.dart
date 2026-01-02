@@ -1,92 +1,94 @@
 class ActivityResponseModel {
   final List<Activity> activities;
-  final String? message;
 
   ActivityResponseModel({
     required this.activities,
-    this.message,
   });
 
   factory ActivityResponseModel.fromJson(Map<String, dynamic> json) {
-    return ActivityResponseModel(
-      activities: json['activities'] != null
-          ? (json['activities'] as List<dynamic>)
-              .map((e) => Activity.fromJson(e as Map<String, dynamic>))
-              .toList()
-          : [],
-      message: json['message'],
-    );
+    List<Activity> activitiesList = [];
+    
+    if (json['activities'] != null) {
+      if (json['activities'] is List) {
+        activitiesList = (json['activities'] as List)
+            .map((item) => Activity.fromJson(item))
+            .toList();
+      }
+    } else if (json['getAllActivities'] != null) {
+      if (json['getAllActivities'] is List) {
+        activitiesList = (json['getAllActivities'] as List)
+            .map((item) => Activity.fromJson(item))
+            .toList();
+      }
+    }
+    
+    return ActivityResponseModel(activities: activitiesList);
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'activities': activities.map((e) => e.toJson()).toList(),
-      'message': message,
+      'activities': activities.map((activity) => activity.toJson()).toList(),
     };
   }
 }
 
 class Activity {
   final String id;
+  final String? type;
   final String? title;
   final String? description;
-  final String? type;
-  final String? userId;
+  final String? message;
   final bool? isRead;
   final DateTime? createdAt;
   final DateTime? updatedAt;
-  final Map<String, dynamic>? metadata;
+  final Map<String, dynamic>? data;
 
   Activity({
     required this.id,
+    this.type,
     this.title,
     this.description,
-    this.type,
-    this.userId,
+    this.message,
     this.isRead,
     this.createdAt,
     this.updatedAt,
-    this.metadata,
+    this.data,
   });
 
   factory Activity.fromJson(Map<String, dynamic> json) {
     return Activity(
       id: json['_id'] ?? json['id'] ?? '',
-      title: json['title'],
-      description: json['description'] ?? json['message'],
       type: json['type'],
-      userId: json['userId'] ?? json['userid'],
-      isRead: json['isRead'] ?? json['isread'] ?? false,
+      title: json['title'],
+      description: json['description'],
+      message: json['message'],
+      isRead: json['isRead'] ?? json['is_read'] ?? false,
       createdAt: json['createdAt'] != null
           ? DateTime.tryParse(json['createdAt'].toString())
-          : json['createdat'] != null
-              ? DateTime.tryParse(json['createdat'].toString())
-              : null,
+          : (json['created_at'] != null
+              ? DateTime.tryParse(json['created_at'].toString())
+              : null),
       updatedAt: json['updatedAt'] != null
           ? DateTime.tryParse(json['updatedAt'].toString())
-          : json['updatedat'] != null
-              ? DateTime.tryParse(json['updatedat'].toString())
-              : null,
-      metadata: json['metadata'] != null
-          ? Map<String, dynamic>.from(json['metadata'])
-          : null,
+          : (json['updated_at'] != null
+              ? DateTime.tryParse(json['updated_at'].toString())
+              : null),
+      data: json['data'] as Map<String, dynamic>?,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       '_id': id,
+      'type': type,
       'title': title,
       'description': description,
-      'type': type,
-      'userId': userId,
+      'message': message,
       'isRead': isRead,
       'createdAt': createdAt?.toIso8601String(),
       'updatedAt': updatedAt?.toIso8601String(),
-      'metadata': metadata,
+      'data': data,
     };
   }
 }
-
-
 
