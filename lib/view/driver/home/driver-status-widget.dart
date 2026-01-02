@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import 'package:sugudeni/providers/driver/driver-provider.dart';
 import 'package:sugudeni/utils/extensions/sizebox.dart';
 import 'package:sugudeni/utils/global-functions.dart';
-import 'package:sugudeni/utils/sharePreference/isDriver-online.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../utils/constants/colors.dart';
@@ -78,33 +77,32 @@ class DriverStatusWidget extends StatelessWidget {
             Column(
               children: [
                Consumer<DriverProvider>(builder: (context,provider,child){
-                 return FutureBuilder<bool>(
-                     future: isDriverOnline(),
-                     key: ValueKey(provider.isToggling), // Force rebuild when toggling state changes
-                     builder: (context,snapshot){
-                       bool inOnline=snapshot.data??false;
-                       customPrint("Status==============================$inOnline");
-                       return  Row(
-                         children: [
-                           MyText(text: AppLocalizations.of(context)!.online,size: 12.sp,fontWeight: FontWeight.w600,),
-                           10.width,
-                           SizedBox(
-                             width: 40,
-                             child: FittedBox(
-                               child: Switch(
-                                   activeColor: const Color(0xff00C000),
-                                   value: provider.isToggling ? inOnline : (snapshot.data ?? false),
-                                   onChanged: provider.isToggling ? null : (v) async {
-                                     final driverProvider = context.read<DriverProvider>();
-                                     await driverProvider.toggleDriver(context);
-                                     // Status will be updated automatically via notifyListeners in provider
-                                   }),
-                             ),
-                           )
-
-                         ],
-                       );
-                     });
+                 // Use driverStatus from API if available, otherwise fallback to isPendingApproval
+                 bool isPendingApproval = provider.driverStatus != null 
+                     ? provider.driverStatus != 'approved' 
+                     : provider.isPendingApproval;
+                 
+                 // Use cached online status from provider for instant updates
+                 bool inOnline = provider.isOnline ?? false;
+                 
+                 return Row(
+                   children: [
+                     MyText(text: AppLocalizations.of(context)!.online,size: 12.sp,fontWeight: FontWeight.w600,),
+                     10.width,
+                     SizedBox(
+                       width: 40,
+                       child: FittedBox(
+                         child: Switch(
+                             activeColor: const Color(0xff00C000),
+                             value: inOnline,
+                             onChanged: (provider.isToggling || isPendingApproval) ? null : (v) {
+                               // Toggle immediately - provider handles optimistic update
+                               provider.toggleDriver(context);
+                             }),
+                       ),
+                     )
+                   ],
+                 );
                }),
                 Row(
                   children: [

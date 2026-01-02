@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:http_parser/http_parser.dart';
@@ -17,7 +18,6 @@ import '../../../api/api-endpoints.dart';
 import '../../../utils/global-functions.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:sugudeni/utils/global-functions.dart';
 import 'package:http/http.dart' as http;
 import '../../l10n/app_localizations.dart';
 
@@ -31,6 +31,7 @@ class DriverSignUpProvider extends ChangeNotifier{
 
   bool term=false;
   bool isUpdate=false;
+  bool _isPickingImage = false;
 
   final firstNameController=TextEditingController();
   final lastNameController=TextEditingController();
@@ -41,22 +42,28 @@ class DriverSignUpProvider extends ChangeNotifier{
   Future<void> updateDriver(BuildContext context) async {
     final loadingProvider = Provider.of<LoadingProvider>(context, listen: false);
 
-    if (firstNameController.text.isEmpty ||
-        lastNameController.text.isEmpty ||
-        phoneNumberController.text.isEmpty ||
-        licenseNumberController.text.isEmpty ||
-        bikeRegistrationNumberController.text.isEmpty ||
-        drivingText == 'Select Date' ||
-        dateOfBirth == 'Date of Birth') {
-      showSnackbar(context, AppLocalizations.of(context)!.pleasefillallfields, color: redColor);
-      return;
+    // Check if at least one field has been changed
+    bool hasChanges = false;
+    
+    // Check text fields
+    if (firstNameController.text.isNotEmpty ||
+        lastNameController.text.isNotEmpty ||
+        phoneNumberController.text.isNotEmpty ||
+        licenseNumberController.text.isNotEmpty ||
+        bikeRegistrationNumberController.text.isNotEmpty ||
+        (drivingText != 'Select Date' && drivingText.isNotEmpty) ||
+        (dateOfBirth != 'Date of Birth' && dateOfBirth.isNotEmpty)) {
+      hasChanges = true;
     }
-    if (frontImage==null) {
-      showSnackbar(context, AppLocalizations.of(context)!.frontsideoflicenseisrequired, color: redColor);
-      return;
+    
+    // Check images
+    if (frontImage != null || backImage != null) {
+      hasChanges = true;
     }
-    if (backImage==null) {
-      showSnackbar(context, AppLocalizations.of(context)!.backsideoflicenseisrequired, color: redColor);
+    
+    // If no changes, show message
+    if (!hasChanges) {
+      showSnackbar(context, 'Please update at least one field', color: redColor);
       return;
     }
 
@@ -74,27 +81,42 @@ class DriverSignUpProvider extends ChangeNotifier{
         'Authorization': 'Bearer $token'
       });
 
-      // Add text fields
-      request.fields.addAll({
-        'firstname': firstNameController.text.trim(),
-        'lastname': lastNameController.text.trim(),
-        'licenseNumber': licenseNumberController.text.trim(),
-        'bikeRegistrationNumber': bikeRegistrationNumberController.text.trim(),
-        'drivingSince': drivingText,
-        'dob': dateOfBirth,
-        'phone': phoneNumberController.text.trim(),
+      // Add text fields only if they are not empty
+      if (firstNameController.text.isNotEmpty) {
+        request.fields['firstname'] = firstNameController.text.trim();
+      }
+      if (lastNameController.text.isNotEmpty) {
+        request.fields['lastname'] = lastNameController.text.trim();
+      }
+      if (phoneNumberController.text.isNotEmpty) {
+        request.fields['phone'] = phoneNumberController.text.trim();
+      }
+      if (licenseNumberController.text.isNotEmpty) {
+        request.fields['licenseNumber'] = licenseNumberController.text.trim();
+      }
+      if (bikeRegistrationNumberController.text.isNotEmpty) {
+        request.fields['bikeRegistrationNumber'] = bikeRegistrationNumberController.text.trim();
+      }
+      if (drivingText != 'Select Date' && drivingText.isNotEmpty) {
+        request.fields['drivingSince'] = drivingText;
+      }
+      if (dateOfBirth != 'Date of Birth' && dateOfBirth.isNotEmpty) {
+        request.fields['dob'] = dateOfBirth;
+      }
 
-      });
-
-      // Attach files
+      // Attach files only if they exist
+      if (frontImage != null) {
       request.files.add(await http.MultipartFile.fromPath(
         'licenseFront', frontImage!.path,
         contentType: MediaType('image', 'jpeg'), // Explicit content type
       ));
-      request.files.add(await http.MultipartFile.fromPath('licenseBack', backImage!.path,
-
+      }
+      if (backImage != null) {
+        request.files.add(await http.MultipartFile.fromPath(
+          'licenseBack', backImage!.path,
         contentType: MediaType('image', 'jpeg'), // Explicit content type
       ));
+      }
 
       // Send request
       http.StreamedResponse response = await request.send();
@@ -139,21 +161,123 @@ class DriverSignUpProvider extends ChangeNotifier{
 
   }
 
-  void pickFrontImage()async{
-    final ImagePicker imagePicker=ImagePicker();
-    final XFile? pickedFile=await imagePicker.pickImage(source: ImageSource.gallery);
-    if(pickedFile!=null){
-      frontImage=File(pickedFile.path);
-      notifyListeners();
+  Future<void> pickFrontImage(BuildContext? context) async {
+    if (_isPickingImage) {
+      customPrint('Image picker is already open');
+      if (context != null && context.mounted) {
+        showSnackbar(context, 'Image picker is already open. Please wait...', color: redColor);
+      }
+      return;
+    }
+    
+    _isPickingImage = true;
+    
+    try {
+      final ImagePicker imagePicker = ImagePicker();
+      
+      // Use a shorter timeout - 15 seconds should be enough
+      final XFile? pickedFile = await imagePicker
+          .pickImage(
+            source: ImageSource.gallery,
+            imageQuality: 85,
+          )
+          .timeout(
+            const Duration(seconds: 15),
+            onTimeout: () {
+              customPrint('Image picker timed out after 15 seconds');
+              return null;
+            },
+          );
+      
+      if (pickedFile != null) {
+        frontImage = File(pickedFile.path);
+        notifyListeners();
+        customPrint('Front image picked successfully: ${pickedFile.path}');
+      } else {
+        customPrint('No image was selected or picker was cancelled');
+      }
+    } on TimeoutException catch (e) {
+      customPrint('TimeoutException: $e');
+      if (context != null && context.mounted) {
+        showSnackbar(
+          context,
+          'Image picker timed out. Please try again.',
+          color: redColor,
+        );
+      }
+    } catch (e, stackTrace) {
+      customPrint('Error picking front image: $e');
+      customPrint('Stack trace: $stackTrace');
+      if (context != null && context.mounted) {
+        showSnackbar(
+          context,
+          'Failed to pick image. Please try again.',
+          color: redColor,
+        );
+      }
+    } finally {
+      _isPickingImage = false;
+      customPrint('Image picking process finished - flag reset');
     }
   }
 
-  void pickBackImage()async{
-    final ImagePicker imagePicker=ImagePicker();
-    final XFile? pickedFile=await imagePicker.pickImage(source: ImageSource.gallery);
-    if(pickedFile!=null){
-      backImage=File(pickedFile.path);
-      notifyListeners();
+  Future<void> pickBackImage(BuildContext? context) async {
+    if (_isPickingImage) {
+      customPrint('Image picker is already open');
+      if (context != null && context.mounted) {
+        showSnackbar(context, 'Image picker is already open. Please wait...', color: redColor);
+      }
+      return;
+    }
+    
+    _isPickingImage = true;
+    
+    try {
+      final ImagePicker imagePicker = ImagePicker();
+      
+      // Use a shorter timeout - 15 seconds should be enough
+      final XFile? pickedFile = await imagePicker
+          .pickImage(
+            source: ImageSource.gallery,
+            imageQuality: 85,
+          )
+          .timeout(
+            const Duration(seconds: 15),
+            onTimeout: () {
+              customPrint('Image picker timed out after 15 seconds');
+              return null;
+            },
+          );
+      
+      if (pickedFile != null) {
+        backImage = File(pickedFile.path);
+        notifyListeners();
+        customPrint('Back image picked successfully: ${pickedFile.path}');
+      } else {
+        customPrint('No image was selected');
+      }
+    } on TimeoutException catch (e) {
+      customPrint('TimeoutException: $e');
+      if (context != null && context.mounted) {
+        showSnackbar(
+          context,
+          'Image picker timed out. Please try again.',
+          color: redColor,
+        );
+      }
+    } catch (e, stackTrace) {
+      customPrint('Error picking back image: $e');
+      customPrint('Stack trace: $stackTrace');
+      if (context != null && context.mounted) {
+        showSnackbar(
+          context,
+          'Failed to pick image. Please try again.',
+          color: redColor,
+        );
+      }
+    } finally {
+      _isPickingImage = false;
+      customPrint('Image picking process finished');
     }
   }
 

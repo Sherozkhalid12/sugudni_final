@@ -19,39 +19,38 @@ class DriverTermAndConditionView extends StatelessWidget {
     return Scaffold(
       key: scaffoldKey,
       drawer: const DriverDrawer(),
+      appBar: AppBar(
+        forceMaterialTransparency: true,
+        leadingWidth: 50.w,
+        leading: Padding(
+          padding: EdgeInsets.only(left: 15.w),
+          child: GestureDetector(
+            onTap: () {
+              Navigator.pop(context);
+            },
+            child: Container(
+              width: 5.w,
+              height: 35.h,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: textFieldColor,
+                image: DecorationImage(image: AssetImage(AppAssets.backArrow), scale: 3)
+              ),
+            ),
+          ),
+        ),
+        title: MyText(
+          text: AppLocalizations.of(context)!.termsandconditions,
+          fontWeight: FontWeight.w700,
+          size: 22.sp,
+        ),
+      ),
       body: SafeArea(
           child: SymmetricPadding(
             child: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        10.height,
-                        GestureDetector(
-                          onTap: (){
-                            scaffoldKey.currentState!.openDrawer();
-                          },
-                          child: Material(
-                            elevation: 2,shape: const CircleBorder(),
-                            child: Container(
-                              height: 38.h,
-                              width: 38.w,
-                              decoration: const BoxDecoration(
-                                  color: whiteColor,
-                                  shape: BoxShape.circle
-                              ),
-                              child: const Center(
-                                child: Icon(Icons.menu,color: primaryColor,),
-                              ),
-                            ),
-                          ),
-                        ),
-                        Center(
-                          child: Image.asset(
-                              height: 140.h,
-                              width: 300.w,
-                              AppAssets.appLogo),
-                        ),
-                        Center(child: MyText(text: AppLocalizations.of(context)!.termsandconditions,size: 22.sp,fontWeight: FontWeight.w600,)),
                         10.height,
                         Container(
                           width: double.infinity,

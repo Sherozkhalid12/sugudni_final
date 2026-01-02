@@ -17,12 +17,12 @@ import 'package:sugudeni/utils/extensions/media-query.dart';
 import 'package:sugudeni/utils/extensions/sizebox.dart';
 import 'package:sugudeni/utils/global-functions.dart';
 import 'package:sugudeni/utils/routes/routes-name.dart';
-import 'package:sugudeni/utils/sharePreference/isDriver-online.dart';
 import 'package:sugudeni/view/driver/home/driver-status-widget.dart';
 import 'package:sugudeni/view/driver/sidebar/driver-side-drawer.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../utils/customWidgets/my-text.dart';
+import '../../../utils/customWidgets/cached-network-image.dart';
 
 class DriverHomeView extends StatefulWidget {
   const DriverHomeView({super.key});
@@ -31,18 +31,37 @@ class DriverHomeView extends StatefulWidget {
   State<DriverHomeView> createState() => _DriverHomeViewState();
 }
 
-class _DriverHomeViewState extends State<DriverHomeView> {
+class _DriverHomeViewState extends State<DriverHomeView> with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
+  late TabController _tabController;
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
-
-    context.read<ShippingProvider>().getAllAvailableShipments(context);
-    // TODO: implement initState
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    // Preload both tabs data immediately
+    final provider = context.read<ShippingProvider>();
+    provider.getAllAvailableShipments(context);
+    provider.getAllCompletedShipments(context);
+    // Load driver approval status from API
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<DriverProvider>().loadApprovalStatus(context);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // Required for AutomaticKeepAliveClientMixin
     // Removed dummyOrderData - using real API data from DriverShippingRepository
     final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
 
@@ -81,26 +100,23 @@ class _DriverHomeViewState extends State<DriverHomeView> {
         ),
         actions: [
           Consumer<DriverProvider>(builder: (context,provider,child){
-            return  FutureBuilder(
-                future: isDriverOnline(),
-                builder: (context,snapshot){
-                  bool isOnline=snapshot.data??false;
-                  return Container(
-                    width: 67.w,
-                    height: 20.h,
-                    margin: EdgeInsets.only(right: 10.w),
-                    decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(6.r),
-                        color: isOnline==true? const Color(0xff6DFF87):redColor
-                    ),
-                    child: Center(
-                      child: MyText(
-                        text:isOnline==true? AppLocalizations.of(context)!.working:AppLocalizations.of(context)!.offline,
-                        size: 8.sp,
-                        fontWeight: FontWeight.w600,color:isOnline==true? const Color(0xff005613):whiteColor,),
-                    ),
-                  );
-                });
+            // Use cached online status from provider for instant updates
+            bool isOnline = provider.isOnline ?? false;
+            return Container(
+              width: 67.w,
+              height: 20.h,
+              margin: EdgeInsets.only(right: 10.w),
+              decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(6.r),
+                  color: isOnline==true? const Color(0xff6DFF87):redColor
+              ),
+              child: Center(
+                child: MyText(
+                  text:isOnline==true? AppLocalizations.of(context)!.working:AppLocalizations.of(context)!.offline,
+                  size: 8.sp,
+                  fontWeight: FontWeight.w600,color:isOnline==true? const Color(0xff005613):whiteColor,),
+              ),
+            );
           })
         ],
         title: MyText(text: AppLocalizations.of(context)!.currentshift,fontWeight: FontWeight.w700,size: 20.sp,),
@@ -114,66 +130,184 @@ class _DriverHomeViewState extends State<DriverHomeView> {
            const DriverStatusWidget(),
             10.height,
             Consumer<DriverProvider>(builder: (context,provider,child){
-              return FutureBuilder(
-                  future: isDriverOnline(),
-                  builder: (context,u){
-                    bool isOnline=u.data??false;
-                    if(isOnline==false){
-                      return  Center(
-                        child: MyText(text: AppLocalizations.of(context)!.youareoffline),
-                      );
-                    }
+              // Use cached online status from provider for instant updates
+              bool isOnline = provider.isOnline ?? false;
+              // Use driverStatus from API if available, otherwise fallback to isPendingApproval
+              String? driverStatus = provider.driverStatus;
+              bool isPendingApproval = driverStatus != null 
+                  ? driverStatus != 'approved' 
+                  : provider.isPendingApproval;
+              
+              // Determine message based on driverStatus
+              String statusMessage = 'Your driver account is pending approval';
+              if (driverStatus == 'rejected') {
+                statusMessage = 'Your driver account has been rejected';
+              } else if (driverStatus == 'pending') {
+                statusMessage = 'Your driver account is pending approval';
+              } else if (driverStatus != 'approved') {
+                statusMessage = 'Your driver account is pending approval';
+              }
+              
+              if(isOnline==false){
+                if(isPendingApproval){
+                  return  Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          driverStatus == 'rejected' ? Icons.cancel : Icons.pending_actions, 
+                          size: 48.sp, 
+                          color: redColor
+                        ),
+                        10.height,
+                        MyText(
+                          text: statusMessage,
+                          size: 16.sp,
+                          fontWeight: FontWeight.w600,
+                          color: redColor,
+                        ),
+                        5.height,
+                        MyText(
+                          text: driverStatus == 'rejected' 
+                              ? 'Please contact admin for more information'
+                              : 'Please wait for admin approval before going online',
+                          size: 12.sp,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                return  Center(
+                  child: MyText(text: AppLocalizations.of(context)!.youareoffline),
+                );
+              }
                 return SymmetricPadding(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-
-                      MyText(text: AppLocalizations.of(context)!.availableshipments,fontWeight: FontWeight.w700,size: 22.sp,),
-                      5.height,
-                      FutureBuilder(
-                          future: DriverShippingRepository.getAllAvailableShipment(context),
-                          builder: (context,snapshot){
-                            if(snapshot.connectionState==ConnectionState.waiting){
-                              return const Center(
-                                child: CircularProgressIndicator(),
-                              );
-                            }
-                            if(snapshot.hasError){
-                              return Center(
-                                child: MyText(text: snapshot.error.toString()),
-                              );
-                            }
-                            var data = snapshot.data!.shipments.where((shipment) => shipment.shippingAddress != null).toList();
-                            if(data.isEmpty){
-                              return SizedBox(
-                                height: 250.h,
-                                child:  Center(
-                                  child: MyText(text: AppLocalizations.of(context)!.notfound),
-                                ),
-                              );
-                            }
-                            return  ListView.builder(
-                                physics: const NeverScrollableScrollPhysics(),
-                                scrollDirection: Axis.vertical,
-                                shrinkWrap: true,
-                                itemCount: data.length,
-                                itemBuilder: (context,index){
-                                  // var data=dummyOrderData[index];
-                                  var availableShippingData=data[index];
-                                  return CompletedOrderWidget(
+                      // Tab Bar
+                      TabBar(
+                        controller: _tabController,
+                        labelColor: primaryColor,
+                        unselectedLabelColor: textSecondaryColor,
+                        indicatorColor: primaryColor,
+                        isScrollable: true,
+                        tabAlignment: TabAlignment.start,
+                        labelPadding: EdgeInsets.symmetric(horizontal: 16.w),
+                        tabs: [
+                          Tab(
+                            child: Text(
+                              AppLocalizations.of(context)!.availableshipments,
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14.sp,
+                              ),
+                              overflow: TextOverflow.clip,
+                            ),
+                          ),
+                          Tab(
+                            child: Text(
+                              'Orders Completed',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14.sp,
+                              ),
+                              overflow: TextOverflow.clip,
+                            ),
+                          ),
+                        ],
+                      ),
+                      10.height,
+                      // Tab Bar View
+                      SizedBox(
+                        height: MediaQuery.of(context).size.height * 0.6,
+                        child: TabBarView(
+                          controller: _tabController,
+                          physics: const BouncingScrollPhysics(),
+                          children: [
+                            // Available Shipments Tab - Using cached provider data
+                            Consumer<ShippingProvider>(
+                              builder: (context, provider, child) {
+                                if (provider.isLoading && provider.shipmentModel == null) {
+                                  return const Center(child: CircularProgressIndicator());
+                                }
+                                if (provider.errorText != null && provider.shipmentModel == null) {
+                                  return Center(child: MyText(text: provider.errorText!));
+                                }
+                                final data = provider.shipmentModel
+                                    ?.where((shipment) => shipment.shippingAddress != null)
+                                    .toList() ?? [];
+                                if (data.isEmpty) {
+                                  return SizedBox(
+                                    height: 250.h,
+                                    child: Center(
+                                      child: MyText(text: AppLocalizations.of(context)!.notfound),
+                                    ),
+                                  );
+                                }
+                                return ListView.builder(
+                                  physics: const AlwaysScrollableScrollPhysics(),
+                                  cacheExtent: 500,
+                                  itemCount: data.length,
+                                  itemBuilder: (context, index) {
+                                    final availableShippingData = data[index];
+                                    return CompletedOrderWidget(
+                                      key: ValueKey('available_${availableShippingData.id}'),
                                       shipmentModel: availableShippingData,
                                       img: availableShippingData.cartItems[0].product.imgCover,
-                                      title:  availableShippingData.cartItems[0].product.title,
-                                      discription:  availableShippingData.cartItems[0].product.description,
-                                      stars:  availableShippingData.cartItems[0].product.ratingAvg.toString(),
-                                      rupees:  availableShippingData.cartItems[0].product.price.toString());
-                                });
-                          })
-
+                                      title: availableShippingData.cartItems[0].product.title,
+                                      discription: availableShippingData.cartItems[0].product.description,
+                                      stars: availableShippingData.cartItems[0].product.ratingAvg.toString(),
+                                      rupees: availableShippingData.cartItems[0].product.price.toString());
+                                  },
+                                );
+                              },
+                            ),
+                            // Completed Shipments Tab - Using cached provider data
+                            Consumer<ShippingProvider>(
+                              builder: (context, provider, child) {
+                                if (provider.isLoadingCompleted && provider.completedShipments == null) {
+                                  return const Center(child: CircularProgressIndicator());
+                                }
+                                if (provider.errorText != null && provider.completedShipments == null) {
+                                  return Center(child: MyText(text: provider.errorText!));
+                                }
+                                final completedData = provider.completedShipments ?? [];
+                                if (completedData.isEmpty) {
+                                  return SizedBox(
+                                    height: 250.h,
+                                    child: Center(
+                                      child: MyText(text: AppLocalizations.of(context)!.notfound),
+                                    ),
+                                  );
+                                }
+                                return ListView.builder(
+                                  physics: const AlwaysScrollableScrollPhysics(),
+                                  cacheExtent: 500,
+                                  itemCount: completedData.length,
+                                  itemBuilder: (context, index) {
+                                    final completedShippingData = completedData[index];
+                                    return CompletedOrderWidget(
+                                      key: ValueKey('completed_${completedShippingData.id}'),
+                                      shipmentModel: completedShippingData,
+                                      img: completedShippingData.cartItems[0].product.imgCover,
+                                      title: completedShippingData.cartItems[0].product.title,
+                                      discription: completedShippingData.cartItems[0].product.description,
+                                      stars: completedShippingData.cartItems[0].product.ratingAvg.toString(),
+                                      rupees: completedShippingData.totalPriceAfterDiscount == 0
+                                          ? completedShippingData.totalPriceAfterDiscount.toString()
+                                          : completedShippingData.totalPrice.toString());
+                                  },
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 );
-              });
             })
 
 
@@ -191,25 +325,34 @@ class CompletedOrderWidget extends StatelessWidget {
   final String discription;
   final String stars;
   final String rupees;
-  bool? isBulk;
+  final bool? isBulk;
 
-   CompletedOrderWidget({super.key, required this.img, required this.title, required this.stars, required this.rupees,this.isBulk=false, required this.discription, required this.shipmentModel});
+  const CompletedOrderWidget({
+    super.key, 
+    required this.img, 
+    required this.title, 
+    required this.stars, 
+    required this.rupees,
+    this.isBulk=false, 
+    required this.discription, 
+    required this.shipmentModel
+  });
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth=context.screenWidth;
-    final screenHeight=context.screenHeight;
+    bool isCompleted = shipmentModel.isDelivered == true;
     return   GestureDetector(
-      onTap: (){
-        if(shipmentModel.trackingStatus==DeliveryStatus.readytoship){
-          Navigator.pushNamed(context, RoutesNames.driverNewOrderView,arguments: shipmentModel);
-        }
-        if(shipmentModel.trackingStatus==DeliveryStatus.shipping){
-          if(shipmentModel.driverPicked==false){
-            Navigator.pushNamed(context, RoutesNames.arrivedAtVendor,arguments: shipmentModel);
-          }
-         else if(shipmentModel.driverPicked==true){
-            Navigator.pushNamed(context, RoutesNames.arrivedAtCustomer,arguments: shipmentModel);
+      onTap: () {
+        // Only handle card tap for non-completed shipments - instant navigation
+        if(!isCompleted){
+          if(shipmentModel.trackingStatus==DeliveryStatus.readytoship){
+            Navigator.pushNamed(context, RoutesNames.driverNewOrderView,arguments: shipmentModel);
+          } else if(shipmentModel.trackingStatus==DeliveryStatus.shipping){
+            if(shipmentModel.driverPicked==false){
+              Navigator.pushNamed(context, RoutesNames.arrivedAtVendor,arguments: shipmentModel);
+            } else if(shipmentModel.driverPicked==true){
+              Navigator.pushNamed(context, RoutesNames.arrivedAtCustomer,arguments: shipmentModel);
+            }
           }
         }
       },
@@ -225,14 +368,12 @@ class CompletedOrderWidget extends StatelessWidget {
           padding: EdgeInsets.symmetric(horizontal: 10.w,vertical: 10.h),
           child: Row(
             children: [
-              Container(
+              MyCachedNetworkImage(
                 height: 70.h,
                 width: 70.w,
-                decoration:  BoxDecoration(
-                    image: DecorationImage(image: NetworkImage(
-                       isBulk==true? img:"${ApiEndpoints.productUrl}/$img"
-                    ),fit: BoxFit.cover)
-                ),
+                radius: 0,
+                fit: BoxFit.cover,
+                imageUrl: isBulk == true ? img : "${ApiEndpoints.productUrl}/$img",
               ),
               10.width,
               Flexible(
@@ -274,18 +415,52 @@ class CompletedOrderWidget extends StatelessWidget {
                           fontFamily: AppFonts.jost,
                         ),
                         const Spacer(),
-                        Container(
-                          decoration: BoxDecoration(
-                              color:const Color(0xffDDDDDD),
-                              border: Border.all(color: whiteColor),
-                              borderRadius: BorderRadius.circular(8.r)
-                          ),
-                          child: Center(
-                            child:   Padding(
-                              padding:  EdgeInsets.symmetric(horizontal: 10.w,vertical: 4.h),
-                              child: MyText(text: AppLocalizations.of(context)!.view,
-                                color: blackColor,size:13.sp ,fontWeight: FontWeight.w600,
-                                fontFamily: AppFonts.jost,
+                        GestureDetector(
+                          onTap: () {
+                            // Instant navigation - no delay
+                            if(isCompleted){
+                              Navigator.pushNamed(
+                                context, 
+                                RoutesNames.driverCompletedShipmentDetailView, 
+                                arguments: shipmentModel
+                              );
+                            } else {
+                              if(shipmentModel.trackingStatus==DeliveryStatus.readytoship){
+                                Navigator.pushNamed(
+                                  context, 
+                                  RoutesNames.driverNewOrderView,
+                                  arguments: shipmentModel
+                                );
+                              } else if(shipmentModel.trackingStatus==DeliveryStatus.shipping){
+                                if(shipmentModel.driverPicked==false){
+                                  Navigator.pushNamed(
+                                    context, 
+                                    RoutesNames.arrivedAtVendor,
+                                    arguments: shipmentModel
+                                  );
+                                } else if(shipmentModel.driverPicked==true){
+                                  Navigator.pushNamed(
+                                    context, 
+                                    RoutesNames.arrivedAtCustomer,
+                                    arguments: shipmentModel
+                                  );
+                                }
+                              }
+                            }
+                          },
+                          child: Container(
+                            decoration: BoxDecoration(
+                                color:const Color(0xffDDDDDD),
+                                border: Border.all(color: whiteColor),
+                                borderRadius: BorderRadius.circular(8.r)
+                            ),
+                            child: Center(
+                              child:   Padding(
+                                padding:  EdgeInsets.symmetric(horizontal: 10.w,vertical: 4.h),
+                                child: MyText(text: AppLocalizations.of(context)!.view,
+                                  color: blackColor,size:13.sp ,fontWeight: FontWeight.w600,
+                                  fontFamily: AppFonts.jost,
+                                ),
                               ),
                             ),
                           ),

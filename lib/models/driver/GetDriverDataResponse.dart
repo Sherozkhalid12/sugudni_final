@@ -7,7 +7,7 @@ class GetDriverDataResponse {
   factory GetDriverDataResponse.fromJson(Map<String, dynamic> json) {
     return GetDriverDataResponse(
       message: json['message'] ?? '',
-      user: DriverUser.fromJson(json['user'] ?? {}),
+      user: DriverUser.fromJson((json['user'] ?? {}) as Map<String, dynamic>),
     );
   }
 
@@ -44,6 +44,9 @@ class DriverUser {
   final String firstname;
   final String lastname;
   final String phone;
+  final String driverStatus;
+  final String rejectionReason;
+  final bool driverOnline;
 
   DriverUser({
     required this.id,
@@ -70,6 +73,9 @@ class DriverUser {
     required this.firstname,
     required this.lastname,
     required this.phone,
+    required this.driverStatus,
+    required this.rejectionReason,
+    required this.driverOnline,
   });
 
   factory DriverUser.fromJson(Map<String, dynamic> json) {
@@ -98,6 +104,9 @@ class DriverUser {
       firstname: json['firstname'] ?? '',
       lastname: json['lastname'] ?? '',
       phone: json['phone'] ?? '',
+      driverStatus: json['driverStatus'] ?? 'pending',
+      rejectionReason: json['rejectionReason'] ?? '',
+      driverOnline: json['driverOnline'] ?? false,
     );
   }
 
@@ -127,6 +136,9 @@ class DriverUser {
       'firstname': firstname,
       'lastname': lastname,
       'phone': phone,
+      'driverStatus': driverStatus,
+      'rejectionReason': rejectionReason,
+      'driverOnline': driverOnline,
     };
   }
 }

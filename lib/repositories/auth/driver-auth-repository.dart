@@ -10,6 +10,8 @@ import 'package:sugudeni/utils/global-functions.dart';
 import '../../api/api-endpoints.dart';
 import '../../utils/constants/colors.dart';
 import '../../utils/sharePreference/save-user-token.dart';
+import '../../utils/sharePreference/isDriver-online.dart';
+import '../user-repository.dart';
 class DriverAuthRepository{
 
 
@@ -54,6 +56,8 @@ class DriverAuthRepository{
       customPrint("Status code:================$statusCode");
       
       if(response.statusCode==201){
+        // Clear pending approval status on successful toggle
+        await clearDriverApprovalStatus();
         return _handleResponse(response, (data) => DriverToggleResponse.fromJson(body));
       } else if(response.statusCode==404){
         // Handle driver not approved error
@@ -62,19 +66,42 @@ class DriverAuthRepository{
         if (error.toString().toLowerCase().contains('not approved') || 
             error.toString().toLowerCase().contains('approval')) {
           userFriendlyMessage = 'Your driver account is pending approval. Please wait for admin approval before going online.';
+          // Store approval status
+          await setDriverApprovalStatus(true);
         } else {
           userFriendlyMessage = error.toString();
         }
-        // Show snackbar using Future.microtask to ensure it displays
+        // Show snackbar immediately with proper context check
         customPrint("Showing snackbar for driver approval error: $userFriendlyMessage");
         if (context.mounted) {
-          Future.microtask(() {
+          // Use SchedulerBinding to ensure it runs after the current frame
+          WidgetsBinding.instance.addPostFrameCallback((_) {
             if (context.mounted) {
               try {
-                showSnackbar(context, userFriendlyMessage, color: redColor);
-                customPrint("Snackbar shown successfully");
+                final scaffoldMessenger = ScaffoldMessenger.maybeOf(context);
+                if (scaffoldMessenger != null) {
+                  scaffoldMessenger.showSnackBar(
+                    SnackBar(
+                      content: Text(userFriendlyMessage),
+                      duration: const Duration(seconds: 4),
+                      backgroundColor: redColor,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                  customPrint("Snackbar shown successfully in repository");
+                } else {
+                  // Fallback to showSnackbar function
+                  showSnackbar(context, userFriendlyMessage, color: redColor, duration: const Duration(seconds: 4));
+                  customPrint("Snackbar shown using fallback function");
+                }
               } catch (e) {
                 customPrint("Error showing snackbar: $e");
+                // Last resort - try showSnackbar directly
+                try {
+                  showSnackbar(context, userFriendlyMessage, color: redColor, duration: const Duration(seconds: 4));
+                } catch (e2) {
+                  customPrint("Final snackbar attempt failed: $e2");
+                }
               }
             }
           });

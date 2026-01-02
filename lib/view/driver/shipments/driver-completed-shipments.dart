@@ -31,14 +31,39 @@ class DriverCompletedShipmentView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        forceMaterialTransparency: true,
+        leadingWidth: 50.w,
+        leading: Padding(
+          padding: EdgeInsets.only(left: 15.w),
+          child: GestureDetector(
+            onTap: () {
+              Navigator.pop(context);
+            },
+            child: Container(
+              width: 5.w,
+              height: 35.h,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: textFieldColor,
+                image: DecorationImage(image: AssetImage(AppAssets.backArrow), scale: 3)
+              ),
+            ),
+          ),
+        ),
+        title: MyText(
+          text: AppLocalizations.of(context)!.completedshipments,
+          fontWeight: FontWeight.w700,
+          size: 22.sp,
+        ),
+      ),
       body: SingleChildScrollView(
-        child:     SafeArea(
+        child: SafeArea(
           child: SymmetricPadding(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-
-                MyText(text: AppLocalizations.of(context)!.completedshipments,fontWeight: FontWeight.w700,size: 22.sp,),
+                10.height,
                 5.height,
                 FutureBuilder(
                     future: DriverShippingRepository.getAllPendingShipment(context),

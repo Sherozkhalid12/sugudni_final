@@ -119,7 +119,7 @@ class UserRepository{
     final response = await ApiClient.getRequest("${ApiEndpoints.users}/$driverId",).timeout(const Duration(seconds: 30),onTimeout: (){
       throw 'Request timed out. Please try again.';
     });
-    final body=jsonDecode(response.body);
+    final body=jsonDecode(response.body) as Map<String, dynamic>;
     final statusCode=response.statusCode;
     customPrint("Body type:================${body.runtimeType}");
     customPrint("Status code:================$statusCode");

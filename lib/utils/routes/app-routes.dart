@@ -41,6 +41,7 @@ import 'package:sugudeni/view/driver/help/help-center-view.dart';
 import 'package:sugudeni/view/driver/home/driver-home-view.dart';
 import 'package:sugudeni/view/driver/order/arrived-at-customer.dart';
 import 'package:sugudeni/view/driver/order/arrived-at-vendor.dart';
+import 'package:sugudeni/view/driver/order/driver-completed-shipment-detail-view.dart';
 import 'package:sugudeni/view/driver/order/driver-new-order-view.dart';
 import 'package:sugudeni/view/driver/privacyAndTerms/driver-privacy-policy-view.dart';
 import 'package:sugudeni/view/driver/privacyAndTerms/driver-term-and-condition-view.dart';
@@ -130,14 +131,41 @@ class Routes {
         return MaterialPageRoute(
             builder: (BuildContext context) => const DriverTermAndConditionView());
         case RoutesNames.driverNewOrderView:
-        return MaterialPageRoute(
-            builder: (BuildContext context) => const DriverNewOrderView(),settings: routeSettings);
+        return PageRouteBuilder(
+          settings: routeSettings,
+          pageBuilder: (context, animation, secondaryAnimation) => const DriverNewOrderView(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(
+              opacity: animation,
+              child: child,
+            );
+          },
+          transitionDuration: const Duration(milliseconds: 150),
+        );
         case RoutesNames.arrivedAtCustomer:
-        return MaterialPageRoute(
-            builder: (BuildContext context) => const ArrivedAtCustomer(),settings: routeSettings);
+        return PageRouteBuilder(
+          settings: routeSettings,
+          pageBuilder: (context, animation, secondaryAnimation) => const ArrivedAtCustomer(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(
+              opacity: animation,
+              child: child,
+            );
+          },
+          transitionDuration: const Duration(milliseconds: 150),
+        );
         case RoutesNames.arrivedAtVendor:
-        return MaterialPageRoute(
-            builder: (BuildContext context) => const ArrivedAtVendor(),settings: routeSettings);
+        return PageRouteBuilder(
+          settings: routeSettings,
+          pageBuilder: (context, animation, secondaryAnimation) => const ArrivedAtVendor(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(
+              opacity: animation,
+              child: child,
+            );
+          },
+          transitionDuration: const Duration(milliseconds: 150),
+        );
       case RoutesNames.driverHelpCenterView:
         return MaterialPageRoute(
             builder: (BuildContext context) => const HelpCenterView());
@@ -147,6 +175,18 @@ class Routes {
       case RoutesNames.driverCompletedDeliveryView:
         return MaterialPageRoute(
             builder: (BuildContext context) => const DriverCompletedShipmentView());
+      case RoutesNames.driverCompletedShipmentDetailView:
+        return PageRouteBuilder(
+          settings: routeSettings,
+          pageBuilder: (context, animation, secondaryAnimation) => const DriverCompletedShipmentDetailView(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(
+              opacity: animation,
+              child: child,
+            );
+          },
+          transitionDuration: const Duration(milliseconds: 150),
+        );
         /// seller routes
       case RoutesNames.sellerBottomNav:
         return MaterialPageRoute(

@@ -7,21 +7,69 @@ import 'package:sugudeni/utils/global-functions.dart';
 class ShippingProvider extends ChangeNotifier{
 
   List<ShipmentModel>? shipmentModel;
+  List<ShipmentModel>? completedShipments;
   String? errorText;
   bool isLoading=false;
-  Future<void>getAllAvailableShipments(BuildContext context)async{
+  bool isLoadingCompleted=false;
+  DateTime? lastFetchTime;
+  DateTime? lastCompletedFetchTime;
+  static const Duration cacheDuration = Duration(minutes: 2);
+  
+  Future<void>getAllAvailableShipments(BuildContext context, {bool forceRefresh = false})async{
+    // Use cache if data exists and is fresh
+    if (!forceRefresh && shipmentModel != null && lastFetchTime != null) {
+      final timeSinceFetch = DateTime.now().difference(lastFetchTime!);
+      if (timeSinceFetch < cacheDuration) {
+        return; // Use cached data
+      }
+    }
+    
     isLoading=true;
+    notifyListeners();
     try{
-      await DriverShippingRepository.getAllAvailableShipment(context).then((v){
-        shipmentModel=v.shipments;
-        isLoading=false;
-        notifyListeners();
-      });
+      final response = await DriverShippingRepository.getAllAvailableShipment(context);
+      shipmentModel=response.shipments;
+      lastFetchTime = DateTime.now();
+      isLoading=false;
+      notifyListeners();
     }catch(e){
-      errorText==e.toString();
+      errorText=e.toString();
       isLoading=false;
       notifyListeners();
     }
+  }
+  
+  Future<void>getAllCompletedShipments(BuildContext context, {bool forceRefresh = false})async{
+    // Use cache if data exists and is fresh
+    if (!forceRefresh && completedShipments != null && lastCompletedFetchTime != null) {
+      final timeSinceFetch = DateTime.now().difference(lastCompletedFetchTime!);
+      if (timeSinceFetch < cacheDuration) {
+        return; // Use cached data
+      }
+    }
+    
+    isLoadingCompleted=true;
+    notifyListeners();
+    try{
+      final response = await DriverShippingRepository.getAllPendingShipment(context);
+      completedShipments = response.shipments
+          .where((shipment) => shipment.isDelivered == true && shipment.shippingAddress != null)
+          .toList();
+      lastCompletedFetchTime = DateTime.now();
+      isLoadingCompleted=false;
+      notifyListeners();
+    }catch(e){
+      errorText=e.toString();
+      isLoadingCompleted=false;
+      notifyListeners();
+    }
+  }
+  
+  void clearCache(){
+    shipmentModel = null;
+    completedShipments = null;
+    lastFetchTime = null;
+    lastCompletedFetchTime = null;
   }
 
   String selectDate=orderFormatDate(DateTime.now());
