@@ -131,7 +131,8 @@ class CategoryWidget extends StatelessWidget {
               width: 90.w,
               child: MyText(
                   textAlignment: TextAlign.center,
-                  overflow: TextOverflow.clip,
+                  overflow: TextOverflow.ellipsis,
+                  maxLine: 2,
                   text: title,size: 10.sp,fontWeight: FontWeight.w500,color: textSecondaryColor),
             )
           ],

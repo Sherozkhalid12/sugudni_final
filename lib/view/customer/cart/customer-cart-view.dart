@@ -2,25 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'package:sugudeni/api/api-endpoints.dart';
-import 'package:sugudeni/models/orders/CashOrderModel.dart';
 import 'package:sugudeni/providers/carts/cart-provider.dart';
 import 'package:sugudeni/repositories/carts/cart-repository.dart';
 import 'package:sugudeni/utils/constants/app-assets.dart';
-import 'package:sugudeni/utils/constants/fonts.dart';
 import 'package:sugudeni/utils/customWidgets/cached-network-image.dart';
 import 'package:sugudeni/utils/customWidgets/loading-dialog.dart';
 import 'package:sugudeni/utils/customWidgets/my-text.dart';
 import 'package:sugudeni/utils/customWidgets/shimmer-widgets.dart';
 import 'package:sugudeni/utils/extensions/sizebox.dart';
 import 'package:sugudeni/utils/global-functions.dart';
-import 'package:sugudeni/utils/routes/routes-name.dart';
-import 'package:sugudeni/view/customer/appBar/customer-used-appbar.dart';
 import 'package:sugudeni/view/customer/cart/show-delivery-slots.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../utils/constants/colors.dart';
 import '../../currency/find-currency.dart';
-import '../visitStore/visit-store-appBar.dart';
 
 class CustomerCartView extends StatefulWidget {
   const CustomerCartView({super.key});
@@ -33,18 +28,20 @@ class _CustomerCartViewState extends State<CustomerCartView> {
   @override
   void initState() {
     // TODO: implement initState
-    context.read<CartProvider>().getCartData(context);
+    context.read<CartProvider>().getCartData(context).then((_) {
+      // Auto-select single item if there's only one item in cart
+      final provider = context.read<CartProvider>();
+      if (provider.cartResponse != null &&
+          provider.cartResponse!.cart.cartItem.length == 1 &&
+          provider.selectedIndex.isEmpty) {
+        final singleItem = provider.cartResponse!.cart.cartItem.first;
+        provider.toggleItem(singleItem.id);
+      }
+    });
     super.initState();
   }
   @override
   Widget build(BuildContext context) {
-    final border=OutlineInputBorder(
-      borderRadius: BorderRadius.circular(8.r),
-      borderSide: const BorderSide(
-        color: transparentColor,
-
-      ),
-    );
     return Scaffold(
       appBar: AppBar(
         backgroundColor: whiteColor,
@@ -89,7 +86,7 @@ class _CustomerCartViewState extends State<CustomerCartView> {
             GestureDetector(
                 onTap: ()async{
                   if(context.read<CartProvider>().selectedIndex.isEmpty){
-                    showSnackbar(context, AppLocalizations.of(context)!.pleaseselectproducttodelete);
+                    showSnackbar(context, "Please select items to delete");
                     return;
                   }
                   showDialog(context: context, builder: (context){
@@ -148,6 +145,18 @@ class _CustomerCartViewState extends State<CustomerCartView> {
           ));
         }
 
+        // Handle case where cartResponse is null or cart data is not loaded yet
+        if (provider.cartResponse == null) {
+          return Center(child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Image.asset(AppAssets.emptyCart),
+              Text("Loading cart..."),
+            ],
+          ));
+        }
+
+        // Check if cart has items
         if (provider.cartResponse!.cart.cartItem.isEmpty) {
           return  Center(child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -226,9 +235,8 @@ class _CustomerCartViewState extends State<CustomerCartView> {
                       children: [
                         Row(
                           children: [
-                            MyText(text: "${AppLocalizations.of(context)!.subtotal} : ",size: 12.sp,fontWeight: FontWeight.w600),
-                            FindCurrency(usdAmount:
-                            provider.cartResponse!.cart.discount==0 ?provider.cartResponse!.cart.totalPrice:provider.cartResponse!.cart.totalPriceAfterDiscount,
+                            MyText(text: "${AppLocalizations.of(context)!.subtotal} (${provider.getSelectedItemsCount()} ${provider.getSelectedItemsCount() == 1 ? 'item' : 'items'}) : ",size: 12.sp,fontWeight: FontWeight.w600),
+                            FindCurrency(usdAmount: provider.getSelectedItemsSubtotal(),
                                 size: 12.sp,fontWeight: FontWeight.w600,color: primaryColor),
                             //MyText(text: "USD ${provider.cartResponse!.cart.totalPrice}",size: 12.sp,fontWeight: FontWeight.w600,color: primaryColor,),
 
@@ -249,6 +257,12 @@ class _CustomerCartViewState extends State<CustomerCartView> {
                     10.width,
                     GestureDetector(
                       onTap: ()async{
+                        // Check if items are selected for checkout
+                        if (provider.selectedIndex.isEmpty) {
+                          showSnackbar(context, "Please select items to proceed with checkout");
+                          return;
+                        }
+
                         // var model=CashOrderModel(shippingAddress: "shippingAddress");
                         // await CartRepository.createCashOrder(model, provider.cartResponse!.cart.id, context).then((v){
                         //   showSnackbar(context, "Checkout created successfully",color: greenColor);
@@ -377,7 +391,7 @@ class CartItemWidget extends StatelessWidget {
                   height:65.h ,
                   width: 65.w,
                   radius: 6.r,
-                  imageUrl:isBulk==true? img!:"${ApiEndpoints.productUrl}/$img"),
+                  imageUrl:isBulk==true? (img ?? ""):"${ApiEndpoints.productUrl}/${img ?? ""}"),
 
               10.width,
               Column(

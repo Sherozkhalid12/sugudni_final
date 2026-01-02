@@ -36,6 +36,26 @@ import '../../utils/global-functions.dart';
       }
       notifyListeners();
     }
+
+    // Calculate subtotal of selected items only
+    double getSelectedItemsSubtotal() {
+      if (cartResponse == null) return 0.0;
+
+      double subtotal = 0.0;
+      for (var cartItem in cartResponse!.cart.cartItem) {
+        if (selectedIndex.contains(cartItem.id)) {
+          // Use the appropriate price based on discount
+          double itemPrice = cartItem.priceAfterDiscount > 0 ? cartItem.priceAfterDiscount : cartItem.price;
+          subtotal += itemPrice * cartItem.quantity;
+        }
+      }
+      return subtotal;
+    }
+
+    // Get selected items count
+    int getSelectedItemsCount() {
+      return selectedIndex.length;
+    }
     selectSlot(String s){
       selectedSlot=s;
       notifyListeners();

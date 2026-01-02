@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:sugudeni/providers/bottom_navigation_provider.dart';
 import 'package:sugudeni/utils/constants/colors.dart';
 import 'package:sugudeni/utils/extensions/sizebox.dart';
 import 'package:sugudeni/view/customer/cart/customer-cart-view.dart';
@@ -66,7 +69,12 @@ class CustomerUsedAppBar extends StatelessWidget {
           ),
         ),
         4.width,
-        Image.asset(AppAssets.shareIcon,scale: 2,width: 20.w,height: 20.h,),
+        GestureDetector(
+          onTap: () {
+            Share.share('Check out SUGUDENI - Your favorite shopping app! Download now');
+          },
+          child: Image.asset(AppAssets.shareIcon,scale: 2,width: 20.w,height: 20.h,),
+        ),
         4.width,
         Stack(
           children: [
@@ -92,7 +100,12 @@ class CustomerUsedAppBar extends StatelessWidget {
           ],
         ),
         4.width,
-        Image.asset(AppAssets.gridIcon,scale: 2,width: 20.w,height: 20.h,),
+        GestureDetector(
+          onTap: () {
+            context.read<BottomNavigationProvider>().navigateToProfile();
+          },
+          child: Image.asset(AppAssets.gridIcon,scale: 2,width: 20.w,height: 20.h,),
+        ),
       ],
     );
   }
