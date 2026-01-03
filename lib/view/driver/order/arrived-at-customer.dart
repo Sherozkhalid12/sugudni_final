@@ -15,6 +15,7 @@ import 'package:sugudeni/view/driver/order/arrived-at-vendor.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../models/shipment/GetAllAvailableShipmentModel.dart';
 import '../../../providers/loading-provider.dart';
+import '../../../providers/shipping-provider/shipping-provider.dart';
 import '../../../repositories/driver/driver-shipping-repository.dart';
 import '../../../utils/customWidgets/my-text.dart';
 import '../../../utils/global-functions.dart';
@@ -341,6 +342,9 @@ class _ArrivedAtCustomerState extends State<ArrivedAtCustomer> {
                                  try{
                                    await DriverShippingRepository.deliveredShipment(shipmentModel.id, context).then((v){
                                      showSnackbar(context, AppLocalizations.of(context)!.shipmentdeliveredsuccessfully,color: greenColor);
+                                     // Clear cache before navigating to show updated data
+                                     final shippingProvider = Provider.of<ShippingProvider>(context, listen: false);
+                                     shippingProvider.clearCache();
                                      Navigator.pushNamedAndRemoveUntil(context, RoutesNames.driverHomeView, (route) => false,);
                                    });
                                  }catch(e){

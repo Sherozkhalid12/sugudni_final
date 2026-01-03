@@ -36,13 +36,31 @@ class _EnterOtpViewState extends State<EnterOtpView> {
     final signUpProvider = Provider.of<AuthProvider>(context, listen: false);
 
     // Retrieve navigation arguments
-    final arguments = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
+    final arguments = ModalRoute.of(context)!.settings.arguments;
+    Map<String, dynamic>? argsMap;
+    if (arguments != null) {
+      if (arguments is Map<String, dynamic>) {
+        argsMap = arguments;
+      } else {
+        // Try to cast if it's a different type
+        try {
+          argsMap = arguments as Map<String, dynamic>?;
+        } catch (e) {
+          argsMap = null;
+        }
+      }
+    }
+    
     // Use arguments if available, otherwise fallback to provider state
-    final bool isSignUp = arguments?['isSignUp'] ?? signUpProvider.isSignUp;
-    final bool isEmail = arguments?['isEmail'] ?? signUpProvider.isEmail;
+    // IMPORTANT: For sign-in with phone, we must use arguments, not provider state
+    final bool isSignUp = argsMap?['isSignUp'] ?? signUpProvider.isSignUp;
+    // When arguments are provided, always use them (don't fallback to provider for isEmail)
+    final bool isEmail = argsMap != null && argsMap.containsKey('isEmail') 
+        ? argsMap['isEmail'] as bool 
+        : signUpProvider.isEmail;
 
     // Debug log to confirm arguments
-    customPrint("EnterOtpView Arguments: isSignUp=$isSignUp (from args: ${arguments?['isSignUp']}, from provider: ${signUpProvider.isSignUp}), isEmail=$isEmail");
+    customPrint("EnterOtpView Arguments: isSignUp=$isSignUp (from args: ${argsMap?['isSignUp']}, from provider: ${signUpProvider.isSignUp}), isEmail=$isEmail (from args: ${argsMap?['isEmail']}, from provider: ${signUpProvider.isEmail})");
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -128,7 +146,8 @@ class _EnterOtpViewState extends State<EnterOtpView> {
                       if (_isDisposed || !mounted) return;
                       if (isSignUp) {
                         customPrint('Calling verifyOtp for sign-up, isEmail=$isEmail');
-                        signUpProvider.verifyOtp(context, otpController.text);
+                        // Pass isEmail explicitly to ensure correct verification method
+                        signUpProvider.verifyOtp(context, otpController.text, useEmail: isEmail);
                       } else {
                         customPrint('Calling verifySignOtp for sign-in, isEmail=$isEmail');
                         signUpProvider.verifySignOtp(context, otpController.text, isEmail: isEmail, isSignUp: false);

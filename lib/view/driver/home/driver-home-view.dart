@@ -41,17 +41,18 @@ class _DriverHomeViewState extends State<DriverHomeView> with SingleTickerProvid
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    // Preload both tabs data immediately
-    final provider = context.read<ShippingProvider>();
-    provider.getAllAvailableShipments(context);
-    provider.getAllCompletedShipments(context);
-    // Load driver approval status from API
+    // Clear cache and force refresh on app start to show latest orders
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
+        final provider = context.read<ShippingProvider>();
+        // Force refresh to get latest orders instantly
+        provider.getAllAvailableShipments(context, forceRefresh: true);
+        provider.getAllCompletedShipments(context, forceRefresh: true);
         context.read<DriverProvider>().loadApprovalStatus(context);
       }
     });
   }
+
 
   @override
   void dispose() {
@@ -100,6 +101,12 @@ class _DriverHomeViewState extends State<DriverHomeView> with SingleTickerProvid
         ),
         actions: [
           Consumer<DriverProvider>(builder: (context,provider,child){
+            // Check if driver status is underreview - don't show online status
+            String? driverStatus = provider.driverStatus;
+            if (driverStatus == 'underreview') {
+              return const SizedBox.shrink(); // Hide online status when under review
+            }
+            
             // Use cached online status from provider for instant updates
             bool isOnline = provider.isOnline ?? false;
             return Container(
@@ -122,66 +129,168 @@ class _DriverHomeViewState extends State<DriverHomeView> with SingleTickerProvid
         title: MyText(text: AppLocalizations.of(context)!.currentshift,fontWeight: FontWeight.w700,size: 20.sp,),
 
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-
-           const DriverStatusWidget(),
-            10.height,
-            Consumer<DriverProvider>(builder: (context,provider,child){
-              // Use cached online status from provider for instant updates
-              bool isOnline = provider.isOnline ?? false;
-              // Use driverStatus from API if available, otherwise fallback to isPendingApproval
-              String? driverStatus = provider.driverStatus;
-              bool isPendingApproval = driverStatus != null 
-                  ? driverStatus != 'approved' 
-                  : provider.isPendingApproval;
-              
-              // Determine message based on driverStatus
-              String statusMessage = 'Your driver account is pending approval';
-              if (driverStatus == 'rejected') {
-                statusMessage = 'Your driver account has been rejected';
-              } else if (driverStatus == 'pending') {
-                statusMessage = 'Your driver account is pending approval';
-              } else if (driverStatus != 'approved') {
-                statusMessage = 'Your driver account is pending approval';
-              }
-              
-              if(isOnline==false){
-                if(isPendingApproval){
-                  return  Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          driverStatus == 'rejected' ? Icons.cancel : Icons.pending_actions, 
-                          size: 48.sp, 
-                          color: redColor
+      body: Consumer<DriverProvider>(builder: (context, provider, child) {
+        // Check if driver status is underreview - show beautiful waiting message
+        String? driverStatus = provider.driverStatus;
+        if (driverStatus == 'underreview') {
+          return Center(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 30.w, vertical: 50.h),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Animated icon container with gradient
+                    Container(
+                      width: 120.w,
+                      height: 120.w,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            primaryColor.withOpacity(0.2),
+                            primaryColor.withOpacity(0.1),
+                          ],
                         ),
-                        10.height,
-                        MyText(
-                          text: statusMessage,
-                          size: 16.sp,
-                          fontWeight: FontWeight.w600,
-                          color: redColor,
+                      ),
+                      child: Center(
+                        child: Container(
+                          width: 100.w,
+                          height: 100.w,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: primaryColor.withOpacity(0.1),
+                          ),
+                          child: Icon(
+                            Icons.hourglass_empty_rounded,
+                            size: 60.sp,
+                            color: primaryColor,
+                          ),
                         ),
-                        5.height,
-                        MyText(
-                          text: driverStatus == 'rejected' 
-                              ? 'Please contact admin for more information'
-                              : 'Please wait for admin approval before going online',
-                          size: 12.sp,
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ],
+                      ),
                     ),
+                    30.height,
+                    // Main title
+                    MyText(
+                      text: 'Waiting for Approval',
+                      size: 28.sp,
+                      fontWeight: FontWeight.w700,
+                      color: textPrimaryColor,
+                    ),
+                    15.height,
+                    // Subtitle with gradient text effect
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
+                      decoration: BoxDecoration(
+                        color: primaryColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12.r),
+                        border: Border.all(
+                          color: primaryColor.withOpacity(0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: MyText(
+                        text: 'Your driver account is under review',
+                        size: 16.sp,
+                        fontWeight: FontWeight.w600,
+                        color: primaryColor,
+                        textAlignment: TextAlign.center,
+                      ),
+                    ),
+                    25.height,
+                    // Description
+                    MyText(
+                      text: 'Our team is reviewing your application. You\'ll be notified once your account is approved.',
+                      size: 14.sp,
+                      fontWeight: FontWeight.w400,
+                      color: textPrimaryColor.withOpacity(0.7),
+                      textAlignment: TextAlign.center,
+                    ),
+                    40.height,
+                    // Decorative dots
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(3, (index) {
+                        return Container(
+                          margin: EdgeInsets.symmetric(horizontal: 4.w),
+                          width: 8.w,
+                          height: 8.w,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: primaryColor.withOpacity(0.3 + (index * 0.2)),
+                          ),
+                        );
+                      }),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+        
+        // Normal content when not under review
+        return SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const DriverStatusWidget(),
+              10.height,
+              Consumer<DriverProvider>(builder: (context,provider,child){
+                // Use cached online status from provider for instant updates
+                bool isOnline = provider.isOnline ?? false;
+                // Use driverStatus from API if available, otherwise fallback to isPendingApproval
+                String? driverStatus = provider.driverStatus;
+                bool isPendingApproval = driverStatus != null 
+                    ? driverStatus != 'approved' 
+                    : provider.isPendingApproval;
+                
+                // Determine message based on driverStatus
+                String statusMessage = 'Your driver account is pending approval';
+                if (driverStatus == 'rejected') {
+                  statusMessage = 'Your driver account has been rejected';
+                } else if (driverStatus == 'pending') {
+                  statusMessage = 'Your driver account is pending approval';
+                } else if (driverStatus != 'approved') {
+                  statusMessage = 'Your driver account is pending approval';
+                }
+                
+                if(isOnline==false){
+                  if(isPendingApproval){
+                    return  Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            driverStatus == 'rejected' ? Icons.cancel : Icons.pending_actions, 
+                            size: 48.sp, 
+                            color: redColor
+                          ),
+                          10.height,
+                          MyText(
+                            text: statusMessage,
+                            size: 16.sp,
+                            fontWeight: FontWeight.w600,
+                            color: redColor,
+                          ),
+                          5.height,
+                          MyText(
+                            text: driverStatus == 'rejected' 
+                                ? 'Please contact admin for more information'
+                                : 'Please wait for admin approval before going online',
+                            size: 12.sp,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                  return  Center(
+                    child: MyText(text: AppLocalizations.of(context)!.youareoffline),
                   );
                 }
-                return  Center(
-                  child: MyText(text: AppLocalizations.of(context)!.youareoffline),
-                );
-              }
                 return SymmetricPadding(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -308,16 +417,15 @@ class _DriverHomeViewState extends State<DriverHomeView> with SingleTickerProvid
                     ],
                   ),
                 );
-            })
-
-
-
-          ],
-        ),
-      ),
+              }),
+            ],
+          ),
+        );
+      }),
     );
   }
 }
+
 class CompletedOrderWidget extends StatelessWidget {
   final ShipmentModel shipmentModel;
   final String img;

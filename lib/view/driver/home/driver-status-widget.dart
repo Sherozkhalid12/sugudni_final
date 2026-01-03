@@ -77,6 +77,12 @@ class DriverStatusWidget extends StatelessWidget {
             Column(
               children: [
                Consumer<DriverProvider>(builder: (context,provider,child){
+                 // Check if driver status is underreview - don't show online status
+                 String? driverStatus = provider.driverStatus;
+                 if (driverStatus == 'underreview') {
+                   return const SizedBox.shrink(); // Hide online status when under review
+                 }
+                 
                  // Use driverStatus from API if available, otherwise fallback to isPendingApproval
                  bool isPendingApproval = provider.driverStatus != null 
                      ? provider.driverStatus != 'approved' 

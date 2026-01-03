@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:provider/provider.dart';
-import 'package:sugudeni/utils/extensions/media-query.dart';
 
-import '../../providers/auth/auth-provider.dart';
 import '../constants/colors.dart';
 import '../constants/fonts.dart';
 import '../constants/app-assets.dart';
@@ -79,7 +76,6 @@ class CustomTextFiled extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final screenHeight = context.screenHeight;
     return TextFormField(
       textAlign: textAlign ?? TextAlign.start,
       enabled: isEnable ?? true,
@@ -110,9 +106,7 @@ class CustomTextFiled extends StatelessWidget {
                       : AppAssets.passwordEyeIcon,
                   scale: 2.5,
                 ))
-            : (suffixIcon != null
-                ? Icon(suffixIcon)
-                : null),
+            : (suffixIcon != null ? Icon(suffixIcon) : null),
         prefixIcon: isShowPrefixIcon == false
             ? null
             : isShowPrefixImage == true

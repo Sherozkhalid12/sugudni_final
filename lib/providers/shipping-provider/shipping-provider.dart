@@ -13,7 +13,7 @@ class ShippingProvider extends ChangeNotifier{
   bool isLoadingCompleted=false;
   DateTime? lastFetchTime;
   DateTime? lastCompletedFetchTime;
-  static const Duration cacheDuration = Duration(minutes: 2);
+  static const Duration cacheDuration = Duration(seconds: 30); // Reduced to 30 seconds for faster updates
   
   Future<void>getAllAvailableShipments(BuildContext context, {bool forceRefresh = false})async{
     // Use cache if data exists and is fresh
@@ -24,18 +24,26 @@ class ShippingProvider extends ChangeNotifier{
       }
     }
     
-    isLoading=true;
-    notifyListeners();
+    // Delay notifyListeners to avoid setState during build
+    Future.microtask(() {
+      isLoading=true;
+      notifyListeners();
+    });
+    
     try{
       final response = await DriverShippingRepository.getAllAvailableShipment(context);
       shipmentModel=response.shipments;
       lastFetchTime = DateTime.now();
-      isLoading=false;
-      notifyListeners();
+      Future.microtask(() {
+        isLoading=false;
+        notifyListeners();
+      });
     }catch(e){
       errorText=e.toString();
-      isLoading=false;
-      notifyListeners();
+      Future.microtask(() {
+        isLoading=false;
+        notifyListeners();
+      });
     }
   }
   
@@ -48,20 +56,28 @@ class ShippingProvider extends ChangeNotifier{
       }
     }
     
-    isLoadingCompleted=true;
-    notifyListeners();
+    // Delay notifyListeners to avoid setState during build
+    Future.microtask(() {
+      isLoadingCompleted=true;
+      notifyListeners();
+    });
+    
     try{
       final response = await DriverShippingRepository.getAllPendingShipment(context);
       completedShipments = response.shipments
           .where((shipment) => shipment.isDelivered == true && shipment.shippingAddress != null)
           .toList();
       lastCompletedFetchTime = DateTime.now();
-      isLoadingCompleted=false;
-      notifyListeners();
+      Future.microtask(() {
+        isLoadingCompleted=false;
+        notifyListeners();
+      });
     }catch(e){
       errorText=e.toString();
-      isLoadingCompleted=false;
-      notifyListeners();
+      Future.microtask(() {
+        isLoadingCompleted=false;
+        notifyListeners();
+      });
     }
   }
   

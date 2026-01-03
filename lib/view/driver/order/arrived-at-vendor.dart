@@ -15,6 +15,7 @@ import 'package:sugudeni/utils/routes/routes-name.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../models/shipment/GetAllAvailableShipmentModel.dart';
 import '../../../providers/loading-provider.dart';
+import '../../../providers/shipping-provider/shipping-provider.dart';
 import '../../../utils/customWidgets/my-text.dart';
 
 class ArrivedAtVendor extends StatefulWidget {
@@ -315,6 +316,9 @@ class _ArrivedAtVendorState extends State<ArrivedAtVendor> {
                             try{
                               await DriverShippingRepository.shipmentPicked(shipmentModel.id, context).then((v){
                                 showSnackbar(context, AppLocalizations.of(context)!.shipmentpickedsuccessfully,color: greenColor);
+                                // Clear cache before navigating to show updated data
+                                final shippingProvider = Provider.of<ShippingProvider>(context, listen: false);
+                                shippingProvider.clearCache();
                                 Navigator.pushNamedAndRemoveUntil(context, RoutesNames.driverHomeView, (route) => false,);
                               });
                             }catch(e){

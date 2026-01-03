@@ -105,8 +105,11 @@ class _LoginWithEmailViewState extends State<LoginWithEmailView> {
                       isShowPrefixImage: true,
                       prefixImgUrl: AppAssets.passwordIcon,
                       isPassword: true,
-                      showPassword: authProvider.showPassword, // From provider
-                      passwordFunction: authProvider.togglePasswordVisibility, // Toggle via provider
+                      isObscure: !authProvider.showPassword, // Invert showPassword to isObscure
+                      passwordFunction: () {
+                        authProvider.togglePasswordVisibility();
+                        return null;
+                      }, // Toggle via provider
                     );
                   },
                 ),
