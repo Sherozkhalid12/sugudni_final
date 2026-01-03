@@ -38,44 +38,67 @@ class _SellerMyProductsViewState extends State<SellerMyProductsView> {
     final sellerActiveTab=Provider.of<SellerActiveTabProductProvider>(context,listen: false);
 
     return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, result) async {
-        if (!didPop) {
-          // Clean up resources before popping
-          Provider.of<SellerActiveTabProductProvider>(context, listen: false).resetFilter();
-          Provider.of<SellerActiveTabProductProvider>(context, listen: false).clearResources();
-          // Pop the route
-          if (Navigator.canPop(context)) {
-            Navigator.pop(context);
-          }
+      canPop: true,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) {
+          // Clean up resources after popping (system back button)
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            final sellerProvider = Provider.of<SellerActiveTabProductProvider>(context, listen: false);
+            sellerProvider.resetFilter();
+            sellerProvider.clearResources();
+          });
         }
       },
       child: Scaffold(
         resizeToAvoidBottomInset: false,
         appBar: AppBar(
           toolbarHeight: 80.h,
-          forceMaterialTransparency: true,
+          backgroundColor: Colors.transparent,
+          elevation: 0,
           automaticallyImplyLeading: false,
+
           title: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              RoundIconButton(onPressed: (){
-                // Clean up resources before popping
-                Provider.of<SellerActiveTabProductProvider>(context, listen: false).resetFilter();
-                Provider.of<SellerActiveTabProductProvider>(context, listen: false).clearResources();
-                Navigator.pop(context);
-              },iconUrl: AppAssets.arrowBack),
-               AppBarTitleWidget(title: AppLocalizations.of(context)!.myproducts),
 
+              /// BACK BUTTON
+              RoundIconButton(
+                iconUrl: AppAssets.arrowBack,
+                onPressed: () {
+                  final sellerProvider =
+                  Provider.of<SellerActiveTabProductProvider>(
+                    context,
+                    listen: false,
+                  );
 
-              RoundIconButton(onPressed: (){
-                context.read<ProductsProvider>().clearResources();
+                  // Clean up filters/resources safely
+                  sellerProvider.resetFilter();
+                  sellerProvider.clearResources();
 
-                Navigator.pushNamed(context, RoutesNames.sellerAddProductView);
-              },iconUrl: AppAssets.addIconT),
+                  // Navigate back immediately
+                  Navigator.pop(context);
+                },
+              ),
+
+              /// TITLE
+              AppBarTitleWidget(
+                title: AppLocalizations.of(context)!.myproducts,
+              ),
+
+              /// ADD PRODUCT BUTTON
+              RoundIconButton(
+                iconUrl: AppAssets.addIconT,
+                onPressed: () {
+                  context.read<ProductsProvider>().clearResources();
+
+                  Navigator.pushNamed(
+                    context,
+                    RoutesNames.sellerAddProductView,
+                  );
+                },
+              ),
             ],
           ),
-
         ),
         body: Column(
           children: [

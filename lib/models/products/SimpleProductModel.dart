@@ -205,6 +205,24 @@ class Product {
     int formatInt(num value) {
       return value.toInt();  // Ensures conversion to int safely
     }
+    
+    // Fix invalid imgCover from backend (handles cases where backend returns literal strings)
+    String rawImgCover = json['imgCover'] ?? '';
+    String fixedImgCover = rawImgCover;
+    
+    // Check if imgCover is invalid (contains backend error strings)
+    if (rawImgCover.contains('req.files') || 
+        rawImgCover.contains('filename') ||
+        (rawImgCover.isNotEmpty && !rawImgCover.startsWith('products/') && !rawImgCover.startsWith('http'))) {
+      // Use first image from images array as fallback
+      List<String> images = (json['images'] as List?)?.map((e) => e.toString()).toList() ?? [];
+      if (images.isNotEmpty) {
+        fixedImgCover = images[0];
+      } else {
+        fixedImgCover = ''; // No fallback available
+      }
+    }
+    
     return Product(
       sku: json['sku'] ?? '',
       supplierName: json['supplier_name'] ?? '',
@@ -235,7 +253,7 @@ class Product {
       id: json['_id'] ?? '',
       sellerId: SellerIdProductResponseModel.fromJson(json['sellerid']),
       title: json['title'] ?? '',
-      imgCover: json['imgCover'] ?? '',
+      imgCover: fixedImgCover, // Use fixed imgCover
       weight: json['weight'] ?? '',
       color: json['color'] ?? '',
       size: json['size'] ?? '',
@@ -255,6 +273,22 @@ class Product {
       violation: json['violation'] != null ? ViolationModel.fromJson(json['violation']) : null, // Handle optional violation
 
     );
+  }
+  
+  /// Get a valid image URL for display
+  /// Falls back to first image from images array if imgCover is invalid
+  String getValidImageUrl() {
+    // Check if imgCover is invalid
+    if (imgCover.contains('req.files') || 
+        imgCover.contains('filename') ||
+        (imgCover.isNotEmpty && !imgCover.startsWith('products/') && !imgCover.startsWith('http'))) {
+      // Use first image from images array as fallback
+      if (images.isNotEmpty) {
+        return images[0];
+      }
+      return imgCover; // Return original if no fallback
+    }
+    return imgCover;
   }
   Map<String, dynamic> toJson() {
     return {
