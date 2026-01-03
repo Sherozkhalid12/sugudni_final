@@ -13,7 +13,7 @@ class NotificationProvider extends ChangeNotifier {
   bool get hasUnreadNotifications => _hasUnreadNotifications;
   String? get error => _error;
 
-  int get unreadCount => _notifications.where((n) => !(n.isRead ?? true)).length;
+  int get unreadCount => _notifications.where((n) => !n.read).length;
 
   Future<void> loadNotifications(BuildContext context) async {
     _isLoading = true;
@@ -23,7 +23,7 @@ class NotificationProvider extends ChangeNotifier {
     try {
       final response = await ActivityRepository.getAllActivities(context);
       _notifications = response.activities;
-      _hasUnreadNotifications = _notifications.any((n) => !(n.isRead ?? true));
+      _hasUnreadNotifications = _notifications.any((n) => !n.read);
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -37,14 +37,15 @@ class NotificationProvider extends ChangeNotifier {
     if (index != -1) {
       _notifications[index] = Activity(
         id: _notifications[index].id,
-        type: _notifications[index].type,
+        userid: _notifications[index].userid,
+        otheruserid: _notifications[index].otheruserid,
+        text: _notifications[index].text,
         title: _notifications[index].title,
-        description: _notifications[index].description,
-        message: _notifications[index].message,
-        isRead: true,
+        read: true,
+        activityType: _notifications[index].activityType,
+        activityData: _notifications[index].activityData,
         createdAt: _notifications[index].createdAt,
         updatedAt: _notifications[index].updatedAt,
-        data: _notifications[index].data,
       );
       _updateUnreadStatus();
       notifyListeners();
@@ -54,21 +55,22 @@ class NotificationProvider extends ChangeNotifier {
   void markAllAsRead() {
     _notifications = _notifications.map((n) => Activity(
       id: n.id,
-      type: n.type,
+      userid: n.userid,
+      otheruserid: n.otheruserid,
+      text: n.text,
       title: n.title,
-      description: n.description,
-      message: n.message,
-      isRead: true,
+      read: true,
+      activityType: n.activityType,
+      activityData: n.activityData,
       createdAt: n.createdAt,
       updatedAt: n.updatedAt,
-      data: n.data,
     )).toList();
     _hasUnreadNotifications = false;
     notifyListeners();
   }
 
   void _updateUnreadStatus() {
-    _hasUnreadNotifications = _notifications.any((n) => !(n.isRead ?? true));
+    _hasUnreadNotifications = _notifications.any((n) => !n.read);
   }
 
   void clearError() {

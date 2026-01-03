@@ -1,93 +1,134 @@
 class ActivityResponseModel {
+  final int? page;
+  final String? message;
   final List<Activity> activities;
 
   ActivityResponseModel({
+    this.page,
+    this.message,
     required this.activities,
   });
 
   factory ActivityResponseModel.fromJson(Map<String, dynamic> json) {
     List<Activity> activitiesList = [];
-    
+
     if (json['activities'] != null) {
       if (json['activities'] is List) {
         activitiesList = (json['activities'] as List)
             .map((item) => Activity.fromJson(item))
             .toList();
       }
-    } else if (json['getAllActivities'] != null) {
-      if (json['getAllActivities'] is List) {
-        activitiesList = (json['getAllActivities'] as List)
-            .map((item) => Activity.fromJson(item))
-            .toList();
-      }
     }
-    
-    return ActivityResponseModel(activities: activitiesList);
+
+    return ActivityResponseModel(
+      page: json['page'] as int?,
+      message: json['message'] as String?,
+      activities: activitiesList,
+    );
   }
 
   Map<String, dynamic> toJson() {
     return {
+      'page': page,
+      'message': message,
       'activities': activities.map((activity) => activity.toJson()).toList(),
     };
   }
 }
 
-class Activity {
+// User model for activity userid
+class ActivityUser {
   final String id;
-  final String? type;
-  final String? title;
-  final String? description;
-  final String? message;
-  final bool? isRead;
-  final DateTime? createdAt;
-  final DateTime? updatedAt;
-  final Map<String, dynamic>? data;
+  final String name;
+  final String phone;
+  final String email;
+  final String? profilePic;
 
-  Activity({
+  ActivityUser({
     required this.id,
-    this.type,
-    this.title,
-    this.description,
-    this.message,
-    this.isRead,
-    this.createdAt,
-    this.updatedAt,
-    this.data,
+    required this.name,
+    required this.phone,
+    required this.email,
+    this.profilePic,
   });
 
-  factory Activity.fromJson(Map<String, dynamic> json) {
-    return Activity(
-      id: json['_id'] ?? json['id'] ?? '',
-      type: json['type'],
-      title: json['title'],
-      description: json['description'],
-      message: json['message'],
-      isRead: json['isRead'] ?? json['is_read'] ?? false,
-      createdAt: json['createdAt'] != null
-          ? DateTime.tryParse(json['createdAt'].toString())
-          : (json['created_at'] != null
-              ? DateTime.tryParse(json['created_at'].toString())
-              : null),
-      updatedAt: json['updatedAt'] != null
-          ? DateTime.tryParse(json['updatedAt'].toString())
-          : (json['updated_at'] != null
-              ? DateTime.tryParse(json['updated_at'].toString())
-              : null),
-      data: json['data'] as Map<String, dynamic>?,
+  factory ActivityUser.fromJson(Map<String, dynamic> json) {
+    return ActivityUser(
+      id: json['_id'] ?? '',
+      name: json['name'] ?? '',
+      phone: json['phone'] ?? '',
+      email: json['email'] ?? '',
+      profilePic: json['profilePic'] as String?,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       '_id': id,
-      'type': type,
+      'name': name,
+      'phone': phone,
+      'email': email,
+      'profilePic': profilePic,
+    };
+  }
+}
+
+class Activity {
+  final String id;
+  final ActivityUser? userid;
+  final ActivityUser? otheruserid;
+  final String? text;
+  final String? title;
+  final bool read;
+  final String? activityType;
+  final Map<String, dynamic>? activityData;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
+
+  Activity({
+    required this.id,
+    this.userid,
+    this.otheruserid,
+    this.text,
+    this.title,
+    required this.read,
+    this.activityType,
+    this.activityData,
+    this.createdAt,
+    this.updatedAt,
+  });
+
+  factory Activity.fromJson(Map<String, dynamic> json) {
+    return Activity(
+      id: json['_id'] ?? '',
+      userid: json['userid'] != null ? ActivityUser.fromJson(json['userid']) : null,
+      otheruserid: json['otheruserid'] != null ? ActivityUser.fromJson(json['otheruserid']) : null,
+      text: json['text'] as String?,
+      title: json['title'] as String?,
+      read: json['read'] ?? false,
+      activityType: json['activityType'] as String?,
+      activityData: json['activityData'] as Map<String, dynamic>?,
+      createdAt: json['createdAt'] != null
+          ? DateTime.tryParse(json['createdAt'].toString())
+          : null,
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.tryParse(json['updatedAt'].toString())
+          : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      '_id': id,
+      'userid': userid?.toJson(),
+      'otheruserid': otheruserid?.toJson(),
+      'text': text,
       'title': title,
-      'description': description,
-      'message': message,
-      'isRead': isRead,
+      'read': read,
+      'activityType': activityType,
+      'activityData': activityData,
       'createdAt': createdAt?.toIso8601String(),
       'updatedAt': updatedAt?.toIso8601String(),
-      'data': data,
     };
   }
 }

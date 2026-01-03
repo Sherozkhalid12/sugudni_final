@@ -8,11 +8,8 @@ import 'package:sugudeni/utils/constants/app-assets.dart';
 import 'package:sugudeni/utils/constants/colors.dart';
 import 'package:sugudeni/utils/customWidgets/app-bar-title-widget.dart';
 import 'package:sugudeni/utils/customWidgets/my-text.dart';
-import 'package:sugudeni/utils/customWidgets/round-button.dart';
 import 'package:sugudeni/utils/customWidgets/shimmer-widgets.dart';
-import 'package:sugudeni/utils/customWidgets/symetric-padding.dart';
 import 'package:sugudeni/utils/extensions/sizebox.dart';
-import 'package:sugudeni/utils/global-functions.dart';
 
 import '../../l10n/app_localizations.dart';
 
@@ -68,14 +65,16 @@ class _NotificationsViewState extends State<NotificationsView> {
     return grouped;
   }
 
-  IconData _getActivityIcon(String? type) {
-    switch (type?.toLowerCase()) {
+  IconData _getActivityIcon(String? activityType) {
+    switch (activityType?.toLowerCase()) {
       case 'order':
         return Icons.shopping_bag_outlined;
       case 'payment':
         return Icons.payment_outlined;
       case 'delivery':
         return Icons.local_shipping_outlined;
+      case 'delivery-rating':
+        return Icons.star_outline;
       case 'product':
         return Icons.inventory_2_outlined;
       case 'review':
@@ -87,14 +86,16 @@ class _NotificationsViewState extends State<NotificationsView> {
     }
   }
 
-  Color _getActivityIconColor(String? type) {
-    switch (type?.toLowerCase()) {
+  Color _getActivityIconColor(String? activityType) {
+    switch (activityType?.toLowerCase()) {
       case 'order':
         return primaryColor;
       case 'payment':
         return Colors.green;
       case 'delivery':
         return Colors.blue;
+      case 'delivery-rating':
+        return Colors.amber;
       case 'product':
         return Colors.orange;
       case 'review':
@@ -203,7 +204,7 @@ class _NotificationsViewState extends State<NotificationsView> {
   }
 
   Widget _buildActivityItem(Activity activity, NotificationProvider notificationProvider) {
-    final isRead = activity.isRead ?? false;
+    final isRead = activity.read;
 
     return Container(
       margin: EdgeInsets.only(bottom: 12.h),
@@ -222,7 +223,8 @@ class _NotificationsViewState extends State<NotificationsView> {
         color: Colors.transparent,
         child: InkWell(
           onTap: () {
-            // Mark as read when tapped
+            // Mark as read when tapped (if there's an API for this)
+            // For now, just update local state
             if (!isRead) {
               notificationProvider.markAsRead(activity.id);
             }
@@ -238,12 +240,12 @@ class _NotificationsViewState extends State<NotificationsView> {
                   width: 48.w,
                   height: 48.h,
                   decoration: BoxDecoration(
-                    color: _getActivityIconColor(activity.type).withOpacity(0.1),
+                    color: _getActivityIconColor(activity.activityType).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12.r),
                   ),
                   child: Icon(
-                    _getActivityIcon(activity.type),
-                    color: _getActivityIconColor(activity.type),
+                    _getActivityIcon(activity.activityType),
+                    color: _getActivityIconColor(activity.activityType),
                     size: 24.sp,
                   ),
                 ),
@@ -264,15 +266,26 @@ class _NotificationsViewState extends State<NotificationsView> {
                           overflow: TextOverflow.ellipsis,
                         ),
                       if (activity.title != null && activity.title!.isNotEmpty) 4.height,
-                      // Description
-                      if (activity.description != null && activity.description!.isNotEmpty)
+                      // Description (text field)
+                      if (activity.text != null && activity.text!.isNotEmpty)
                         MyText(
-                          text: activity.description!,
+                          text: activity.text!,
                           size: 12.sp,
                           fontWeight: FontWeight.w400,
                           color: textPrimaryColor.withOpacity(0.7),
                           maxLine: 3,
                           overflow: TextOverflow.ellipsis,
+                        ),
+                      // Show tracking ID if available
+                      if (activity.activityData != null && activity.activityData!['trackingId'] != null)
+                        Padding(
+                          padding: EdgeInsets.only(top: 4.h),
+                          child: MyText(
+                            text: 'Tracking ID: ${activity.activityData!['trackingId']}',
+                            size: 10.sp,
+                            fontWeight: FontWeight.w500,
+                            color: primaryColor.withOpacity(0.8),
+                          ),
                         ),
                       8.height,
                       // Time
