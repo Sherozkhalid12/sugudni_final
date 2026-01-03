@@ -7,7 +7,6 @@ import 'package:sugudeni/providers/carts/cart-provider.dart';
 import 'package:sugudeni/repositories/carts/cart-repository.dart';
 import 'package:sugudeni/utils/constants/app-assets.dart';
 import 'package:sugudeni/utils/customWidgets/cached-network-image.dart';
-import 'package:sugudeni/utils/customWidgets/loading-dialog.dart';
 import 'package:sugudeni/utils/customWidgets/my-text.dart';
 import 'package:sugudeni/utils/customWidgets/shimmer-widgets.dart';
 import 'package:sugudeni/utils/extensions/sizebox.dart';
@@ -119,9 +118,51 @@ class _CustomerCartViewState extends State<CustomerCartView> {
                     showSnackbar(context, "Please select items to delete");
                     return;
                   }
-                  showDialog(context: context, builder: (context){
-                    return  LoadingDialog(text: AppLocalizations.of(context)!.deleting,);
-                  });
+                  // Show professional loading overlay
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (BuildContext context) {
+                      return Dialog(
+                        backgroundColor: Colors.transparent,
+                        elevation: 0,
+                        child: Container(
+                          padding: EdgeInsets.all(20.sp),
+                          decoration: BoxDecoration(
+                            color: whiteColor,
+                            borderRadius: BorderRadius.circular(12.r),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SizedBox(
+                                width: 20.sp,
+                                height: 20.sp,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+                                ),
+                              ),
+                              12.width,
+                              MyText(
+                                text: AppLocalizations.of(context)!.deleting,
+                                size: 12.sp,
+                                color: textPrimaryColor,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  );
                   List<String> selectedItems = List.from(context.read<CartProvider>().selectedIndex);
 
                   for (var i in selectedItems) {
