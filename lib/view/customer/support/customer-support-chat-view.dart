@@ -350,24 +350,24 @@ class _CustomerSupportChatViewState extends State<CustomerSupportChatView> {
                 ? Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      GestureDetector(
-                        onTap: () {
-                          provider.toggle();
-                        },
-                        child: Container(
-                          height: 42.h,
-                          width: 58.w,
-                          decoration: BoxDecoration(
-                            color: primaryColor,
-                            borderRadius: BorderRadius.circular(10.r),
-                          ),
-                          child: const Icon(
-                            Icons.add,
-                            color: whiteColor,
-                            size: 20,
-                          ),
-                        ),
-                      ),
+                      // GestureDetector(
+                      //   onTap: () {
+                      //     provider.toggle();
+                      //   },
+                      //   child: Container(
+                      //     height: 42.h,
+                      //     width: 58.w,
+                      //     decoration: BoxDecoration(
+                      //       color: primaryColor,
+                      //       borderRadius: BorderRadius.circular(10.r),
+                      //     ),
+                      //     child: const Icon(
+                      //       Icons.add,
+                      //       color: whiteColor,
+                      //       size: 20,
+                      //     ),
+                      //   ),
+                      // ),
                       7.width,
                       Flexible(
                         child: TextFormField(
