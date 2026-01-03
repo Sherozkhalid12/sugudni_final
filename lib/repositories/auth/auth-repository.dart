@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/cupertino.dart';
 import 'package:http/http.dart' as http;
+import 'package:sugudeni/utils/global-functions.dart';
 import 'package:sugudeni/api/api-endpoints.dart';
 import 'package:sugudeni/api/network/api-client.dart';
 import 'package:sugudeni/models/auth/ResetPasswordModel.dart';
@@ -12,7 +13,7 @@ import 'package:sugudeni/models/auth/SignUpSuccess.dart';
 import 'package:sugudeni/models/auth/VerifySignUpOtpModel.dart';
 import 'package:sugudeni/models/simple/SimpleMessageResponseModel.dart';
 import 'package:sugudeni/utils/constants/colors.dart';
-import 'package:sugudeni/utils/global-functions.dart';
+import 'package:sugudeni/utils/sharePreference/save-user-token.dart';
 
 import '../../models/auth/SignInWithPhoneRespnseModel.dart';
 import '../../models/auth/SignUpModel.dart';
@@ -222,6 +223,67 @@ class AuthRepository{
       final error=body['error']??body['message'];
       showSnackbar(context, error.toString(),color: redColor);
       throw error;
+    }
+  }
+
+  static Future<void> setFcmToken(String fcmToken, BuildContext? context) async {
+    try {
+      bool isConnected = await checkInternetConnection();
+      if (!isConnected) {
+        customPrint('No internet connection. Skipping FCM token update.');
+        return;
+      }
+      
+      // Verify session token and userId exist before making the request
+      final sessionToken = await getSessionTaken();
+      final userId = await getUserId();
+      
+      if (sessionToken == null || sessionToken.isEmpty || sessionToken.trim().isEmpty) {
+        customPrint('Cannot send FCM token: No valid session token found');
+        return;
+      }
+      
+      // Also verify userId exists - backend needs this to identify the user
+      if (userId == null || userId.isEmpty || userId.trim().isEmpty) {
+        customPrint('Cannot send FCM token: User ID not found. User may not be fully logged in.');
+        return;
+      }
+      
+      final body = {'fcmtoken': fcmToken};
+      final response = await ApiClient.patchRequest(
+        ApiEndpoints.setFcmToken,
+        body,
+        headers: await ApiClient.bearerHeader,
+      ).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          customPrint('FCM token update timed out.');
+          return http.Response('Timeout', 408);
+        },
+      );
+      
+      final responseBody = jsonDecode(response.body);
+      customPrint("FCM Token Update Response: $responseBody");
+      customPrint("FCM Token Update Status Code: ${response.statusCode}");
+      
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        customPrint('FCM token updated successfully');
+      } else if (response.statusCode == 400) {
+        // 400 Bad Request - likely means token is invalid or user not found
+        final error = responseBody['error'] ?? responseBody['message'] ?? 'Bad Request';
+        customPrint('Failed to update FCM token: $error (Status: 400)');
+        customPrint('This usually means the session token is invalid or expired.');
+      } else if (response.statusCode == 401 || response.statusCode == 403) {
+        // Unauthorized/Forbidden - user needs to login again
+        customPrint('FCM token update failed: User authentication expired (Status: ${response.statusCode})');
+      } else {
+        final error = responseBody['error'] ?? responseBody['message'] ?? 'Unknown error';
+        customPrint('Failed to update FCM token: $error (Status: ${response.statusCode})');
+        // Don't throw error - just log it, as this is not critical for login flow
+      }
+    } catch (e) {
+      customPrint('Error updating FCM token: $e');
+      // Don't throw error - just log it, as this is not critical for login flow
     }
   }
 

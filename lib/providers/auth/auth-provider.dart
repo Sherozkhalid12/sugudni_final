@@ -15,6 +15,7 @@ import 'package:sugudeni/utils/routes/routes-name.dart';
 import 'package:sugudeni/utils/sharePreference/save-user-token.dart';
 import 'package:sugudeni/utils/sharePreference/save-user-type.dart';
 import 'package:sugudeni/utils/user-roles.dart';
+import 'package:sugudeni/services/firebase-messaging-service.dart';
 
 import '../../models/auth/SuccessfullVerifyOtpResponse.dart';
 import '../../utils/constants/colors.dart';
@@ -332,6 +333,10 @@ class AuthProvider extends ChangeNotifier {
         await saveSessionToken(response.token!);
         await saveUserId(userId);
         await saveUserType(roleProvider.selectedRole);
+        
+        // Send FCM token to backend
+        _sendFcmTokenToBackend(context);
+        
         if (context.mounted) {
           // Show success message only if context is still mounted and not navigating
           Future.microtask(() {
@@ -447,6 +452,10 @@ class AuthProvider extends ChangeNotifier {
         await saveSessionToken(v.token);
         await saveUserId(v.user.id);
         await saveUserType(v.role);
+        
+        // Send FCM token to backend
+        _sendFcmTokenToBackend(context);
+        
         if (context.mounted) {
           showSnackbar(context, AppLocalizations.of(context)!.loggedinsuccessfully, color: greenColor);
           navigateBasedOnRole(v.role, context);
@@ -482,6 +491,10 @@ class AuthProvider extends ChangeNotifier {
         await saveSessionToken(v.token!);
         await saveUserId(v.user.id);
         saveUserType(v.role);
+        
+        // Send FCM token to backend
+        _sendFcmTokenToBackend(context);
+        
         loadingProvider.setLoading(false);
         if (context.mounted) {
           showSnackbar(context, message, color: greenColor);
@@ -632,4 +645,20 @@ class AuthProvider extends ChangeNotifier {
     _showPassword = false;
     isSignUp = true;
     isEmail = true;
-  }}
+  }
+
+  /// Helper function to send FCM token to backend after login/signup
+  Future<void> _sendFcmTokenToBackend(BuildContext? context) async {
+    try {
+      final fcmToken = await FirebaseMessagingService().getFCMToken();
+      if (fcmToken != null && fcmToken.isNotEmpty) {
+        await AuthRepository.setFcmToken(fcmToken, context);
+      } else {
+        customPrint('FCM token is null or empty, skipping backend update');
+      }
+    } catch (e) {
+      customPrint('Error sending FCM token to backend: $e');
+      // Don't throw - this is not critical for login flow
+    }
+  }
+}

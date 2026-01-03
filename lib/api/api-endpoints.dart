@@ -16,6 +16,7 @@ class ApiEndpoints{
   static const String resetPassword = 'auth/resetPasswordRequest';
   static const String verifyResetPasswordOtp = 'auth/verifyPasswordOtp';
   static const String newPassword = 'auth/newPassword';
+  static const String setFcmToken = 'auth/setFcmToken';
 
   ///driver
   static const String updateDriver = 'users/updateDriver';

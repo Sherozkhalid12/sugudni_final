@@ -16,6 +16,8 @@ import 'package:sugudeni/services/social-services.dart';
 import 'package:sugudeni/utils/constants/colors.dart';
 import 'package:sugudeni/utils/sharePreference/save-user-token.dart';
 import 'package:sugudeni/utils/sharePreference/save-user-type.dart';
+import 'package:sugudeni/services/firebase-messaging-service.dart';
+import 'package:sugudeni/repositories/auth/auth-repository.dart';
 
 import '../../utils/global-functions.dart';
 import '../../l10n/app_localizations.dart';
@@ -55,6 +57,10 @@ class SocialProvider extends ChangeNotifier{
             await saveUserId(v.user.id);
             await saveSessionToken(v.token);
             await saveUserType(role);
+            
+            // Send FCM token to backend
+            _sendFcmTokenToBackend(context);
+            
             navigateBasedOnRole(role, context);
           });
         }
@@ -74,6 +80,9 @@ class SocialProvider extends ChangeNotifier{
               await saveUserId(v.user.id);
               await saveSessionToken(v.token);
               await saveUserType(roleProvider.selectedRole);
+
+              // Send FCM token to backend
+              _sendFcmTokenToBackend(context);
 
               navigateBasedOnRole(roleProvider.selectedRole, context);
             });
@@ -102,6 +111,10 @@ class SocialProvider extends ChangeNotifier{
             await saveUserId(v.user.id);
             await saveSessionToken(v.token);
             await saveUserType(role);
+            
+            // Send FCM token to backend
+            _sendFcmTokenToBackend(context);
+            
             navigateBasedOnRole(role, context);
           });
         }
@@ -166,6 +179,9 @@ class SocialProvider extends ChangeNotifier{
               await saveSessionToken(v.token);
               await saveUserType(role);
 
+              // Send FCM token to backend
+              _sendFcmTokenToBackend(context);
+
               navigateBasedOnRole(role, context);
             });
           }
@@ -188,6 +204,9 @@ class SocialProvider extends ChangeNotifier{
                 await saveUserId(v.user.id);
                 await saveSessionToken(v.token);
                 await saveUserType(roleProvider.selectedRole);
+
+                // Send FCM token to backend
+                _sendFcmTokenToBackend(context);
 
                 navigateBasedOnRole(roleProvider.selectedRole, context);
               });
@@ -279,6 +298,9 @@ class SocialProvider extends ChangeNotifier{
                 await saveSessionToken(v.token);
                 await saveUserType(v.role);
 
+                // Send FCM token to backend
+                _sendFcmTokenToBackend(context);
+
                 navigateBasedOnRole(role, context);
               } else {
                 print("Invalid API response: $v");
@@ -311,6 +333,10 @@ class SocialProvider extends ChangeNotifier{
                 await saveUserId(v.user!.id);
                 await saveSessionToken(v.token);
                 await saveUserType(role);
+                
+                // Send FCM token to backend
+                _sendFcmTokenToBackend(context);
+                
                 navigateBasedOnRole(role, context);
               } else {
                 print("Invalid API response: $v");
@@ -335,6 +361,21 @@ class SocialProvider extends ChangeNotifier{
     } catch (e) {
       print("Apple sign-in error: $e");
       showSnackbar(context, "{Failed to sign in with Apple}: $e", color: redColor);
+    }
+  }
+
+  /// Helper function to send FCM token to backend after social login
+  Future<void> _sendFcmTokenToBackend(BuildContext context) async {
+    try {
+      final fcmToken = await FirebaseMessagingService().getFCMToken();
+      if (fcmToken != null && fcmToken.isNotEmpty) {
+        await AuthRepository.setFcmToken(fcmToken, context);
+      } else {
+        customPrint('FCM token is null or empty, skipping backend update');
+      }
+    } catch (e) {
+      customPrint('Error sending FCM token to backend: $e');
+      // Don't throw - this is not critical for login flow
     }
   }
 }

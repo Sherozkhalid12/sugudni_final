@@ -31,6 +31,7 @@ class _SellerAddAddressViewState extends State<SellerAddAddressView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: false, // ← ADD THIS LINE
       appBar: AppBar(
         backgroundColor: whiteColor,
         automaticallyImplyLeading: false,
