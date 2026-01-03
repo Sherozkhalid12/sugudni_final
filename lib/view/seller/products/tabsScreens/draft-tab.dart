@@ -123,7 +123,9 @@ class _DraftTabState extends State<DraftTab> {
                                   height:65.h ,
                                   width: 65.w,
                                   radius: 6.r,
-                                imageUrl:productData.bulk==true?productData.imgCover :"${ApiEndpoints.productUrl}${productData.imgCover}",
+                                imageUrl: productData.bulk == true 
+                                    ? productData.getValidImageUrl()
+                                    : "${ApiEndpoints.productUrl}${productData.getValidImageUrl()}",
                               ),
                               10.width,
                               Flexible(
@@ -169,16 +171,22 @@ class _DraftTabState extends State<DraftTab> {
                                           
                                           final productsProvider = context.read<ProductsProvider>();
                                           
+                                          // Set values FIRST before clearing (to preserve title and other data)
+                                          productsProvider.setValues(productData);
+                                          
                                           // Clear resources EXCEPT files - we need to preserve them
-                                          productsProvider.clearResourcesExceptFiles();
+                                          // But DON'T clear title, description, etc. since we just set them
+                                          productsProvider.clearResourcesExceptFilesAndFormData();
                                           
                                           productsProvider.setDraftToPublish();
                                           productsProvider.setProductId(productData.id);
                                           
                                           // Prepare all image URLs including imgCover (avoid duplicates)
+                                          // Use getValidImageUrl() to handle invalid imgCover from backend
                                           List<String> allImageUrls = [];
-                                          if (productData.imgCover.isNotEmpty) {
-                                            allImageUrls.add(productData.imgCover);
+                                          String validImgCover = productData.getValidImageUrl();
+                                          if (validImgCover.isNotEmpty) {
+                                            allImageUrls.add(validImgCover);
                                           }
                                           // Add images that are not already in the list (avoid duplicates)
                                           for (String imageUrl in productData.images) {
@@ -190,7 +198,8 @@ class _DraftTabState extends State<DraftTab> {
                                           // Download images FIRST before navigating
                                           customPrint("========== DRAFT TO PUBLISH DEBUG ==========");
                                           customPrint("Product ID: ${productData.id}");
-                                          customPrint("imgCover: ${productData.imgCover}");
+                                          customPrint("imgCover (raw): ${productData.imgCover}");
+                                          customPrint("imgCover (valid): ${productData.getValidImageUrl()}");
                                           customPrint("Images list: ${productData.images}");
                                           customPrint("All image URLs to download: $allImageUrls");
                                           customPrint("Total images: ${allImageUrls.length}");
@@ -211,7 +220,6 @@ class _DraftTabState extends State<DraftTab> {
                                           customPrint("===========================================");
                                           
                                           if(context.mounted){
-                                            productsProvider.setValues(productData);
                                             Navigator.pop(context);
                                             Navigator.pushNamed(context, RoutesNames.sellerAddProductView);
                                           }

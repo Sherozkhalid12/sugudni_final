@@ -159,6 +159,19 @@ class ProductsProvider extends ChangeNotifier{
 
         if (response.statusCode == 200) {
           String fileName = url.split('/').last;
+          
+          // Ensure file has proper extension
+          if (!fileName.contains('.')) {
+            // Try to determine extension from content type
+            String? contentType = response.headers['content-type'];
+            if (contentType != null && contentType.contains('image/')) {
+              String ext = contentType.split('/').last.split(';').first;
+              fileName = "$fileName.$ext";
+            } else {
+              fileName = "$fileName.jpg"; // Default to jpg
+            }
+          }
+          
           // Ensure unique filename to avoid conflicts
           String uniqueFileName = "${DateTime.now().millisecondsSinceEpoch}_${index}_$fileName";
           File file = File('${directory.path}/$uniqueFileName');
@@ -167,8 +180,13 @@ class ProductsProvider extends ChangeNotifier{
           
           // Verify file was written successfully
           if (await file.exists()) {
-            _files.add(FileModel(name: fileName, path: file.path));
-            customPrint("Successfully downloaded and added image: $fileName (saved as $uniqueFileName, size: ${file.lengthSync()} bytes)");
+            int fileSize = file.lengthSync();
+            if (fileSize > 0) {
+              _files.add(FileModel(name: fileName, path: file.path));
+              customPrint("Successfully downloaded and added image: $fileName (saved as $uniqueFileName, size: $fileSize bytes)");
+            } else {
+              customPrint("ERROR: Downloaded file is empty: $uniqueFileName");
+            }
           } else {
             customPrint("ERROR: File was not created after write: $uniqueFileName");
           }
@@ -182,18 +200,34 @@ class ProductsProvider extends ChangeNotifier{
     
     // CRITICAL: Notify listeners after all files are added so UI updates
     notifyListeners();
+    customPrint("");
+    customPrint("=== DOWNLOAD SUMMARY ===");
     customPrint("Total files added: ${_files.length} out of ${imageUrls.length} requested");
     
     // Verify all files exist before returning
+    customPrint("");
+    customPrint("=== FINAL FILE VERIFICATION ===");
+    int validCount = 0;
     for (int i = 0; i < _files.length; i++) {
-      File fileCheck = File(_files[i].path);
-      bool exists = await fileCheck.exists();
-      customPrint("Final verification - File $i: ${_files[i].path} - Exists: $exists");
-      if (!exists) {
-        customPrint("ERROR: File $i does not exist after download!");
+      try {
+        File fileCheck = File(_files[i].path);
+        bool exists = await fileCheck.exists();
+        if (exists) {
+          int size = await fileCheck.length();
+          customPrint("✅ File $i: ${_files[i].path} - Exists: true - Size: $size bytes");
+          validCount++;
+        } else {
+          customPrint("❌ File $i: ${_files[i].path} - Exists: false - FILE MISSING!");
+        }
+      } catch (e) {
+        customPrint("❌ File $i: ${_files[i].path} - ERROR: $e");
       }
     }
-    customPrint("===========================================");
+    customPrint("Valid files: $validCount/${_files.length}");
+    if (validCount != _files.length) {
+      customPrint("⚠️  WARNING: Some files failed to download or verify!");
+    }
+    customPrint("╚══════════════════════════════════════════════════════════════╝");
   }
   Future<void> addFileFromBarcode(String imageUrl) async {
     final directory = await getApplicationDocumentsDirectory();
@@ -555,15 +589,45 @@ class ProductsProvider extends ChangeNotifier{
     final sellerDraftTabProvider = Provider.of<SellerDraftTabProductProvider>(context, listen: false);
     final sellerActiveTabProvider = Provider.of<SellerActiveTabProductProvider>(context, listen: false);
     
-    // Debug: Print file information
-    customPrint("========== UPDATE PRODUCT DEBUG ==========");
-    customPrint("Files count: ${_files.length}");
+    // COMPREHENSIVE DEBUG: Print ALL information
+    customPrint("╔══════════════════════════════════════════════════════════════╗");
+    customPrint("║           UPDATE PRODUCT - COMPREHENSIVE DEBUG              ║");
+    customPrint("╚══════════════════════════════════════════════════════════════╝");
+    customPrint("Product ID: $productId");
+    customPrint("Files in _files list: ${_files.length}");
+    customPrint("isDraftToPublish: $isDraftToPublish");
+    customPrint("isViolationToPendingQc: $isViolationToPendingQc");
+    customPrint("");
+    customPrint("=== FILE INFORMATION ===");
     for (int i = 0; i < _files.length; i++) {
-      File fileCheck = File(_files[i].path);
-      bool exists = await fileCheck.exists();
-      customPrint("File $i: ${_files[i].path} - Exists: $exists");
+      try {
+        File fileCheck = File(_files[i].path);
+        bool exists = await fileCheck.exists();
+        int size = exists ? await fileCheck.length() : 0;
+        customPrint("File $i:");
+        customPrint("  Name: ${_files[i].name}");
+        customPrint("  Path: ${_files[i].path}");
+        customPrint("  Exists: $exists");
+        customPrint("  Size: $size bytes");
+        if (!exists) {
+          customPrint("  ⚠️  WARNING: FILE DOES NOT EXIST!");
+        }
+      } catch (e) {
+        customPrint("  ❌ ERROR checking file $i: $e");
+      }
     }
-    customPrint("===========================================");
+    customPrint("");
+    customPrint("=== FORM DATA ===");
+    customPrint("Title: ${productTitleController.text}");
+    customPrint("Category ID: $categoryId");
+    customPrint("SubCategory ID: $subCategoryId");
+    customPrint("Weight: $weight");
+    customPrint("Color: $color");
+    customPrint("Size: $size");
+    customPrint("Price: ${priceController.text}");
+    customPrint("Quantity: ${quantityController.text}");
+    customPrint("Description: ${discriptionController.text}");
+    customPrint("╚══════════════════════════════════════════════════════════════╝");
     
     if (_files.isEmpty) {
       showSnackbar(context, AppLocalizations.of(context)!.pleaseuploadproductimages, color: redColor);
@@ -612,19 +676,23 @@ class ProductsProvider extends ChangeNotifier{
       loadingProvider.setLoading(true);
 
       var url = Uri.parse("${ApiEndpoints.baseUrl}/${ApiEndpoints.products}/$productId");
+      customPrint("Request URL: $url");
 
       var request = http.MultipartRequest('PUT', url);
       final token = await getSessionTaken();
       final sellerId = await getUserId();
-      customPrint("token======$token");
+      customPrint("Token: ${token.substring(0, 20)}...");
+      customPrint("Seller ID: $sellerId");
+      
       // Add headers
       request.headers.addAll({
         'token': token,
         'Authorization': 'Bearer $token'
       });
+      customPrint("Headers added: ${request.headers.keys}");
 
       // Add text fields
-      request.fields.addAll({
+      Map<String, String> fields = {
         'sellerid': sellerId,
         'status':isViolationToPendingQc==true? ProductStatus.pendingqc:ProductStatus.active,
         'title': productTitleController.text.trim(),
@@ -636,22 +704,40 @@ class ProductsProvider extends ChangeNotifier{
         'descripton': discriptionController.text.trim(),
         'category': categoryId!,
         'subcategory': subCategoryId!,
-
+      };
+      request.fields.addAll(fields);
+      customPrint("=== FORM FIELDS BEING SENT ===");
+      fields.forEach((key, value) {
+        customPrint("  $key: $value");
       });
+      customPrint("Total fields: ${request.fields.length}");
 
       // Attach files - verify they exist first
+      customPrint("");
+      customPrint("=== FILE VALIDATION ===");
       List<FileModel> validFiles = [];
-      for (var file in _files) {
-        File fileCheck = File(file.path);
-        if (await fileCheck.exists()) {
-          validFiles.add(file);
-          customPrint("Valid file found: ${file.path}");
-        } else {
-          customPrint("WARNING: File does not exist: ${file.path}");
+      for (int i = 0; i < _files.length; i++) {
+        var file = _files[i];
+        try {
+          File fileCheck = File(file.path);
+          bool exists = await fileCheck.exists();
+          if (exists) {
+            int size = await fileCheck.length();
+            validFiles.add(file);
+            customPrint("✅ File $i VALID: ${file.path} (${size} bytes)");
+          } else {
+            customPrint("❌ File $i INVALID: ${file.path} - FILE DOES NOT EXIST");
+          }
+        } catch (e) {
+          customPrint("❌ File $i ERROR: ${file.path} - Exception: $e");
         }
       }
       
       if (validFiles.isEmpty) {
+        customPrint("");
+        customPrint("❌❌❌ CRITICAL ERROR: NO VALID FILES FOUND! ❌❌❌");
+        customPrint("Total files in _files: ${_files.length}");
+        customPrint("Valid files: ${validFiles.length}");
         loadingProvider.setLoading(false);
         if (context.mounted) {
           showSnackbar(context, 'Error: Image files not found. Please re-select images.', color: redColor);
@@ -659,26 +745,85 @@ class ProductsProvider extends ChangeNotifier{
         return;
       }
       
-      customPrint("Uploading ${validFiles.length} image files...");
+      customPrint("");
+      customPrint("=== ATTACHING FILES TO REQUEST ===");
+      customPrint("Valid files to upload: ${validFiles.length}");
       
-      // Attach cover image (first file)
-      request.files.add(await http.MultipartFile.fromPath(
-        'imgCover', validFiles[0].path,
-        contentType: MediaType('image', 'jpeg'),
-      ));
-      
-      // Attach all other images
-      for (var file in validFiles) {
-        request.files.add(await http.MultipartFile.fromPath(
-          'images', file.path,
+      // Attach cover image (first file only)
+      try {
+        customPrint("📎 Attaching COVER image: ${validFiles[0].path}");
+        File coverFile = File(validFiles[0].path);
+        int coverSize = await coverFile.length();
+        customPrint("   Cover file size: $coverSize bytes");
+        
+        var coverMultipart = await http.MultipartFile.fromPath(
+          'imgCover', validFiles[0].path,
           contentType: MediaType('image', 'jpeg'),
-        ));
+        );
+        request.files.add(coverMultipart);
+        customPrint("   ✅ Cover image attached successfully");
+      } catch (e) {
+        customPrint("   ❌ ERROR attaching cover image: $e");
+        throw Exception("Failed to attach cover image: $e");
       }
+      
+      // Attach all images (including cover) to images array
+      customPrint("");
+      customPrint("📎 Attaching IMAGES array:");
+      for (int i = 0; i < validFiles.length; i++) {
+        try {
+          customPrint("   Attaching image $i: ${validFiles[i].path}");
+          File imgFile = File(validFiles[i].path);
+          int imgSize = await imgFile.length();
+          customPrint("   Image $i size: $imgSize bytes");
+          
+          var imgMultipart = await http.MultipartFile.fromPath(
+            'images', validFiles[i].path,
+            contentType: MediaType('image', 'jpeg'),
+          );
+          request.files.add(imgMultipart);
+          customPrint("   ✅ Image $i attached successfully");
+        } catch (e) {
+          customPrint("   ❌ ERROR attaching image $i: $e");
+          throw Exception("Failed to attach image $i: $e");
+        }
+      }
+      
+      customPrint("");
+      customPrint("=== REQUEST SUMMARY ===");
+      customPrint("Total files attached to request: ${request.files.length}");
+      customPrint("Expected: 1 cover + ${validFiles.length} images = ${1 + validFiles.length}");
+      for (int i = 0; i < request.files.length; i++) {
+        customPrint("  File $i: field=${request.files[i].field}, filename=${request.files[i].filename}");
+      }
+      customPrint("");
 
 
       // Send request
-      http.StreamedResponse response = await request.send();
-      customPrint("Status code ==============${response.statusCode}");
+      customPrint("🚀 SENDING REQUEST...");
+      customPrint("Request method: ${request.method}");
+      customPrint("Request URL: ${request.url}");
+      customPrint("Request fields count: ${request.fields.length}");
+      customPrint("Request files count: ${request.files.length}");
+      
+      http.StreamedResponse response;
+      try {
+        response = await request.send();
+        customPrint("");
+        customPrint("✅ RESPONSE RECEIVED");
+        customPrint("Status code: ${response.statusCode}");
+        customPrint("Response headers: ${response.headers}");
+      } catch (e) {
+        customPrint("");
+        customPrint("❌❌❌ REQUEST FAILED ❌❌❌");
+        customPrint("Error: $e");
+        customPrint("Error type: ${e.runtimeType}");
+        loadingProvider.setLoading(false);
+        if (context.mounted) {
+          showSnackbar(context, 'Network error: ${e.toString()}', color: redColor);
+        }
+        return;
+      }
       if (response.statusCode == 200) {
         final responseBody = await response.stream.bytesToString();
         final body = jsonDecode(responseBody);
@@ -692,13 +837,62 @@ class ProductsProvider extends ChangeNotifier{
      else if (response.statusCode == 201) {
         final responseBody = await response.stream.bytesToString();
         final body = jsonDecode(responseBody);
-        customPrint("Response: $body");
+        customPrint("========== PUBLISH SUCCESS RESPONSE ==========");
+        customPrint("Full Response: $body");
+        
+        // Log image URLs from response if available
+        String? responseImgCover;
+        List<String>? responseImages;
+        
+        if (body is Map) {
+          if (body.containsKey('updateProduct')) {
+            var product = body['updateProduct'];
+            if (product is Map) {
+              responseImgCover = product['imgCover']?.toString();
+              if (product['images'] is List) {
+                responseImages = List<String>.from(product['images']);
+              }
+              customPrint("Product imgCover: $responseImgCover");
+              customPrint("Product images: $responseImages");
+              
+              // Check if imgCover is invalid (backend bug - returns literal string)
+              if (responseImgCover != null && 
+                  (responseImgCover.contains('req.files') || 
+                   responseImgCover.contains('filename') ||
+                   (!responseImgCover.startsWith('products/') && !responseImgCover.startsWith('http')))) {
+                customPrint("⚠️  WARNING: imgCover appears to be invalid: $responseImgCover");
+                customPrint("   This is a backend issue - imgCover should be a file path");
+                customPrint("   Frontend will automatically use first image from images array as fallback");
+                customPrint("   The Product model's fromJson will handle this automatically");
+              }
+            }
+          }
+          if (body.containsKey('data')) {
+            var data = body['data'];
+            if (data is Map) {
+              customPrint("Data imgCover: ${data['imgCover']}");
+              customPrint("Data images: ${data['images']}");
+            }
+          }
+          if (body.containsKey('product')) {
+            var product = body['product'];
+            if (product is Map) {
+              customPrint("Product imgCover: ${product['imgCover']}");
+              customPrint("Product images: ${product['images']}");
+            }
+          }
+        }
+        customPrint("===========================================");
 
         loadingProvider.setLoading(false);
         if (context.mounted) {
           clearResources();
           // Remove from draft tab and add to active tab
           sellerDraftTabProvider.removeProduct(productId);
+          
+          // Add a small delay to ensure backend has processed the images
+          await Future.delayed(const Duration(milliseconds: 500));
+          
           // Refresh active tab to show the newly published product
           await sellerActiveTabProvider.refreshProducts(context);
           
@@ -793,24 +987,33 @@ class ProductsProvider extends ChangeNotifier{
       } else if (response.statusCode == 500) {
         final responseBody = await response.stream.bytesToString();
         final body = jsonDecode(responseBody);
+        customPrint("❌ SERVER ERROR (500)");
         customPrint("Response: $body");
 
         loadingProvider.setLoading(false);
         if (context.mounted) {
-          showSnackbar(context,body['error'], color: redColor);
+          showSnackbar(context,body['error'] ?? 'Server error occurred', color: redColor);
         }
       }
 
      else {
+        customPrint("❌ UNEXPECTED STATUS CODE: ${response.statusCode}");
+        final responseBody = await response.stream.bytesToString();
+        customPrint("Response body: $responseBody");
         loadingProvider.setLoading(false);
         if (context.mounted) {
-          showSnackbar(context, "Error: ${response.reasonPhrase}", color: redColor);
+          showSnackbar(context, "Error: ${response.reasonPhrase ?? 'Unknown error'} (${response.statusCode})", color: redColor);
         }
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      customPrint("");
+      customPrint("❌❌❌ EXCEPTION IN updateProduct ❌❌❌");
+      customPrint("Error: $e");
+      customPrint("Error type: ${e.runtimeType}");
+      customPrint("Stack trace: $stackTrace");
       loadingProvider.setLoading(false);
       if (context.mounted) {
-        showSnackbar(context, e.toString(), color: redColor);
+        showSnackbar(context, 'Error: ${e.toString()}', color: redColor);
       }
     }
   }
@@ -1135,6 +1338,16 @@ class ProductsProvider extends ChangeNotifier{
     size=null;
     subCategoryId=null;
     categoryId=null;
+    isDraftToPublish=false;
+    isViolationToPendingQc=false;
+    notifyListeners();
+  }
+  
+  // Clear resources but preserve files AND form data (used when loading draft to publish)
+  // NOTE: This should be called AFTER setValues, not before
+  clearResourcesExceptFilesAndFormData(){
+    // Don't clear form controllers - they're already set by setValues
+    // Just reset flags
     isDraftToPublish=false;
     isViolationToPendingQc=false;
     notifyListeners();

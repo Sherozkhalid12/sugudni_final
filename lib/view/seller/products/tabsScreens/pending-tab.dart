@@ -114,7 +114,9 @@ class _PendingTabState extends State<PendingTab> {
                                   height:65.h ,
                                   width: 65.w,
                                   radius: 6.r,
-                                imageUrl:productData.bulk==true?productData.imgCover :"${ApiEndpoints.productUrl}${productData.imgCover}",
+                                imageUrl: productData.bulk == true 
+                                    ? productData.getValidImageUrl()
+                                    : "${ApiEndpoints.productUrl}${productData.getValidImageUrl()}",
                               ),
 
                               10.width,
