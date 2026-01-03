@@ -26,7 +26,7 @@ extension AlertDialogExtension on BuildContext {
           ),
           TextButton(
             onPressed: () {
-             // Navigator.pop(context);
+              Navigator.pop(context);
               onYes();
             },
             child: const Text("Yes"),

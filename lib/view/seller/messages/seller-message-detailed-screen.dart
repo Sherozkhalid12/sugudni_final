@@ -40,12 +40,27 @@ class _SellerMessageDetailViewState extends State<SellerMessageDetailView> {
   @override
   void initState() {
     super.initState();
-
-    context.read<ChatSocketProvider>().connectSocket(widget.receiverId, widget.senderId,context);
-  //  context.read<ChatSocketProvider>().aboutMessages(widget.receiverId, widget.senderId);
-    context.read<ChatSocketProvider>().getChatHistory(context, widget.receiverId, widget.senderId);
-    context.read<ChatSocketProvider>().markAsUnread(widget.senderId, widget.receiverId, context);
-
+    
+    // Ensure socket is initialized before connecting
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final chatProvider = context.read<ChatSocketProvider>();
+      
+      // Initialize socket if not already connected
+      if (chatProvider.socket == null || !chatProvider.socket!.connected) {
+        chatProvider.connectSocketInInitial(context);
+        // Wait for connection
+        await Future.delayed(const Duration(milliseconds: 300));
+      }
+      
+      // Connect socket for this specific chat
+      chatProvider.connectSocket(widget.receiverId, widget.senderId, context);
+      
+      // Load chat history
+      await chatProvider.getChatHistory(context, widget.receiverId, widget.senderId);
+      
+      // Mark as unread
+      chatProvider.markAsUnread(widget.senderId, widget.receiverId, context);
+    });
   }
 
 
@@ -62,6 +77,8 @@ class _SellerMessageDetailViewState extends State<SellerMessageDetailView> {
     customPrint("Reciver id=====================================${widget.receiverId}");
     customPrint("Sender id=====================================${widget.senderId}");
     final mediaProvider=Provider.of<SellerChatAddDocProvider>(context,listen: false);
+    const adminId = '67e26686ea078c3a5fdc0698';
+    final isSupportChat = widget.receiverId == adminId;
     return PopScope(
       onPopInvokedWithResult: (didPop, result) {
       //  Provider.of<ChatSocketProvider>(context,listen: false).disconnectSocket();
@@ -96,11 +113,41 @@ class _SellerMessageDetailViewState extends State<SellerMessageDetailView> {
 
               chatProvider.isLoading==true? Column(
                 children: List.generate(5, (index) => const ListItemShimmer(height: 80)),
-              ): Expanded(
+              ): chatProvider.chatHistoryResponse == null || chatProvider.chatHistoryResponse!.chat.isEmpty
+                  ? Expanded(
+                      flex: 9,
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.chat_bubble_outline,
+                              size: 64.sp,
+                              color: textPrimaryColor.withOpacity(0.3),
+                            ),
+                            16.height,
+                            MyText(
+                              text: 'No messages yet',
+                              size: 14.sp,
+                              fontWeight: FontWeight.w500,
+                              color: textPrimaryColor.withOpacity(0.6),
+                            ),
+                            8.height,
+                            MyText(
+                              text: 'Start the conversation by sending a message',
+                              size: 12.sp,
+                              fontWeight: FontWeight.w400,
+                              color: textPrimaryColor.withOpacity(0.5),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  : Expanded(
                   flex: 9,
                   child: SymmetricPadding(
                     child: ListView.builder(
-                        itemCount:chatProvider.chatHistoryResponse!.chat.length,
+                        itemCount: chatProvider.chatHistoryResponse!.chat.length,
                         scrollDirection: Axis.vertical,
                         controller: chatProvider.scrollController,
                         itemBuilder: (context,index){
@@ -258,28 +305,31 @@ class _SellerMessageDetailViewState extends State<SellerMessageDetailView> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            provider.isOpenDoc==false?
-                            GestureDetector(
-                              onTap: (){
-                                provider.toggle();
-                              },
-                              child: Container(
-                                height: 42.h,
-                                width: 58.w,
-                                decoration: BoxDecoration(
-                                    color: primaryColor,
-                                    borderRadius: BorderRadius.circular(10.r),
-                                    image: const DecorationImage(image: AssetImage(AppAssets.addIcon),scale: 3)
+                            // Hide plus button for support chat
+                            if (!isSupportChat) ...[
+                              provider.isOpenDoc==false?
+                              GestureDetector(
+                                onTap: (){
+                                  provider.toggle();
+                                },
+                                child: Container(
+                                  height: 42.h,
+                                  width: 58.w,
+                                  decoration: BoxDecoration(
+                                      color: primaryColor,
+                                      borderRadius: BorderRadius.circular(10.r),
+                                      image: const DecorationImage(image: AssetImage(AppAssets.addIcon),scale: 3)
+                                  ),
                                 ),
+                              ):
+                              GestureDetector(
+                                onTap: (){
+                                  provider.toggle();
+                                },
+                                child: Image.asset(AppAssets.cancelIcon,scale: 1.3,),
                               ),
-                            ):
-                            GestureDetector(
-                              onTap: (){
-                                provider.toggle();
-                              },
-                              child: Image.asset(AppAssets.cancelIcon,scale: 1.3,),
-                            ),
-                            7.width,
+                              7.width,
+                            ],
                             Flexible(
                                 child: TextFormField(
                                   controller: chatProvider.messageController,
@@ -344,8 +394,9 @@ class _SellerMessageDetailViewState extends State<SellerMessageDetailView> {
                           ],
                         ),
 
-                        provider.isOpenDoc?
-                        Row(
+                        // Hide media options for support chat
+                        (!isSupportChat && provider.isOpenDoc)
+                        ? Row(
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
                             GestureDetector(
@@ -385,10 +436,10 @@ class _SellerMessageDetailViewState extends State<SellerMessageDetailView> {
                                 Image.asset(AppAssets.ordersChatImg,scale: 3,),
                                 MyText(text: AppLocalizations.of(context)!.orders,size: 10.sp,fontWeight: FontWeight.w500,color: const Color(0xff545454),)
                               ],
-                            )
-
-                            ,                    ],
-                        ):const SizedBox()
+                            ),
+                          ],
+                        )
+                        : const SizedBox()
                       ],
                     ),
                   ),
