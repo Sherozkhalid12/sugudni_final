@@ -25,3 +25,27 @@ Future<bool> isDriverOnline()async{
   return token;
 
 }
+
+Future<void> setDriverApprovalStatus(bool isPending)async{
+  final sp=await SharedPreferences.getInstance();
+  await sp.setBool('isDriverPendingApproval', isPending).then((v){
+    customPrint("Driver approval status set: $isPending");
+  }).onError((err,e){
+    customPrint("Error while saving driver approval status $err");
+  });
+}
+
+Future<bool> isDriverPendingApproval()async{
+  final sp=await SharedPreferences.getInstance();
+  final isPending= sp.getBool('isDriverPendingApproval')?? false;
+  return isPending;
+}
+
+Future<void> clearDriverApprovalStatus()async{
+  final sp=await SharedPreferences.getInstance();
+  await sp.setBool('isDriverPendingApproval', false).then((v){
+    customPrint("Driver approval status cleared");
+  }).onError((err,e){
+    customPrint("Error while clearing driver approval status $err");
+  });
+}

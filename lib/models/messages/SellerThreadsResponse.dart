@@ -26,6 +26,7 @@ class Thread {
   final DateTime lastMessageTimestamp;
   final String contentType;
   final int unreadCount;
+  final String? threadType;
 
   Thread({
     required this.id,
@@ -35,6 +36,7 @@ class Thread {
     required this.lastMessageTimestamp,
     required this.contentType,
     required this.unreadCount,
+    this.threadType,
   });
 
   factory Thread.fromJson(Map<String, dynamic> json) {
@@ -48,6 +50,7 @@ class Thread {
       lastMessageTimestamp: DateTime.parse(json['last_message_timestamp']),
       contentType: json['contentType'] as String,
       unreadCount: json['unreadCount'] as int,
+      threadType: json['threadType'] as String? ?? json['thread_type'] as String?,
     );
   }
 
@@ -60,6 +63,7 @@ class Thread {
       'last_message_timestamp': lastMessageTimestamp.toIso8601String(),
       'contentType': contentType,
       'unreadCount': unreadCount,
+      'threadType': threadType,
     };
   }
 }

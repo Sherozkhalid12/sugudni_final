@@ -38,9 +38,17 @@ class _SellerMyProductsViewState extends State<SellerMyProductsView> {
     final sellerActiveTab=Provider.of<SellerActiveTabProductProvider>(context,listen: false);
 
     return PopScope(
-      onPopInvokedWithResult: (didPop, result) {
-         Provider.of<SellerActiveTabProductProvider>(context,listen: false).resetFilter();
-         Provider.of<SellerActiveTabProductProvider>(context,listen: false).clearResources();
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (!didPop) {
+          // Clean up resources before popping
+          Provider.of<SellerActiveTabProductProvider>(context, listen: false).resetFilter();
+          Provider.of<SellerActiveTabProductProvider>(context, listen: false).clearResources();
+          // Pop the route
+          if (Navigator.canPop(context)) {
+            Navigator.pop(context);
+          }
+        }
       },
       child: Scaffold(
         resizeToAvoidBottomInset: false,
@@ -52,6 +60,9 @@ class _SellerMyProductsViewState extends State<SellerMyProductsView> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               RoundIconButton(onPressed: (){
+                // Clean up resources before popping
+                Provider.of<SellerActiveTabProductProvider>(context, listen: false).resetFilter();
+                Provider.of<SellerActiveTabProductProvider>(context, listen: false).clearResources();
                 Navigator.pop(context);
               },iconUrl: AppAssets.arrowBack),
                AppBarTitleWidget(title: AppLocalizations.of(context)!.myproducts),

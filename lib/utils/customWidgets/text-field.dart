@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:provider/provider.dart';
-import 'package:sugudeni/utils/extensions/media-query.dart';
 
-import '../../providers/auth/auth-provider.dart';
 import '../constants/colors.dart';
 import '../constants/fonts.dart';
+import '../constants/app-assets.dart';
 
 class CustomTextFiled extends StatelessWidget {
   final String? hintText;
@@ -21,7 +19,7 @@ class CustomTextFiled extends StatelessWidget {
   final String? Function(String?)? validator;
   final String? Function(String?)? onChange;
   final String? Function(String?)? onSubmit;
-  final VoidCallback? passwordFunction; // Callback to toggle visibility
+  final String? Function()? passwordFunction;
   final double? borderRadius;
   final bool? isBorder;
   final bool? isFocusBorder;
@@ -29,8 +27,10 @@ class CustomTextFiled extends StatelessWidget {
   final IconData? prefixIcon;
   final bool? isErrorBorder;
   final TextInputType? keyboardType;
-  final bool? isPassword; // To determine if it's a password field
-  final bool? showPassword; // NEW: Controls whether password is visible
+  final bool? isPassword;
+  final IconData? beforePasswordIcon;
+  final IconData? afterPasswordIcon;
+  final bool? isObscure;
   final bool? isShowPrefixIcon;
   final bool? isShowPrefixImage;
   final bool? isEnable;
@@ -59,7 +59,9 @@ class CustomTextFiled extends StatelessWidget {
     this.keyboardType,
     this.isPassword,
     this.passwordFunction,
-    this.showPassword,
+    this.beforePasswordIcon,
+    this.isObscure,
+    this.afterPasswordIcon,
     this.isShowPrefixIcon,
     this.isFocusBorder,
     this.isShowPrefixImage = false,
@@ -88,10 +90,7 @@ class CustomTextFiled extends StatelessWidget {
       onChanged: onChange,
       onFieldSubmitted: onSubmit,
       keyboardType: keyboardType,
-
-      obscureText: isPassword == true
-          ? !(Provider.of<AuthProvider>(context).showPassword)
-          : false,
+      obscureText: isObscure ?? false,
       maxLines: maxLine ?? 1,
       inputFormatters: inputFormatters,
       decoration: InputDecoration(
@@ -99,38 +98,29 @@ class CustomTextFiled extends StatelessWidget {
         // Inside CustomTextFiled build method, replace the suffixIcon part:
 
         suffixIcon: isPassword == true
-            ? Consumer<AuthProvider>(
-          builder: (context, authProvider, child) {
-            return IconButton(
-              onPressed: passwordFunction ?? authProvider.togglePasswordVisibility,
-              icon: Icon(
-                (showPassword ?? authProvider.showPassword)
-                    ? Icons.visibility
-                    : Icons.visibility_off,
-                color: primaryColor,
-                size: 22.sp,
-              ),
-            );
-          },
-        )
-            : (suffixIcon != null
-            ? Icon(suffixIcon)
-            : null),
-
+            ? IconButton(
+                onPressed: passwordFunction,
+                icon: Image.asset(
+                  isObscure == true
+                      ? AppAssets.passwordEyeIcon
+                      : AppAssets.passwordEyeIcon,
+                  scale: 2.5,
+                ))
+            : (suffixIcon != null ? Icon(suffixIcon) : null),
         prefixIcon: isShowPrefixIcon == false
             ? null
             : isShowPrefixImage == true
-            ? Image.asset(
-          prefixImgUrl!,
-          scale: 2.2.sp,
-          height: 12.h,
-          width: 12.w,
-          color: prefixImageColor ?? primaryColor,
-        )
-            : Icon(prefixIcon, color: blackColor),
-
+                ? Image.asset(
+                    prefixImgUrl!,
+                    scale: 2.2.sp,
+                    height: 12.h,
+                    width: 12.w,
+                    color: prefixImageColor ?? primaryColor,
+                  )
+                : Icon(prefixIcon, color: blackColor),
         filled: isFilled ?? true,
         fillColor: fillColor ?? textFieldColor,
+        //contentPadding: const EdgeInsets.only(left: 12),
         hintText: hintText,
         hintStyle: TextStyle(
           fontFamily: fontFamily ?? AppFonts.poppins,
@@ -148,15 +138,13 @@ class CustomTextFiled extends StatelessWidget {
         ),
         border: isBorder == true
             ? OutlineInputBorder(
-          borderRadius: BorderRadius.circular(borderRadius ?? 13.31.r),
-          borderSide: const BorderSide(color: textFieldColor),
-        )
+                borderRadius: BorderRadius.circular(borderRadius ?? 13.31.r),
+                borderSide: const BorderSide(color: textFieldColor))
             : InputBorder.none,
         errorBorder: isErrorBorder == true
             ? OutlineInputBorder(
-          borderSide: const BorderSide(color: textFieldColor),
-          borderRadius: BorderRadius.circular(borderRadius ?? 13.31.r),
-        )
+                borderSide: const BorderSide(color: textFieldColor),
+                borderRadius: BorderRadius.circular(borderRadius ?? 13.31.r))
             : InputBorder.none,
       ),
     );

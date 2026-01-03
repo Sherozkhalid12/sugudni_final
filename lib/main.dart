@@ -60,10 +60,14 @@ import 'providers/products/customer/all-customer-products.dart';
 import 'providers/products/seller-products-tabs/seller-active-tab-products-provider.dart';
 import 'providers/products/seller-products-tabs/seller-inactive-tab-products-provider.dart';
 import 'view/customer/products/scan/bar-code-scan.dart';
+import 'services/firebase-messaging-service.dart';
 
 void main() async{
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Initialize Firebase Messaging
+  await FirebaseMessagingService().initialize();
 
   await preloadImages();
   SharedPreferences sp=await SharedPreferences.getInstance();

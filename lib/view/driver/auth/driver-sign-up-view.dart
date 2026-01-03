@@ -12,6 +12,7 @@ import 'package:sugudeni/utils/customWidgets/symetric-padding.dart';
 import 'package:sugudeni/utils/customWidgets/text-field.dart';
 import 'package:sugudeni/utils/extensions/sizebox.dart';
 import 'package:sugudeni/utils/routes/routes-name.dart';
+import 'package:sugudeni/utils/global-functions.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../utils/customWidgets/custom-phone-number-field.dart';
 
@@ -216,9 +217,23 @@ class DriverSignUpView extends StatelessWidget {
                 10.height,
                Consumer<DriverSignUpProvider>(
                    builder: (context,provider,child){
+                     print('=== Consumer builder called, frontImage is null: ${provider.frontImage == null} ===');
+                     customPrint('=== Consumer builder called, frontImage is null: ${provider.frontImage == null} ===');
                  return provider.frontImage==null?  GestureDetector(
-                   onTap: (){
-                     provider.pickFrontImage();
+                   behavior: HitTestBehavior.opaque,
+                   onTap: () async {
+                     print('=== TAP DETECTED: Upload Front Image ===');
+                     customPrint('=== TAP DETECTED: Upload Front Image ===');
+                     if (context.mounted) {
+                       print('=== Context is mounted, calling pickFrontImage ===');
+                       customPrint('=== Context is mounted, calling pickFrontImage ===');
+                       await provider.pickFrontImage(context);
+                       print('=== pickFrontImage completed ===');
+                       customPrint('=== pickFrontImage completed ===');
+                     } else {
+                       print('=== ERROR: Context is not mounted ===');
+                       customPrint('=== ERROR: Context is not mounted ===');
+                     }
                    },
                    child: Container(
                      height: 200.h,
@@ -237,8 +252,13 @@ class DriverSignUpView extends StatelessWidget {
                      ),
                    ),
                  ):GestureDetector(
-                   onTap: (){
-                     provider.pickFrontImage();
+                   behavior: HitTestBehavior.opaque,
+                   onTap: () async {
+                     print('=== TAP DETECTED: Upload Front Image (existing image) ===');
+                     customPrint('=== TAP DETECTED: Upload Front Image (existing image) ===');
+                     if (context.mounted) {
+                       await provider.pickFrontImage(context);
+                     }
                    },
                    child: Container(
                      height: 200.h,
@@ -256,8 +276,10 @@ class DriverSignUpView extends StatelessWidget {
                Consumer<DriverSignUpProvider>(
                    builder: (context,provider,child){
                  return provider.backImage==null?  GestureDetector(
-                   onTap: (){
-                     provider.pickBackImage();
+                   onTap: () async {
+                     if (context.mounted) {
+                       await provider.pickBackImage(context);
+                     }
                    },
                    child: Container(
                      height: 200.h,
@@ -276,8 +298,10 @@ class DriverSignUpView extends StatelessWidget {
                      ),
                    ),
                  ):GestureDetector(
-                   onTap: (){
-                     provider.pickBackImage();
+                   onTap: () async {
+                     if (context.mounted) {
+                       await provider.pickBackImage(context);
+                     }
                    },
                    child: Container(
                      height: 200.h,

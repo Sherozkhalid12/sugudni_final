@@ -16,9 +16,9 @@ import 'package:sugudeni/utils/routes/routes-name.dart';
 import 'package:sugudeni/utils/sharePreference/save-user-token.dart';
 import 'package:sugudeni/utils/sharePreference/save-user-type.dart';
 import 'package:sugudeni/utils/user-roles.dart';
+import 'package:sugudeni/services/firebase-messaging-service.dart';
 
 import '../../models/auth/SuccessfullVerifyOtpResponse.dart';
-import '../../models/auth/SuccessfullVerifySignInOtpModel.dart';
 import '../../utils/constants/colors.dart';
 import '../../l10n/app_localizations.dart';
 
@@ -102,6 +102,8 @@ class AuthProvider extends ChangeNotifier {
         String message = v.message!;
         loadingProvider.setLoading(false);
         if (context.mounted) {
+          // Set provider state to match navigation arguments
+          isSignUp = true;
           showSnackbar(context, message, color: greenColor);
           Navigator.pushNamed(
             context,
@@ -279,7 +281,7 @@ class AuthProvider extends ChangeNotifier {
   //   }
   // }
 
-  Future<void> verifyOtp(BuildContext context, String otp) async {
+  Future<void> verifyOtp(BuildContext context, String otp, {bool? useEmail}) async {
     final roleProvider = Provider.of<SelectRoleProvider>(context, listen: false);
     final loadingProvider = Provider.of<LoadingProvider>(context, listen: false);
 
@@ -288,20 +290,54 @@ class AuthProvider extends ChangeNotifier {
       return;
     }
 
+    // Use provided useEmail parameter, or fallback to provider's isEmail
+    final bool shouldUseEmail = useEmail ?? isEmail;
+    
+    // Validate that we have the required field (email or phone)
+    if (shouldUseEmail) {
+      String email = signUpEmailController.text.trim();
+      if (email.isEmpty) {
+        showSnackbar(context, 'Email is required for verification', color: redColor);
+        return;
+      }
+    } else {
+      String phone = signUpPhoneController.text.trim();
+      if (phone.isEmpty) {
+        showSnackbar(context, 'Phone number is required for verification', color: redColor);
+        return;
+      }
+    }
+
     try {
       loadingProvider.setLoading(true);
-      var model = isEmail
-          ? VerifySignUpOtpModel(email: signUpEmailController.text.trim(), otp: otp)
-          : VerifySignUpOtpModel(phone: "$countryCode${signUpPhoneController.text.trim()}", otp: otp);
+      VerifySignUpOtpModel model;
+      if (shouldUseEmail) {
+        // When using email, explicitly set email and leave phone as null
+        String email = signUpEmailController.text.trim();
+        customPrint("VerifySignUpOtp - Using EMAIL: $email");
+        model = VerifySignUpOtpModel(email: email, phone: null, otp: otp);
+      } else {
+        // When using phone, explicitly set phone and leave email as null
+        String phone = "$countryCode${signUpPhoneController.text.trim()}";
+        customPrint("VerifySignUpOtp - Using PHONE: $phone");
+        model = VerifySignUpOtpModel(email: null, phone: phone, otp: otp);
+      }
+      
+      // Debug: Print the model to verify correct fields are being sent
+      customPrint("VerifySignUpOtpModel toJson: ${model.toJson()}");
 
       await AuthRepository.verifySignUpOtp(model, context).then((v) async {
         loadingProvider.setLoading(false);
-        final response = v as SuccessfulVerifyOtpResponse;
+        final response = v;
         String message = response.message!;
         String userId = response.id!;
         await saveSessionToken(response.token!);
         await saveUserId(userId);
         await saveUserType(roleProvider.selectedRole);
+        
+        // Send FCM token to backend
+        _sendFcmTokenToBackend(context);
+        
         if (context.mounted) {
           // Show success message only if context is still mounted and not navigating
           Future.microtask(() {
@@ -386,19 +422,45 @@ class AuthProvider extends ChangeNotifier {
         String email = isSignUp 
             ? signUpEmailController.text.trim() 
             : emailController.text.trim();
-        customPrint("Email in verifySignOtp (isSignUp=$isSignUp) =========================$email");
+        
+        // Validate email is not empty
+        if (email.isEmpty) {
+          loadingProvider.setLoading(false);
+          showSnackbar(context, 'Email is required for verification', color: redColor);
+          return;
+        }
+        
+        customPrint("verifySignOtp - Using EMAIL: $email (isSignUp=$isSignUp, isEmail=$isEmail)");
+        // Explicitly set email and ensure phone is null
         model = VerifySignInOtpModel(email: email, otp: otp);
       } else {
+        // When isEmail is false, use phone
         String phoneNumber = "$countryCode${phoneController.text.trim()}";
-        customPrint("Phone number in verifySignOtp =========================$phoneNumber");
+        
+        // Validate phone is not empty
+        if (phoneController.text.trim().isEmpty) {
+          loadingProvider.setLoading(false);
+          showSnackbar(context, 'Phone number is required for verification', color: redColor);
+          return;
+        }
+        
+        customPrint("verifySignOtp - Using PHONE: $phoneNumber (isSignUp=$isSignUp, isEmail=$isEmail)");
+        // Explicitly set phone and ensure email is null
         model = VerifySignInOtpModel(phone: phoneNumber, otp: otp);
       }
+      
+      // Debug: Print the model to verify correct fields are being sent
+      customPrint("VerifySignInOtpModel toJson: ${model.toJson()}");
       
       await AuthRepository.verifySignInOtp(model, context).then((v) async {
         loadingProvider.setLoading(false);
         await saveSessionToken(v.token);
         await saveUserId(v.user.id);
         await saveUserType(v.role);
+        
+        // Send FCM token to backend
+        _sendFcmTokenToBackend(context);
+        
         if (context.mounted) {
           showSnackbar(context, AppLocalizations.of(context)!.loggedinsuccessfully, color: greenColor);
           // Reset bottom navigation to home tab for customers
@@ -438,6 +500,10 @@ class AuthProvider extends ChangeNotifier {
         await saveSessionToken(v.token!);
         await saveUserId(v.user.id);
         saveUserType(v.role);
+        
+        // Send FCM token to backend
+        _sendFcmTokenToBackend(context);
+        
         loadingProvider.setLoading(false);
         if (context.mounted) {
           showSnackbar(context, message, color: greenColor);
@@ -461,6 +527,8 @@ class AuthProvider extends ChangeNotifier {
         if (context.mounted) {
           if (err.toString() == 'Verify your email') {
             signUpEmailController.text = emailController.text;
+            // Set provider state to match navigation arguments
+            isSignUp = false;
             isEmail = true;
             Navigator.pushNamed(
               context,
@@ -536,6 +604,9 @@ class AuthProvider extends ChangeNotifier {
         String message = v.message;
         loadingProvider.setLoading(false);
         if (context.mounted) {
+          // Set provider state to match navigation arguments
+          isSignUp = false;
+          isEmail = false;
           showSnackbar(context, message, color: greenColor);
           Navigator.pushNamed(
             context,
@@ -547,6 +618,9 @@ class AuthProvider extends ChangeNotifier {
         loadingProvider.setLoading(false);
         if (context.mounted) {
           if (err.toString() == 'Verify your phone') {
+            // Set provider state to match navigation arguments
+            isSignUp = false;
+            isEmail = false;
             Navigator.pushNamed(
               context,
               RoutesNames.enterOTPView,
@@ -584,4 +658,20 @@ class AuthProvider extends ChangeNotifier {
     _showPassword = false;
     isSignUp = true;
     isEmail = true;
-  }}
+  }
+
+  /// Helper function to send FCM token to backend after login/signup
+  Future<void> _sendFcmTokenToBackend(BuildContext? context) async {
+    try {
+      final fcmToken = await FirebaseMessagingService().getFCMToken();
+      if (fcmToken != null && fcmToken.isNotEmpty) {
+        await AuthRepository.setFcmToken(fcmToken, context);
+      } else {
+        customPrint('FCM token is null or empty, skipping backend update');
+      }
+    } catch (e) {
+      customPrint('Error sending FCM token to backend: $e');
+      // Don't throw - this is not critical for login flow
+    }
+  }
+}

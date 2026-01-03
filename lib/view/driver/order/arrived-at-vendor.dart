@@ -15,6 +15,7 @@ import 'package:sugudeni/utils/routes/routes-name.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../models/shipment/GetAllAvailableShipmentModel.dart';
 import '../../../providers/loading-provider.dart';
+import '../../../providers/shipping-provider/shipping-provider.dart';
 import '../../../utils/customWidgets/my-text.dart';
 
 class ArrivedAtVendor extends StatefulWidget {
@@ -28,34 +29,75 @@ class _ArrivedAtVendorState extends State<ArrivedAtVendor> {
   GoogleMapController? _mapController;
   LatLng? _initialLocation;
   Marker? _marker;
+  ShipmentModel? _shipmentModel;
+  bool _isMapReady = false;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final args = ModalRoute.of(context)?.settings.arguments as ShipmentModel?;
-    double longitude=args!.pickupAddress.longitude;
-    double latitude=args.pickupAddress.latitude;
-    if (args != null && _initialLocation == null) {
-      setState(() {
-        _initialLocation = LatLng(latitude, longitude);
-        _marker = Marker(
-          markerId: const MarkerId("selected-location"),
-          position: _initialLocation!,
-        );
-      });
-    }
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      if (mounted) {
+        final args = ModalRoute.of(context)?.settings.arguments as ShipmentModel?;
+        if (args != null) {
+          setState(() {
+            _shipmentModel = args;
+          });
+          if (args.pickupAddress != null) {
+            _loadMapAsync(args);
+          }
+        }
+      }
+    });
   }
+
+  void _loadMapAsync(ShipmentModel args) {
+    Future.microtask(() {
+      if (mounted && args.pickupAddress != null) {
+        final longitude = args.pickupAddress.longitude;
+        final latitude = args.pickupAddress.latitude;
+        setState(() {
+          _initialLocation = LatLng(latitude, longitude);
+          _marker = Marker(
+            markerId: const MarkerId("selected-location"),
+            position: _initialLocation!,
+          );
+          _isMapReady = true;
+        });
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    ShipmentModel shipmentModel=ModalRoute.of(context)!.settings.arguments as ShipmentModel;
-    double longitude=shipmentModel.pickupAddress.longitude;
-    double latitude=shipmentModel.pickupAddress.latitude;
+    final shipmentModel = _shipmentModel ?? ModalRoute.of(context)?.settings.arguments as ShipmentModel;
+    
+    if (shipmentModel == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
     final loadingProvider=Provider.of<LoadingProvider>(context,listen: false);
     return Scaffold(
-      appBar:  AppBar(
+      appBar: AppBar(
         forceMaterialTransparency: true,
-
-        automaticallyImplyLeading: false,
+        leadingWidth: 50.w,
+        leading: Padding(
+          padding: EdgeInsets.only(left: 15.w),
+          child: GestureDetector(
+            onTap: () {
+              Navigator.pop(context);
+            },
+            child: Container(
+              width: 5.w,
+              height: 35.h,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: textFieldColor,
+                image: DecorationImage(image: AssetImage(AppAssets.backArrow), scale: 3)
+              ),
+            ),
+          ),
+        ),
         toolbarHeight: 70.h,
         title: MyText(text: AppLocalizations.of(context)!.vendor,fontWeight: FontWeight.w700,size: 22.sp,),
         actions: [
@@ -72,19 +114,39 @@ class _ArrivedAtVendorState extends State<ArrivedAtVendor> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             5.height,
-            _initialLocation == null
-                ? const Center(child: CircularProgressIndicator()) // Show loader if null
-                : SizedBox(
-              height: 250.h,
-              child: GoogleMap(
-                initialCameraPosition: CameraPosition(
-                  target: _initialLocation!,
-                  zoom: 14,
-                ),
-                onMapCreated: (controller) => _mapController = controller,
-                markers: _marker != null ? {_marker!} : {},
-              ),
-            ),
+            _isMapReady && _initialLocation != null
+                ? SizedBox(
+                    height: 250.h,
+                    child: GoogleMap(
+                      initialCameraPosition: CameraPosition(
+                        target: _initialLocation!,
+                        zoom: 14,
+                      ),
+                      onMapCreated: (controller) => _mapController = controller,
+                      mapType: MapType.normal,
+                      myLocationButtonEnabled: false,
+                      zoomControlsEnabled: false,
+                      markers: _marker != null ? {_marker!} : {},
+                    ),
+                  )
+                : Container(
+                    height: 250.h,
+                    color: textFieldColor,
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const CircularProgressIndicator(),
+                          10.height,
+                          MyText(
+                            text: 'Loading map...',
+                            size: 12.sp,
+                            color: textSecondaryColor,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
             SymmetricPadding(child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -254,6 +316,9 @@ class _ArrivedAtVendorState extends State<ArrivedAtVendor> {
                             try{
                               await DriverShippingRepository.shipmentPicked(shipmentModel.id, context).then((v){
                                 showSnackbar(context, AppLocalizations.of(context)!.shipmentpickedsuccessfully,color: greenColor);
+                                // Clear cache before navigating to show updated data
+                                final shippingProvider = Provider.of<ShippingProvider>(context, listen: false);
+                                shippingProvider.clearCache();
                                 Navigator.pushNamedAndRemoveUntil(context, RoutesNames.driverHomeView, (route) => false,);
                               });
                             }catch(e){

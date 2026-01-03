@@ -323,13 +323,38 @@ class ViolationDialog extends StatelessWidget {
                       builder: (context){
                         return const LoadingDialog();
                       });
-                  context.read<ProductsProvider>().clearResources();
-                  context.read<ProductsProvider>(). setDraftToPublish();
-                  context.read<ProductsProvider>(). setViolationToPendingQx();
-                  context.read<ProductsProvider>(). setProductId(product.id);
-                  await context.read<ProductsProvider>().addFiles(product.images);
+                  
+                  final productsProvider = context.read<ProductsProvider>();
+                  
+                  // Clear resources EXCEPT files - we need to preserve them
+                  productsProvider.clearResourcesExceptFiles();
+                  
+                  productsProvider.setDraftToPublish();
+                  productsProvider.setViolationToPendingQx();
+                  productsProvider.setProductId(product.id);
+                  
+                  // Prepare all image URLs including imgCover (avoid duplicates)
+                  List<String> allImageUrls = [];
+                  if (product.imgCover.isNotEmpty) {
+                    allImageUrls.add(product.imgCover);
+                  }
+                  // Add images that are not already in the list (avoid duplicates)
+                  for (String imageUrl in product.images) {
+                    if (imageUrl.isNotEmpty && !allImageUrls.contains(imageUrl)) {
+                      allImageUrls.add(imageUrl);
+                    }
+                  }
+                  
+                  customPrint("========== VIOLATION TO PUBLISH DEBUG ==========");
+                  customPrint("Product ID: ${product.id}");
+                  customPrint("imgCover: ${product.imgCover}");
+                  customPrint("Images list: ${product.images}");
+                  customPrint("All image URLs to download: $allImageUrls");
+                  
+                  await productsProvider.addFiles(allImageUrls);
+                  
                   if(context.mounted){
-                    context.read<ProductsProvider>().setValues(product);
+                    productsProvider.setValues(product);
                     Navigator.pop(context);
                     Navigator.pushNamed(context, RoutesNames.sellerAddProductView);
                   }
