@@ -169,8 +169,98 @@ class _SellerMessagesViewState extends State<SellerMessagesView> {
                   );
                 }
 
+                // Check which tab is selected first
+                final isCustomerTab = messagesProvider.selectMessageTab == SellerMessagesTabs.customer;
+                const adminId = '67e26686ea078c3a5fdc0698';
+              
+                // If no threads at all, show appropriate empty state based on tab
                 if (provider.sellerThreads == null ||
                     provider.sellerThreads!.threads.isEmpty) {
+                  // If system tab and no threads, show "Start Chat" button
+                  if (!isCustomerTab) {
+                    return FutureBuilder(
+                      future: getUserId(),
+                      builder: (context, userIdSnapshot) {
+                        final sellerId = userIdSnapshot.data ?? '';
+                        return Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(40.sp),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  width: 120.w,
+                                  height: 120.h,
+                                  decoration: BoxDecoration(
+                                    color: primaryColor.withOpacity(0.1),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    Icons.support_agent,
+                                    size: 60.sp,
+                                    color: primaryColor,
+                                  ),
+                                ),
+                                24.height,
+                                MyText(
+                                  text: 'No System Messages',
+                                  size: 20.sp,
+                                  fontWeight: FontWeight.w700,
+                                  color: textPrimaryColor,
+                                ),
+                                12.height,
+                                MyText(
+                                  text: 'Start a conversation with our support team to get help with your account, products, or any questions you may have.',
+                                  size: 13.sp,
+                                  fontWeight: FontWeight.w400,
+                                  color: textPrimaryColor.withOpacity(0.7),
+                                  textAlignment: TextAlign.center,
+                                ),
+                                32.height,
+                                ElevatedButton(
+                                  onPressed: () async {
+                                    final adminName = 'Support';
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => SellerMessageDetailView(
+                                          receiverId: adminId,
+                                          receiverName: adminName,
+                                          senderId: sellerId,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: primaryColor,
+                                    padding: EdgeInsets.symmetric(horizontal: 40.w, vertical: 16.h),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12.r),
+                                    ),
+                                    elevation: 2,
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.chat_bubble_outline, color: whiteColor, size: 20.sp),
+                                      12.width,
+                                      MyText(
+                                        text: 'Start Chat with Support',
+                                        size: 15.sp,
+                                        fontWeight: FontWeight.w600,
+                                        color: whiteColor,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  }
+                  // If customer tab and no threads, show generic empty state
                   return EmptyStateWidget(
                     title: AppLocalizations.of(context)!.nochatfound,
                     description: 'You don\'t have any conversations yet. Messages from customers will appear here once they contact you.',
@@ -179,9 +269,7 @@ class _SellerMessagesViewState extends State<SellerMessagesView> {
                 }
               
               // Filter threads based on selected tab
-              const adminId = '67e26686ea078c3a5fdc0698';
               final allThreads = provider.sellerThreads!.threads;
-              final isCustomerTab = messagesProvider.selectMessageTab == SellerMessagesTabs.customer;
               
               final filteredThreads = allThreads.where((thread) {
                 // Check if this thread involves the admin

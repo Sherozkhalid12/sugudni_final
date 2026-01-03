@@ -242,6 +242,7 @@ class _SellerManageReviewViewState extends State<SellerManageReviewView> {
                                       Expanded(
                                         child: Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
+                                          mainAxisSize: MainAxisSize.min,
                                           children: [
                                             MyText(
                                               text: capitalizeFirstLetter(reviewData.productId.title),
@@ -252,37 +253,35 @@ class _SellerManageReviewViewState extends State<SellerManageReviewView> {
                                               overflow: TextOverflow.ellipsis,
                                             ),
                                             8.height,
-                                            Flexible(
-                                              child: Container(
-                                                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
-                                                decoration: BoxDecoration(
-                                                  color: primaryColor.withOpacity(0.1),
-                                                  borderRadius: BorderRadius.circular(6.r),
-                                                  border: Border.all(
-                                                    color: primaryColor.withOpacity(0.3),
-                                                    width: 1,
+                                            Container(
+                                              padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
+                                              decoration: BoxDecoration(
+                                                color: primaryColor.withOpacity(0.1),
+                                                borderRadius: BorderRadius.circular(6.r),
+                                                border: Border.all(
+                                                  color: primaryColor.withOpacity(0.3),
+                                                  width: 1,
+                                                ),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(
+                                                    Icons.inventory_2_outlined,
+                                                    size: 12.sp,
+                                                    color: primaryColor,
                                                   ),
-                                                ),
-                                                child: Row(
-                                                  mainAxisSize: MainAxisSize.min,
-                                                  children: [
-                                                    Icon(
-                                                      Icons.inventory_2_outlined,
-                                                      size: 12.sp,
+                                                  6.width,
+                                                  Flexible(
+                                                    child: MyText(
+                                                      text: "${AppLocalizations.of(context)!.productid}: ${reviewData.productId.id}",
+                                                      size: 10.sp,
                                                       color: primaryColor,
+                                                      fontWeight: FontWeight.w600,
+                                                      overflow: TextOverflow.ellipsis,
                                                     ),
-                                                    6.width,
-                                                    Flexible(
-                                                      child: MyText(
-                                                        text: "${AppLocalizations.of(context)!.productid}: ${reviewData.productId.id}",
-                                                        size: 10.sp,
-                                                        color: primaryColor,
-                                                        fontWeight: FontWeight.w600,
-                                                        overflow: TextOverflow.ellipsis,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
+                                                  ),
+                                                ],
                                               ),
                                             ),
                                           ],
