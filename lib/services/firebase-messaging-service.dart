@@ -234,11 +234,16 @@ class FirebaseMessagingService {
         return;
       }
 
+      // Get headers with auth token
+      final headers = await ApiClient.bearerHeader;
+      customPrint('FCM Token Update (on refresh) - Auth Token in header: ${headers['token']?.substring(0, 20) ?? 'null'}...');
+      customPrint('FCM Token Update (on refresh) - Authorization header: ${headers['Authorization']?.substring(0, 30) ?? 'null'}...');
+
       final body = {'fcmtoken': fcmToken};
       final response = await ApiClient.patchRequest(
         ApiEndpoints.setFcmToken,
         body,
-        headers: await ApiClient.bearerHeader,
+        headers: headers,
       ).timeout(
         const Duration(seconds: 30),
         onTimeout: () {
