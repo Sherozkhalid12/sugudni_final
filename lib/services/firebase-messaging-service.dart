@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:sugudeni/utils/global-functions.dart';
 import 'package:sugudeni/api/api-endpoints.dart';
@@ -224,13 +223,13 @@ class FirebaseMessagingService {
       final sessionToken = await getSessionTaken();
       final userId = await getUserId();
       
-      if (sessionToken == null || sessionToken.isEmpty || sessionToken.trim().isEmpty) {
+      if (sessionToken.isEmpty || sessionToken.trim().isEmpty) {
         customPrint('Cannot send FCM token: User not authenticated (no session token)');
         return;
       }
 
       // Also check userId exists - backend needs this to find the user
-      if (userId == null || userId.isEmpty || userId.trim().isEmpty) {
+      if (userId.isEmpty || userId.trim().isEmpty) {
         customPrint('Cannot send FCM token: User ID not found. User may not be fully logged in.');
         return;
       }
