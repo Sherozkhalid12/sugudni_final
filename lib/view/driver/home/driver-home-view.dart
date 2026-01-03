@@ -33,6 +33,7 @@ class DriverHomeView extends StatefulWidget {
 
 class _DriverHomeViewState extends State<DriverHomeView> with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   late TabController _tabController;
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   bool get wantKeepAlive => true;
@@ -44,13 +45,17 @@ class _DriverHomeViewState extends State<DriverHomeView> with SingleTickerProvid
     // Clear cache and force refresh on app start to show latest orders
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        final provider = context.read<ShippingProvider>();
-        // Force refresh to get latest orders instantly
-        provider.getAllAvailableShipments(context, forceRefresh: true);
-        provider.getAllCompletedShipments(context, forceRefresh: true);
-        context.read<DriverProvider>().loadApprovalStatus(context);
+        _refreshShipments();
       }
     });
+  }
+
+  void _refreshShipments() {
+    final provider = context.read<ShippingProvider>();
+    // Force refresh to get latest orders instantly
+    provider.getAllAvailableShipments(context, forceRefresh: true);
+    provider.getAllCompletedShipments(context, forceRefresh: true);
+    context.read<DriverProvider>().loadApprovalStatus(context);
   }
 
 
@@ -64,10 +69,20 @@ class _DriverHomeViewState extends State<DriverHomeView> with SingleTickerProvid
   Widget build(BuildContext context) {
     super.build(context); // Required for AutomaticKeepAliveClientMixin
     // Removed dummyOrderData - using real API data from DriverShippingRepository
-    final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
+    
+    // Refresh when page becomes visible (when navigating back)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && ModalRoute.of(context)?.isCurrent == true) {
+        // Check if we need to refresh (e.g., if cache was cleared)
+        final provider = context.read<ShippingProvider>();
+        if (provider.shipmentModel == null) {
+          _refreshShipments();
+        }
+      }
+    });
 
     return Scaffold(
-      key: scaffoldKey,
+      key: _scaffoldKey,
       drawer: const DriverDrawer(),
       appBar: AppBar(
         forceMaterialTransparency: true,
@@ -76,7 +91,7 @@ class _DriverHomeViewState extends State<DriverHomeView> with SingleTickerProvid
         leadingWidth: 60.w,
         leading: GestureDetector(
           onTap: (){
-          scaffoldKey.currentState!.openDrawer();
+            _scaffoldKey.currentState?.openDrawer();
           },
           child: Container(
             height: 50.h,
@@ -364,34 +379,131 @@ class _DriverHomeViewState extends State<DriverHomeView> with SingleTickerProvid
                                   return const Center(child: CircularProgressIndicator());
                                 }
                                 if (provider.errorText != null && provider.shipmentModel == null) {
-                                  return Center(child: MyText(text: provider.errorText!));
+                                  return RefreshIndicator(
+                                    onRefresh: () async {
+                                      await provider.getAllAvailableShipments(context, forceRefresh: true);
+                                    },
+                                    child: SingleChildScrollView(
+                                      physics: const AlwaysScrollableScrollPhysics(),
+                                      child: SizedBox(
+                                        height: 250.h,
+                                        child: Center(
+                                          child: MyText(text: provider.errorText!),
+                                        ),
+                                      ),
+                                    ),
+                                  );
                                 }
                                 final data = provider.shipmentModel
                                     ?.where((shipment) => shipment.shippingAddress != null)
                                     .toList() ?? [];
                                 if (data.isEmpty) {
-                                  return SizedBox(
-                                    height: 250.h,
-                                    child: Center(
-                                      child: MyText(text: AppLocalizations.of(context)!.notfound),
+                                  return RefreshIndicator(
+                                    onRefresh: () async {
+                                      await provider.getAllAvailableShipments(context, forceRefresh: true);
+                                    },
+                                    child: SingleChildScrollView(
+                                      physics: const AlwaysScrollableScrollPhysics(),
+                                      child: SizedBox(
+                                        height: 250.h,
+                                        child: Center(
+                                          child: Column(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              // Icon with gradient background
+                                              Container(
+                                                width: 80.w,
+                                                height: 80.w,
+                                                decoration: BoxDecoration(
+                                                  shape: BoxShape.circle,
+                                                  gradient: LinearGradient(
+                                                    begin: Alignment.topLeft,
+                                                    end: Alignment.bottomRight,
+                                                    colors: [
+                                                      primaryColor.withOpacity(0.15),
+                                                      primaryColor.withOpacity(0.08),
+                                                    ],
+                                                  ),
+                                                ),
+                                                child: Icon(
+                                                  Icons.inventory_2_outlined,
+                                                  size: 40.sp,
+                                                  color: primaryColor.withOpacity(0.6),
+                                                ),
+                                              ),
+                                              20.height,
+                                              MyText(
+                                                text: AppLocalizations.of(context)!.notfound,
+                                                size: 18.sp,
+                                                fontWeight: FontWeight.w700,
+                                                color: textPrimaryColor,
+                                              ),
+                                              20.height,
+                                              // Beautiful pull-down hint container
+                                              Container(
+                                                margin: EdgeInsets.symmetric(horizontal: 40.w),
+                                                padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
+                                                decoration: BoxDecoration(
+                                                  color: primaryColor.withOpacity(0.08),
+                                                  borderRadius: BorderRadius.circular(12.r),
+                                                  border: Border.all(
+                                                    color: primaryColor.withOpacity(0.2),
+                                                    width: 1,
+                                                  ),
+                                                ),
+                                                child: Row(
+                                                  mainAxisAlignment: MainAxisAlignment.center,
+                                                  children: [
+                                                    Icon(
+                                                      Icons.arrow_downward_rounded,
+                                                      size: 16.sp,
+                                                      color: primaryColor,
+                                                    ),
+                                                    8.width,
+                                                    MyText(
+                                                      text: 'Pull down to refresh',
+                                                      size: 13.sp,
+                                                      fontWeight: FontWeight.w600,
+                                                      color: primaryColor,
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              8.height,
+                                              MyText(
+                                                text: 'Swipe down to see new shipments',
+                                                size: 11.sp,
+                                                fontWeight: FontWeight.w400,
+                                                color: textPrimaryColor.withOpacity(0.5),
+                                                textAlignment: TextAlign.center,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
                                     ),
                                   );
                                 }
-                                return ListView.builder(
-                                  physics: const AlwaysScrollableScrollPhysics(),
-                                  cacheExtent: 500,
-                                  itemCount: data.length,
-                                  itemBuilder: (context, index) {
-                                    final availableShippingData = data[index];
-                                    return CompletedOrderWidget(
-                                      key: ValueKey('available_${availableShippingData.id}'),
-                                      shipmentModel: availableShippingData,
-                                      img: availableShippingData.cartItems[0].product.imgCover,
-                                      title: availableShippingData.cartItems[0].product.title,
-                                      discription: availableShippingData.cartItems[0].product.description,
-                                      stars: availableShippingData.cartItems[0].product.ratingAvg.toString(),
-                                      rupees: availableShippingData.cartItems[0].product.price.toString());
+                                return RefreshIndicator(
+                                  onRefresh: () async {
+                                    await provider.getAllAvailableShipments(context, forceRefresh: true);
                                   },
+                                  child: ListView.builder(
+                                    physics: const AlwaysScrollableScrollPhysics(),
+                                    cacheExtent: 500,
+                                    itemCount: data.length,
+                                    itemBuilder: (context, index) {
+                                      final availableShippingData = data[index];
+                                      return CompletedOrderWidget(
+                                        key: ValueKey('available_${availableShippingData.id}'),
+                                        shipmentModel: availableShippingData,
+                                        img: availableShippingData.cartItems[0].product.imgCover,
+                                        title: availableShippingData.cartItems[0].product.title,
+                                        discription: availableShippingData.cartItems[0].product.description,
+                                        stars: availableShippingData.cartItems[0].product.ratingAvg.toString(),
+                                        rupees: availableShippingData.cartItems[0].product.price.toString());
+                                    },
+                                  ),
                                 );
                               },
                             ),

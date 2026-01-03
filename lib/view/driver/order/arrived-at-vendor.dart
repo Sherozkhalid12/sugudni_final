@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import 'package:sugudeni/repositories/driver/driver-shipping-repository.dart';
 import 'package:sugudeni/utils/constants/app-assets.dart';
 import 'package:sugudeni/utils/constants/colors.dart';
-import 'package:sugudeni/utils/constants/fonts.dart';
 import 'package:sugudeni/utils/customWidgets/round-button.dart';
 import 'package:sugudeni/utils/customWidgets/symetric-padding.dart';
 import 'package:sugudeni/utils/extensions/sizebox.dart';
@@ -147,6 +146,63 @@ class _ArrivedAtVendorState extends State<ArrivedAtVendor> {
                       ),
                     ),
                   ),
+            // Track on Google Map button
+            if (shipmentModel.pickupAddress != null && shipmentModel.shippingAddress != null)
+              SymmetricPadding(
+                child: Container(
+                  margin: EdgeInsets.symmetric(vertical: 10.h),
+                  child: GestureDetector(
+                    onTap: () {
+                      final pickupLat = shipmentModel.pickupAddress.latitude;
+                      final pickupLng = shipmentModel.pickupAddress.longitude;
+                      final destLat = shipmentModel.shippingAddress!.latitude;
+                      final destLng = shipmentModel.shippingAddress!.longitude;
+                      
+                      // Open Google Maps
+                      openGoogleMapsDirections(
+                        originLat: pickupLat,
+                        originLng: pickupLng,
+                        destLat: destLat,
+                        destLng: destLng,
+                      );
+                    },
+                    child: Container(
+                      padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
+                      decoration: BoxDecoration(
+                        color: primaryColor,
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.map,
+                            color: whiteColor,
+                            size: 20.sp,
+                          ),
+                          10.width,
+                          MyText(
+                            text: 'Track on Google Map',
+                            size: 14.sp,
+                            fontWeight: FontWeight.w600,
+                            color: whiteColor,
+                          ),
+                          if (shipmentModel.pickupAddress != null && shipmentModel.shippingAddress != null)
+                            ...[
+                              10.width,
+                              MyText(
+                                text: '(${formatDistance(calculateDistance(shipmentModel.pickupAddress.latitude, shipmentModel.pickupAddress.longitude, shipmentModel.shippingAddress!.latitude, shipmentModel.shippingAddress!.longitude))})',
+                                size: 12.sp,
+                                fontWeight: FontWeight.w500,
+                                color: whiteColor.withOpacity(0.9),
+                              ),
+                            ],
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             SymmetricPadding(child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
