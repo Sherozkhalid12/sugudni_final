@@ -13,7 +13,9 @@ import 'package:sugudeni/models/products/SellerProductListResponse.dart';
 import 'package:sugudeni/providers/loading-provider.dart';
 import 'package:sugudeni/providers/products/seller-products-tabs/seller-active-tab-products-provider.dart';
 import 'package:sugudeni/providers/products/seller-products-tabs/seller-inactive-tab-products-provider.dart';
+import 'package:sugudeni/providers/products/seller-products-tabs/seller-draft-tab-products-provider.dart';
 import 'package:sugudeni/providers/select-role-provider.dart';
+import 'package:sugudeni/utils/routes/routes-name.dart';
 import 'package:http/http.dart' as http;
 import 'package:sugudeni/providers/seller-products-tab-provider.dart';
 import 'package:sugudeni/repositories/products/product-repository.dart';
@@ -429,7 +431,7 @@ class ProductsProvider extends ChangeNotifier{
         'price': priceController.text.trim(),
         if(quantityController.text.isNotEmpty)
         'quantity': quantityController.text.trim(),
-        if(discriptionController.text.isNotEmpty)
+        // Always include description, even if empty (API might need it)
         'descripton': discriptionController.text.trim(),
         if(categoryId!=null)
         'category': categoryId==null?'':categoryId!,
@@ -503,6 +505,8 @@ class ProductsProvider extends ChangeNotifier{
   }
   Future<void> updateProduct(String productId,BuildContext context) async {
     final loadingProvider = Provider.of<LoadingProvider>(context, listen: false);
+    final sellerDraftTabProvider = Provider.of<SellerDraftTabProductProvider>(context, listen: false);
+    final sellerActiveTabProvider = Provider.of<SellerActiveTabProductProvider>(context, listen: false);
     if (_files.isEmpty) {
       showSnackbar(context, AppLocalizations.of(context)!.pleaseuploadproductimages, color: redColor);
       return;
@@ -610,7 +614,19 @@ class ProductsProvider extends ChangeNotifier{
         loadingProvider.setLoading(false);
         if (context.mounted) {
           clearResources();
+          // Remove from draft tab and add to active tab
+          sellerDraftTabProvider.removeProduct(productId);
+          // Refresh active tab to show the newly published product
+          await sellerActiveTabProvider.refreshProducts(context);
+          
           showSnackbar(context, AppLocalizations.of(context)!.youproductwasaddedsuccessfully, color: greenColor);
+          
+          // Navigate back to products view
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            RoutesNames.sellerMyProductsView,
+            (route) => route.settings.name == RoutesNames.sellerBottomNav,
+          );
         }
       } else if (response.statusCode == 500) {
         final responseBody = await response.stream.bytesToString();

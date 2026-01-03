@@ -132,11 +132,13 @@ class _SellerAccountHealthViewState extends State<SellerAccountHealthView> {
                         ],
                         borderRadius: BorderRadius.circular(10.r),
                       ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          5.height,
-                          Row(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 4.h, horizontal: 8.w),
+                        child: SingleChildScrollView(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                            Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
@@ -153,90 +155,104 @@ class _SellerAccountHealthViewState extends State<SellerAccountHealthView> {
                                 size: 13.sp,fontWeight: FontWeight.w300,),
                             ],
                           ),
-                          5.height,
+                          6.height,
                           SizedBox(
                               width: 300.w,
                               child: Stack(
-                            children: [
-                              const Divider(),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Column(
-                                    mainAxisSize: MainAxisSize.min,
+                                  const Divider(),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
-                                      Container(
-                                        height: 13.h,
-                                        width: 5.w,
-                                        decoration: const BoxDecoration(
-                                            color: Color(0xff006D28),
-                                        shape: BoxShape.circle
-                                        ),
+                                      Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Container(
+                                            height: 13.h,
+                                            width: 5.w,
+                                            decoration: const BoxDecoration(
+                                                color: Color(0xff006D28),
+                                                shape: BoxShape.circle
+                                            ),
+                                          ),
+                                          MyText(text: "0",size: 10.sp,fontWeight: FontWeight.w500,)
+                                        ],
                                       ),
-                                      MyText(text: "0",size: 10.sp,fontWeight: FontWeight.w500,)
-                                    ],
-                                  ),
-                                  Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Container(
-                                        height: 13.h,
-                                        width: 5.w,
-                                        decoration: const BoxDecoration(
-                                            color: Color(0xffD9D9D9),
-                                            shape: BoxShape.circle
-                                        ),
+                                      Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Container(
+                                            height: 13.h,
+                                            width: 5.w,
+                                            decoration: const BoxDecoration(
+                                                color: Color(0xffD9D9D9),
+                                                shape: BoxShape.circle
+                                            ),
+                                          ),
+                                          MyText(text: "12",size: 10.sp,fontWeight: FontWeight.w500,)
+                                        ],
                                       ),
-                                      MyText(text: "12",size: 10.sp,fontWeight: FontWeight.w500,)
-                                    ],
-                                  ),
-                                  Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Container(
-                                        height: 13.h,
-                                        width: 5.w,
-                                        decoration: const BoxDecoration(
-                                            color: Color(0xffD9D9D9),
-                                            shape: BoxShape.circle
-                                        ),
+                                      Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Container(
+                                            height: 13.h,
+                                            width: 5.w,
+                                            decoration: const BoxDecoration(
+                                                color: Color(0xffD9D9D9),
+                                                shape: BoxShape.circle
+                                            ),
+                                          ),
+                                          MyText(text: "24",size: 10.sp,fontWeight: FontWeight.w500,)
+                                        ],
                                       ),
-                                      MyText(text: "24",size: 10.sp,fontWeight: FontWeight.w500,)
-                                    ],
-                                  ),
-                                  Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Container(
-                                        height: 13.h,
-                                        width: 5.w,
-                                        decoration: const BoxDecoration(
-                                            color: Color(0xffD9D9D9),
-                                            shape: BoxShape.circle
-                                        ),
+                                      Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Container(
+                                            height: 13.h,
+                                            width: 5.w,
+                                            decoration: const BoxDecoration(
+                                                color: Color(0xffD9D9D9),
+                                                shape: BoxShape.circle
+                                            ),
+                                          ),
+                                          MyText(text: "36",size: 10.sp,fontWeight: FontWeight.w500,)
+                                        ],
                                       ),
-                                      MyText(text: "36",size: 10.sp,fontWeight: FontWeight.w500,)
-                                    ],
-                                  ),
-                                  Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Container(
-                                        height: 13.h,
-                                        width: 5.w,
-                                        decoration: const BoxDecoration(
-                                            color: Color(0xffD9D9D9),
-                                            shape: BoxShape.circle
-                                        ),
+                                      Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Container(
+                                            height: 13.h,
+                                            width: 5.w,
+                                            decoration: const BoxDecoration(
+                                                color: Color(0xffD9D9D9),
+                                                shape: BoxShape.circle
+                                            ),
+                                          ),
+                                          MyText(text: "48",size: 10.sp,fontWeight: FontWeight.w500,)
+                                        ],
                                       ),
-                                      MyText(text: "48",size: 10.sp,fontWeight: FontWeight.w500,)
                                     ],
-                                  ),
+                                  )
                                 ],
-                              )
-                            ],
-                          )),
-                          5.height,
+                              ),
+                            ),
+                          4.height,
+                          MyText(
+                            overflow: TextOverflow.clip,
+                            text: 'Range of Points',
+                            color: blackColor,
+                            size: 11.sp,fontWeight: FontWeight.w500,),
+                          2.height,
+                          MyText(
+                            overflow: TextOverflow.clip,
+                            text: "0-48",
+                            color: const Color(0xff006D28),
+                            size: 12.sp,fontWeight: FontWeight.w700,
+                          ),
+                          4.height,
                           Container(
                             width: 308.w,
                             decoration: BoxDecoration(
@@ -252,7 +268,9 @@ class _SellerAccountHealthViewState extends State<SellerAccountHealthView> {
                                 size: 8.sp,fontWeight: FontWeight.w500,),
                             ),
                           ),
-                        ],
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ),

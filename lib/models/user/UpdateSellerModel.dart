@@ -1,13 +1,13 @@
 class UpdateSellerModel {
   final String name;
-  final String email;
-  final String phone;
+  final String? email; // Optional - only send if changed
+  final String? phone; // Optional - only send if changed
   final String? password; // Optional field
 
   UpdateSellerModel({
     required this.name,
-    required this.email,
-    required this.phone,
+    this.email, // Optional parameter
+    this.phone, // Optional parameter
     this.password, // Optional parameter
   });
 
@@ -21,11 +21,19 @@ class UpdateSellerModel {
   }
 
   Map<String, dynamic> toJson() {
-    final data = {
+    final data = <String, dynamic>{
       'name': name,
-      'email': email,
-      'phone': phone,
     };
+
+    // Only add email if it's provided and not empty
+    if (email != null && email!.isNotEmpty) {
+      data['email'] = email!;
+    }
+    
+    // Only add phone if it's provided and not empty
+    if (phone != null && phone!.isNotEmpty) {
+      data['phone'] = phone!;
+    }
 
     // Only add password to JSON if it is not null or empty
     if (password != null && password!.isNotEmpty) {

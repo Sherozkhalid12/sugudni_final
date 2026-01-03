@@ -35,6 +35,11 @@ class _SellerAccountSettingViewState extends State<SellerAccountSettingView> {
   final emailController=TextEditingController();
   final phoneController=TextEditingController();
   final passwordController=TextEditingController();
+  
+  // Store original values to detect changes
+  String originalEmail = '';
+  String originalPhone = '';
+  
   void fetchData()async{
     customPrint("Init ===============================================");
     var data=await UserRepository.getSellerData(context);
@@ -43,6 +48,11 @@ class _SellerAccountSettingViewState extends State<SellerAccountSettingView> {
     nameController.text=data.user!.name;
     emailController.text=data.user!.email;
     phoneController.text=data.user!.phone;
+    
+    // Store original values
+    originalEmail = data.user!.email;
+    originalPhone = data.user!.phone;
+    
     setState(() {
 
     });
@@ -142,18 +152,21 @@ class _SellerAccountSettingViewState extends State<SellerAccountSettingView> {
                 RoundButton(
                     isLoad: true,
                     title: AppLocalizations.of(context)!.savechanges, onTap: ()async{
-                      if(emailController.text.isEmpty||phoneController.text.isEmpty||nameController.text.isEmpty){
+                      if(nameController.text.isEmpty){
                         showSnackbar(context, AppLocalizations.of(context)!.informationmisiing,color: redColor);
-
                         return;
                       }
+                      
+                      // Only include email if it has changed
+                      final emailChanged = emailController.text.trim() != originalEmail;
+                      // Only include phone if it has changed
+                      final phoneChanged = phoneController.text.trim() != originalPhone;
+                      
                       var model=UpdateSellerModel(
                           name: nameController.text.trim(),
-                          email: emailController.text.trim(),
-                          phone: phoneController.text.trim(),
-                        password: passwordController.text.isNotEmpty == true ? passwordController.text.trim(): null, // Only include password if not empty
-
-
+                          email: emailChanged ? emailController.text.trim() : null,
+                          phone: phoneChanged ? phoneController.text.trim() : null,
+                          password: passwordController.text.isNotEmpty ? passwordController.text.trim() : null,
                       );
                     try{
                       loadingProvider.setLoading(true);

@@ -18,6 +18,7 @@ import 'package:sugudeni/utils/extensions/dialog-extension.dart';
 import 'package:sugudeni/utils/extensions/sizebox.dart';
 import 'package:sugudeni/utils/global-functions.dart';
 import 'package:sugudeni/utils/customWidgets/shimmer-widgets.dart';
+import 'package:sugudeni/utils/customWidgets/empty-state-widget.dart';
 import 'package:sugudeni/utils/routes/routes-name.dart';
 
 import '../../../l10n/app_localizations.dart';
@@ -98,26 +99,16 @@ class _SellerMyCategoriesViewState extends State<SellerMyCategoriesView> {
                             child: Center(child: MyText(text: snapshot.error.toString())));
                       }
                       if(snapshot.data!.getAllCategories.isEmpty){
-                        return SizedBox(
-                          height: 500.h,
-
-                          child:  Center(
-                            child: GestureDetector(
-                              onTap: (){
-                                context.read<CategoryProvider>().clearResources();
-
-                                Navigator.pushNamed(context, RoutesNames.sellerAddCategoryView);
-                              },
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                spacing: 10.h,
-                                children: [
-                                  Image.asset(AppAssets.addCategory),
-                                  MyText(text: AppLocalizations.of(context)!.letsaddyourfirstcategory,size: 13.sp,fontWeight: FontWeight.w500,),
-                                ],
-                              ),
-                            ),
-                          ),
+                        return EmptyStateWidget(
+                          title: AppLocalizations.of(context)!.letsaddyourfirstcategory,
+                          description: 'Start organizing your products by creating your first category. Categories help customers find your products easily.',
+                          icon: Icons.category_outlined,
+                          showButton: true,
+                          buttonText: 'Add Category',
+                          onButtonPressed: () {
+                            context.read<CategoryProvider>().clearResources();
+                            Navigator.pushNamed(context, RoutesNames.sellerAddCategoryView);
+                          },
                         );
                       }
                       var data=snapshot.data;
@@ -126,24 +117,11 @@ class _SellerMyCategoriesViewState extends State<SellerMyCategoriesView> {
                         return provider.query.isEmpty|| d.name.toLowerCase().toString().contains(provider.query.toLowerCase().toString());
                       }).toList();
                       if(filteredCategory.isEmpty){
-                        return SizedBox(
-                          height: 500.h,
-
-                          child:  Center(
-                            child: GestureDetector(
-                              onTap: (){
-                              },
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                spacing: 10.h,
-                                children: [
-                                  MyText(text: AppLocalizations.of(context)!.notfound,size: 13.sp,fontWeight: FontWeight.w500,),
-                                ],
-                              ),
-                            ),
-                          ),
+                        return EmptyStateWidget(
+                          title: 'No Categories Found',
+                          description: 'No categories match your search. Try adjusting your search terms or add a new category.',
+                          icon: Icons.search_off_outlined,
                         );
-
                       }
                       return Expanded(
                         child: ListView.builder(

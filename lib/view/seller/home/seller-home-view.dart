@@ -20,6 +20,7 @@ import 'package:sugudeni/utils/routes/routes-name.dart';
 import 'package:sugudeni/utils/sharePreference/save-user-token.dart';
 import 'package:sugudeni/utils/shimmer/shimmer-effects.dart';
 import 'package:sugudeni/utils/customWidgets/shimmer-widgets.dart';
+import 'package:sugudeni/utils/customWidgets/spinkit-loader.dart';
 import 'package:sugudeni/view/seller/orders/seller-specific-order-detail-view.dart';
 
 import '../../../l10n/app_localizations.dart';
@@ -41,16 +42,6 @@ class SellerHomeView extends StatefulWidget {
 class _SellerHomeViewState extends State<SellerHomeView> with AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true;
-
-  // Cache the seller data future
-  late Future<dynamic> _sellerDataFuture;
-
-  @override
-  void initState() {
-    super.initState();
-    // Cache the future to prevent reloading on every build
-    _sellerDataFuture = UserRepository.getSellerData(context);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -76,7 +67,7 @@ class _SellerHomeViewState extends State<SellerHomeView> with AutomaticKeepAlive
         child: SymmetricPadding(
           child: Column(
             children: [
-              SellerInfoWidget(isForProfile: true, cachedFuture: _sellerDataFuture,),
+              const SellerInfoWidget(isForProfile: true),
               20.height,
              Consumer<ShippingProvider>(
                  builder: (context,provider,child){
@@ -268,19 +259,23 @@ class _SellerHomeViewState extends State<SellerHomeView> with AutomaticKeepAlive
   }
 }
 
-class SellerInfoWidget extends StatelessWidget {
+class SellerInfoWidget extends StatefulWidget {
   final bool? isShowLastIcon;
   final bool? isForProfile;
-  final Future<dynamic>? cachedFuture;
 
-  const SellerInfoWidget({super.key, this.isShowLastIcon=false, this.isForProfile=false, this.cachedFuture});
+  const SellerInfoWidget({super.key, this.isShowLastIcon=false, this.isForProfile=false});
 
+  @override
+  State<SellerInfoWidget> createState() => _SellerInfoWidgetState();
+}
+
+class _SellerInfoWidgetState extends State<SellerInfoWidget> {
   @override
   Widget build(BuildContext context) {
     final provider=Provider.of<ImagePickerProviders>(context,listen: false);
 
     return FutureBuilder(
-        future: cachedFuture ?? UserRepository.getSellerData(context),
+        future: UserRepository.getSellerData(context),
         builder: (context,snapshot){
           if(snapshot.connectionState==ConnectionState.waiting){
             return ShimmerEffects().shimmerForChats();
@@ -294,35 +289,56 @@ class SellerInfoWidget extends StatelessWidget {
           Stack(
             children: [
               Consumer<ImagePickerProviders>(builder: (context,provider,child){
-                return   Container(
+                // Priority: Local file > API profile pic > Initials
+                final hasLocalPic = provider.sellerProfilePic != null;
+                final hasApiPic = sellerData!.user!.profilePic.isNotEmpty;
+                
+                return Container(
                   width: 50.w,
                   height: 50.h,
-                  decoration:  BoxDecoration(
-                      image:provider.sellerProfilePic!=null? DecorationImage(image:FileImage(File(provider.sellerProfilePic!.path)),fit: BoxFit.cover):null,
-                      shape: BoxShape.circle, color: const Color(0xffBD3C3C)),
-                  child: Center(
-                    child: MyText(
-                      text: firstTwoLetters(sellerData!.user!.name),
-                      color: whiteColor,
-                      fontWeight: FontWeight.w600,
-                      size: 12.sp,
-                    ),
+                  decoration: BoxDecoration(
+                    image: hasLocalPic
+                        ? DecorationImage(image: FileImage(File(provider.sellerProfilePic!.path)), fit: BoxFit.cover)
+                        : hasApiPic
+                            ? DecorationImage(image: NetworkImage("${ApiEndpoints.productUrl}${sellerData.user!.profilePic}"), fit: BoxFit.cover)
+                            : null,
+                    shape: BoxShape.circle,
+                    color: const Color(0xffBD3C3C),
                   ),
+                  child: !hasLocalPic && !hasApiPic
+                      ? Center(
+                          child: MyText(
+                            text: firstTwoLetters(sellerData.user!.name),
+                            color: whiteColor,
+                            fontWeight: FontWeight.w600,
+                            size: 12.sp,
+                          ),
+                        )
+                      : null,
                 );
               }),
               Positioned(
                 right: 0,
                 bottom: 0,
                 child: GestureDetector(
-                  onTap: (){
-                    provider.pickSellerImage();
+                  onTap: () async {
+                    // Pick image and wait for completion
+                    final picked = await provider.pickSellerImage();
+                    // If image was picked, upload it
+                    if (picked && context.mounted) {
+                      await provider.uploadSellerProfilePicture(context);
+                      // Force widget rebuild to show API image after upload
+                      if (mounted) {
+                        setState(() {});
+                      }
+                    }
                   },
                   child: Container(
                     width: 20.w,
                     height: 20.h,
-                    decoration:  const BoxDecoration(
+                    decoration: const BoxDecoration(
                         image: DecorationImage(
-                            image:AssetImage(AppAssets.pencilIcon),
+                            image: AssetImage(AppAssets.pencilIcon),
                             scale: 2),
                         shape: BoxShape.circle,
                         color: primaryColor),
@@ -340,40 +356,38 @@ class SellerInfoWidget extends StatelessWidget {
                 size: 16.sp,
                 fontWeight: FontWeight.w600,
               ),
-              isForProfile==false?   Row(
-                children: [
-                  MyText(
-                    text: "549",
-                    size: 16.sp,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  5.width,
-                  MyText(
-                    text: "Followers",
-                    size: 12.sp,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ],
-              ):
-              Row(
-                children: [
-                  MyText(
-                    text: "Seller ID",
-                    size: 16.sp,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  5.width,
-                  MyText(
-                    text: sellerData.user!.id,
-                    size: 12.sp,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ],
+              widget.isForProfile==false?   const SizedBox():
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
+                decoration: BoxDecoration(
+                  color: primaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8.r),
+                  border: Border.all(color: primaryColor.withOpacity(0.3), width: 1),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.badge_outlined, size: 14.sp, color: primaryColor),
+                    5.width,
+                    MyText(
+                      text: "ID: ",
+                      size: 11.sp,
+                      fontWeight: FontWeight.w600,
+                      color: primaryColor,
+                    ),
+                    MyText(
+                      text: sellerData.user!.id,
+                      size: 10.sp,
+                      fontWeight: FontWeight.w500,
+                      color: textPrimaryColor.withOpacity(0.7),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
           const Spacer(),
-          isShowLastIcon==true? GestureDetector(
+          widget.isShowLastIcon==true? GestureDetector(
             onTap: (){
               Navigator.pushNamed(context, RoutesNames.sellerAccountSettingView);
             },

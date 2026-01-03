@@ -116,6 +116,7 @@ class ApiClient {
     customPrint("Token===============================$token");
 
     return {
+      'token': token,
       'Authorization': 'Bearer $token',
       'Content-Type': 'application/json',
     };

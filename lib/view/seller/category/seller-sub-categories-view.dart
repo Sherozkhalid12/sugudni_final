@@ -16,6 +16,7 @@ import 'package:sugudeni/utils/extensions/dialog-extension.dart';
 import 'package:sugudeni/utils/extensions/sizebox.dart';
 import 'package:sugudeni/utils/global-functions.dart';
 import 'package:sugudeni/utils/customWidgets/shimmer-widgets.dart';
+import 'package:sugudeni/utils/customWidgets/empty-state-widget.dart';
 import 'package:sugudeni/view/seller/category/seller-my-category-view.dart';
 
 import '../../../l10n/app_localizations.dart';
@@ -104,11 +105,10 @@ class _SellerSubCategoriesViewState extends State<SellerSubCategoriesView> {
                             child: Center(child: MyText(text: snapshot.error.toString())));
                       }
                       if(snapshot.data!.getAllSubCategories.isEmpty){
-                        return SizedBox(
-                          height: 500.h,
-                          child:  Center(
-                            child:   MyText(text: AppLocalizations.of(context)!.notfound,size: 13.sp,fontWeight: FontWeight.w500,),
-                          ),
+                        return EmptyStateWidget(
+                          title: 'No Subcategories',
+                          description: 'This category doesn\'t have any subcategories yet. Add subcategories to better organize your products.',
+                          icon: Icons.subdirectory_arrow_right_outlined,
                         );
                       }
                       var data=snapshot.data;
@@ -117,24 +117,11 @@ class _SellerSubCategoriesViewState extends State<SellerSubCategoriesView> {
                         return provider.subQuery.isEmpty|| d.name.toLowerCase().toString().contains(provider.subQuery.toLowerCase().toString());
                       }).toList();
                       if(filteredCategory.isEmpty){
-                        return SizedBox(
-                          height: 500.h,
-
-                          child:  Center(
-                            child: GestureDetector(
-                              onTap: (){
-                              },
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                spacing: 10.h,
-                                children: [
-                                  MyText(text: AppLocalizations.of(context)!.notfound,size: 13.sp,fontWeight: FontWeight.w500,),
-                                ],
-                              ),
-                            ),
-                          ),
+                        return EmptyStateWidget(
+                          title: 'No Subcategories Found',
+                          description: 'No subcategories match your search. Try adjusting your search terms.',
+                          icon: Icons.search_off_outlined,
                         );
-
                       }
                       return Expanded(
                         child: ListView.builder(

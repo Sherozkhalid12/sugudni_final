@@ -23,12 +23,26 @@ class SellerAddressView extends StatefulWidget {
   State<SellerAddressView> createState() => _SellerAddressViewState();
 }
 
-class _SellerAddressViewState extends State<SellerAddressView> {
+class _SellerAddressViewState extends State<SellerAddressView> with WidgetsBindingObserver {
   @override
   void initState() {
-    // TODO: implement initState
-    Provider.of<SellerAddressProvider>(context,listen: false).fetchUserData(context);
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    Provider.of<SellerAddressProvider>(context,listen: false).fetchUserData(context);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Refresh data when app comes back to foreground
+      Provider.of<SellerAddressProvider>(context,listen: false).fetchUserData(context);
+    }
   }
   @override
   Widget build(BuildContext context) {
@@ -71,9 +85,12 @@ class _SellerAddressViewState extends State<SellerAddressView> {
                 children: [
                   0.height,
                   GestureDetector(
-                    onTap: (){
+                    onTap: () async {
                       provider.clearResources();
-                      Navigator.pushNamed(context, RoutesNames.sellerAddAddressView);
+                      // Wait for navigation to complete, then refresh when returning
+                      await Navigator.pushNamed(context, RoutesNames.sellerAddAddressView);
+                      // Refresh data when returning from add address screen
+                      provider.fetchUserData(context);
                     },
                     child: Container(
                       decoration: BoxDecoration(

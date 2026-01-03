@@ -76,43 +76,53 @@ class SellerAddressProvider extends ChangeNotifier{
   //   notifyListeners();
   // }
   Future<void> getUserLocation(BuildContext context) async {
-    while (!await Geolocator.isLocationServiceEnabled()) {
-       //showErrorDialog("Location services are disabled. Please enable them.", context);
-      await Geolocator.openLocationSettings();
-      await Future.delayed(const Duration(seconds: 2));
+    // Set a default location immediately so map can render instantly
+    // Using a common default location (e.g., center of a major city)
+    if (selectedLocation == null) {
+      selectedLocation = const LatLng(37.7749, -122.4194); // Default: San Francisco
+      notifyListeners();
     }
 
-    LocationPermission permission;
-    do {
-      permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-      if (permission == LocationPermission.deniedForever) {
-         showErrorDialog(
-          "Location permission is permanently denied. Enable it from settings.",
-          context,
-        );
-        await Geolocator.openAppSettings();
-        await Future.delayed(const Duration(seconds: 2));
-      }
-    } while (permission == LocationPermission.denied || permission == LocationPermission.deniedForever);
+    // Check location services in background
+    if (!await Geolocator.isLocationServiceEnabled()) {
+      await Geolocator.openLocationSettings();
+      await Future.delayed(const Duration(seconds: 1));
+    }
 
-    // Get current location
-    Position position = await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
-    );
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+    if (permission == LocationPermission.deniedForever) {
+      showErrorDialog(
+        "Location permission is permanently denied. Enable it from settings.",
+        context,
+      );
+      await Geolocator.openAppSettings();
+      return;
+    }
 
-    LatLng currentLatLng = LatLng(position.latitude, position.longitude);
-    selectedLocation = currentLatLng;
-    marker = Marker(
-      markerId: const MarkerId("selected-location"),
-      position: currentLatLng,
-    );
+    // Get current location with timeout to prevent hanging
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.medium, // Changed from high to medium for faster response
+        timeLimit: const Duration(seconds: 10), // Add timeout
+      );
 
-    mapController?.animateCamera(CameraUpdate.newLatLngZoom(currentLatLng, 14));
-    _getAddressFromLatLng(currentLatLng);
-    notifyListeners();
+      LatLng currentLatLng = LatLng(position.latitude, position.longitude);
+      selectedLocation = currentLatLng;
+      marker = Marker(
+        markerId: const MarkerId("selected-location"),
+        position: currentLatLng,
+      );
+
+      mapController?.animateCamera(CameraUpdate.newLatLngZoom(currentLatLng, 14));
+      _getAddressFromLatLng(currentLatLng);
+      notifyListeners();
+    } catch (e) {
+      // If location fetch fails, keep the default location
+      print("Error getting location: $e");
+    }
   }
 
   void moveToLocation() {
@@ -288,7 +298,11 @@ class SellerAddressProvider extends ChangeNotifier{
       await UserRepository.addCustomerAddress(model, context).then((v){
         showSnackbar(context, "Pickup address added successfully",color: greenColor);
         clearResources();
+        // Refresh the address list immediately
+        fetchUserData(context);
         loadingProvider.setLoading(false);
+        // Navigate back to show the new address instantly
+        Navigator.pop(context);
       }).onError((e,err){
         loadingProvider.setLoading(false);
       });
@@ -323,7 +337,11 @@ class SellerAddressProvider extends ChangeNotifier{
       loadingProvider.setLoading(true);
       await UserRepository.updateCustomerAddress(addressId!,model, context).then((v){
         showSnackbar(context, "Shipping address updated successfully",color: greenColor);
+        // Refresh the address list immediately
+        fetchUserData(context);
         loadingProvider.setLoading(false);
+        // Navigate back to show the updated address instantly
+        Navigator.pop(context);
       }).onError((e,err){
         loadingProvider.setLoading(false);
       });

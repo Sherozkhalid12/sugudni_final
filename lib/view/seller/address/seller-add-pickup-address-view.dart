@@ -200,16 +200,22 @@ class _SellerAddAddressViewState extends State<SellerAddAddressView> {
                               target:  provider.selectedLocation!,
                               zoom: 14.0,
                             ),
-                            markers: {
+                            markers: provider.selectedLocation != null ? {
                               Marker(
                                 markerId: const MarkerId("selected-location"),
                                 position:  provider.selectedLocation!,
                               ),
-                            },
+                            } : {},
                             onTap:  provider.onMapTapped,
-
-                            onCameraMove:  provider.onCameraMove, // Listen for map movement
-                            onCameraIdle:provider.onCameraIdle, // Called when user stops moving map/ Detect user tap on map
+                            onCameraMove:  provider.onCameraMove,
+                            onCameraIdle: provider.onCameraIdle,
+                            // Optimize map rendering
+                            mapType: MapType.normal,
+                            myLocationButtonEnabled: false,
+                            zoomControlsEnabled: false,
+                            compassEnabled: false,
+                            // Enable faster rendering
+                            liteModeEnabled: false,
                           ),
                         ),
                   provider.selectedLocation==null? SizedBox():  Padding(
