@@ -258,6 +258,36 @@ import '../../utils/global-functions.dart';
       // Refresh cart to ensure it's cleared on server
       await getCartData(context);
     }
+    
+    // Remove only selected items from cart after checkout
+    Future<void> removeSelectedItemsFromCart(BuildContext context) async {
+      if (cartResponse == null || selectedIndex.isEmpty) return;
+      
+      // Store selected item IDs before clearing
+      final itemsToRemove = List<String>.from(selectedIndex);
+      
+      // Clear selection and other checkout-related data
+      selectedIndex.clear();
+      shippingId = null;
+      selectedSlot = null;
+      deliverySlotId = null;
+      deliverySlot = null;
+      isComeFromCheckout = false;
+      index = null;
+      
+      // Remove each selected item from cart
+      for (var itemId in itemsToRemove) {
+        try {
+          await CartRepository.removeProductFromCart(itemId, context);
+        } catch (e) {
+          customPrint('Error removing cart item $itemId: $e');
+        }
+      }
+      
+      // Refresh cart data to reflect changes
+      await getCartData(context);
+      notifyListeners();
+    }
   }
 
   class PaymentMethods{

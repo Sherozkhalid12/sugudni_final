@@ -642,12 +642,13 @@ class _WebViewScreenState extends State<WebViewScreen> {
       _paymentCompleted = true;
     });
 
-    // Store order details and clear cart resources BEFORE navigation
+    // Store order details and remove only selected items from cart BEFORE navigation
     if (mounted) {
       final cartProvider = Provider.of<CartProvider>(context, listen: false);
-      // Store order details before clearing
+      // Store order details before removing items
       cartProvider.storeOrderDetails();
-      await cartProvider.clearCartAndRefresh(context);
+      // Remove only selected items from cart, not all items
+      await cartProvider.removeSelectedItemsFromCart(context);
     }
 
     // Show success message BEFORE closing WebView

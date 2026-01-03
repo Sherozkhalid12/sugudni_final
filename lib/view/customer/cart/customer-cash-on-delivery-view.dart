@@ -145,14 +145,15 @@ ${AppLocalizations.of(context)!.beforeyoumakepayment}''',size: 11.sp,),
                   deliverySlot:context.read<CartProvider>().deliverySlotId!,
               );
               await CartRepository.createCashOrder(
-                  model,context.read<CartProvider>().cartResponse!.cart.id, context).then((v){
+                  model,context.read<CartProvider>().cartResponse!.cart.id, context).then((v) async {
                 loadingProvider.setLoading(false);
                 if(context.mounted){
                   final cartProvider = context.read<CartProvider>();
-                  // Store order details before clearing
+                  // Store order details before removing items
                   cartProvider.storeOrderDetails();
                   showSnackbar(context, AppLocalizations.of(context)!.checkoutcreatedsuccessfully,color: greenColor);
-                  cartProvider.clearResources();
+                  // Remove only selected items from cart, not all items
+                  await cartProvider.removeSelectedItemsFromCart(context);
                   Navigator.pushNamed(context, RoutesNames.customerPayAtYourAddressView);
                 }
               }).onError((err,e){

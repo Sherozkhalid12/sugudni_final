@@ -229,7 +229,14 @@ class _RatingBottomSheetState extends State<RatingBottomSheet> {
                 var model=AddDeliveryRatingModel( rating: _selectedRating, ratingDescription: textController.text);
                 loadingProvider.setLoading(true);
                 try{
-                  await ReviewRepository.addReviewToDelivery(model,widget.productId! ,context).then((v){
+                  // Use orderId for delivery reviews, not productId
+                  final orderIdToUse = widget.orderId ?? widget.productId;
+                  if (orderIdToUse == null || orderIdToUse.isEmpty) {
+                    loadingProvider.setLoading(false);
+                    showToast(AppLocalizations.of(context)!.pleaserate, redColor);
+                    return;
+                  }
+                  await ReviewRepository.addReviewToDelivery(model, orderIdToUse, context).then((v){
                     loadingProvider.setLoading(false);
                     AwesomeDialog(
                       context: context,

@@ -158,12 +158,26 @@ class _CustomerCheckOutViewState extends State<CustomerCheckOutView> {
               );
             }
 
+            // Filter to only show selected items
+            final selectedCartItems = provider.cartResponse!.cart.cartItem
+                .where((item) => provider.selectedIndex.contains(item.id))
+                .toList();
+            
+            if (selectedCartItems.isEmpty) {
+              return const Expanded(
+                flex: 21,
+                child: Center(
+                  child: Text('No items selected for checkout'),
+                ),
+              );
+            }
+            
             return Expanded(
               flex: 21,
               child: ListView.builder(
-                  itemCount: provider.cartResponse!.cart.cartItem.length,
+                  itemCount: selectedCartItems.length,
                   itemBuilder: (context,index){
-                    var cartData = provider.cartResponse!.cart.cartItem[index];
+                    var cartData = selectedCartItems[index];
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 8.0),
                       child: CheckOutWidget(
@@ -181,9 +195,9 @@ class _CustomerCheckOutViewState extends State<CustomerCheckOutView> {
                           provider.decrementQuantity(cartData.id,context);
                         },
                         onChange: (v){
-                          provider.toggleItem(cartData.productId.id);
+                          provider.toggleItem(cartData.id); // Use cart item ID, not product ID
                         },
-                        isSelected: provider.selectedIndex.contains(cartData.productId.id),
+                        isSelected: provider.selectedIndex.contains(cartData.id), // Use cart item ID
                         deliverySlot: provider.deliverySlot != null
                             ? "${provider.deliverySlot!.startTime}-${provider.deliverySlot!.endTime} ${capitalizeFirstLetter(provider.deliverySlot!.title)}"
                             : "Select delivery slot",

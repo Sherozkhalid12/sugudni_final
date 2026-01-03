@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'package:sugudeni/api/api-endpoints.dart';
+import 'package:sugudeni/providers/bottom_navigation_provider.dart';
 import 'package:sugudeni/providers/carts/cart-provider.dart';
 import 'package:sugudeni/repositories/carts/cart-repository.dart';
 import 'package:sugudeni/utils/constants/app-assets.dart';
@@ -25,10 +26,18 @@ class CustomerCartView extends StatefulWidget {
 }
 
 class _CustomerCartViewState extends State<CustomerCartView> {
+  int? _lastTabIndex;
+  
   @override
   void initState() {
-    // TODO: implement initState
+    super.initState();
+    // Load cart data on initial load
+    _loadCartData();
+  }
+  
+  void _loadCartData() {
     context.read<CartProvider>().getCartData(context).then((_) {
+      if (!mounted) return;
       // Auto-select single item if there's only one item in cart
       final provider = context.read<CartProvider>();
       if (provider.cartResponse != null &&
@@ -38,10 +47,31 @@ class _CustomerCartViewState extends State<CustomerCartView> {
         provider.toggleItem(singleItem.id);
       }
     });
-    super.initState();
   }
   @override
   Widget build(BuildContext context) {
+    // Listen to bottom navigation changes and refresh cart when cart tab becomes visible
+    return Consumer<BottomNavigationProvider>(
+      builder: (context, bottomNavProvider, child) {
+        final currentIndex = bottomNavProvider.currentIndex;
+        const cartTabIndex = 2; // Cart is at index 2
+        
+        // If cart tab just became visible (wasn't visible before), refresh cart data
+        if (currentIndex == cartTabIndex && _lastTabIndex != cartTabIndex) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              _loadCartData();
+            }
+          });
+        }
+        _lastTabIndex = currentIndex;
+        
+        return _buildCartContent();
+      },
+    );
+  }
+  
+  Widget _buildCartContent() {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: whiteColor,

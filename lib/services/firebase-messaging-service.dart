@@ -26,6 +26,8 @@ class FirebaseMessagingService {
 
   String? _fcmToken;
   Function(RemoteMessage)? onMessageTap;
+  // Store recent messages for local notification tap handling
+  final Map<int, RemoteMessage> _storedMessages = {};
 
   /// Initialize Firebase Messaging
   Future<void> initialize() async {
@@ -96,8 +98,37 @@ class FirebaseMessagingService {
     await _localNotifications.initialize(
       initSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
-        customPrint('Notification tapped: ${response.payload}');
-        // Handle notification tap here if needed
+        customPrint('Local notification tapped: ${response.payload}');
+        customPrint('Notification ID: ${response.id}');
+        
+        // Try to get stored message by notification ID
+        if (_storedMessages.containsKey(response.id)) {
+          final message = _storedMessages[response.id];
+          if (message != null) {
+            customPrint('Found stored message for notification ID: ${response.id}');
+            handleForegroundNotificationTap(message);
+            // Remove from stored messages after handling
+            _storedMessages.remove(response.id);
+          }
+        } else {
+          // Try to parse payload as JSON to get notification data
+          if (response.payload != null && response.payload!.isNotEmpty) {
+            try {
+              final data = jsonDecode(response.payload!);
+              if (data is Map) {
+                customPrint('Parsed notification payload: $data');
+                // Try to create a RemoteMessage from the payload
+                // This is a fallback if stored message is not available
+                if (onMessageTap != null) {
+                  // We'll need to handle this in the callback
+                  customPrint('Payload data available, but need RemoteMessage object');
+                }
+              }
+            } catch (e) {
+              customPrint('Error parsing notification payload: $e');
+            }
+          }
+        }
       },
     );
 
@@ -124,6 +155,10 @@ class FirebaseMessagingService {
     // Show local notification when app is in foreground
     if (message.notification != null) {
       await _showLocalNotification(message);
+      
+      // Store the message for when user taps the notification
+      // We'll handle the tap in the local notification response handler
+      // by checking the stored message or using onMessageTap
     }
   }
 
@@ -150,12 +185,23 @@ class FirebaseMessagingService {
       iOS: iosDetails,
     );
 
+    final notificationId = message.hashCode;
+    
+    // Store the message for tap handling
+    _storedMessages[notificationId] = message;
+    
+    // Clean up old stored messages (keep only last 10)
+    if (_storedMessages.length > 10) {
+      final oldestKey = _storedMessages.keys.first;
+      _storedMessages.remove(oldestKey);
+    }
+    
     await _localNotifications.show(
-      message.hashCode,
+      notificationId,
       message.notification?.title ?? 'New Notification',
       message.notification?.body ?? '',
       details,
-      payload: message.data.toString(),
+      payload: jsonEncode(message.data), // Store data as JSON string
     );
   }
 
@@ -163,6 +209,19 @@ class FirebaseMessagingService {
   void _handleMessageOpenedApp(RemoteMessage message) {
     customPrint('Notification opened app: ${message.messageId}');
     customPrint('Message data: ${message.data}');
+    customPrint('Notification title: ${message.notification?.title}');
+    
+    // Call the callback if set
+    if (onMessageTap != null) {
+      onMessageTap!(message);
+    }
+  }
+  
+  /// Handle foreground notification tap (when app is in foreground)
+  void handleForegroundNotificationTap(RemoteMessage message) {
+    customPrint('Foreground notification tapped: ${message.messageId}');
+    customPrint('Message data: ${message.data}');
+    customPrint('Notification title: ${message.notification?.title}');
     
     // Call the callback if set
     if (onMessageTap != null) {

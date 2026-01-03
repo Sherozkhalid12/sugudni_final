@@ -232,17 +232,23 @@ class _CustomerHomeViewState extends State<CustomerHomeView> with AutomaticKeepA
           ],
         ),
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            15.height,
-            SymmetricPadding(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const HomeAdSection(),
-                  15.height,
+      body: RefreshIndicator(
+        onRefresh: () async {
+          // Trigger refresh by rebuilding the widgets
+          setState(() {});
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(), // Enable pull-to-refresh even when content doesn't scroll
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              15.height,
+              SymmetricPadding(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const HomeAdSection(),
+                    15.height,
                   // Row(
                   //   crossAxisAlignment: CrossAxisAlignment.start,
                   //   children: [
@@ -343,6 +349,6 @@ class _CustomerHomeViewState extends State<CustomerHomeView> with AutomaticKeepA
           ],
         ),
       ),
-    );
+      ));
   }
 }

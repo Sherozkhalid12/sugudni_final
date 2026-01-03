@@ -3,15 +3,20 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:sugudeni/models/activity/ActivityResponseModel.dart';
+import 'package:sugudeni/providers/loading-provider.dart';
 import 'package:sugudeni/providers/notification-provider.dart';
+import 'package:sugudeni/repositories/orders/customer-order-repository.dart';
 import 'package:sugudeni/utils/constants/app-assets.dart';
 import 'package:sugudeni/utils/constants/colors.dart';
 import 'package:sugudeni/utils/customWidgets/app-bar-title-widget.dart';
 import 'package:sugudeni/utils/customWidgets/my-text.dart';
 import 'package:sugudeni/utils/customWidgets/shimmer-widgets.dart';
 import 'package:sugudeni/utils/extensions/sizebox.dart';
+import 'package:sugudeni/utils/global-functions.dart';
+import 'package:sugudeni/view/customer/account/rating-bottom-sheet.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../models/orders/GetAllOrdersCutomerModel.dart';
 
 class NotificationsView extends StatefulWidget {
   const NotificationsView({super.key});
@@ -223,10 +228,14 @@ class _NotificationsViewState extends State<NotificationsView> {
         color: Colors.transparent,
         child: InkWell(
           onTap: () {
-            // Mark as read when tapped (if there's an API for this)
-            // For now, just update local state
+            // Mark as read when tapped
             if (!isRead) {
               notificationProvider.markAsRead(activity.id);
+            }
+            
+            // Handle delivery-rating activity - open review bottom sheet
+            if (activity.activityType == 'delivery-rating') {
+              _handleDeliveryRatingTap(context, activity);
             }
           },
           borderRadius: BorderRadius.circular(12.r),
@@ -276,12 +285,15 @@ class _NotificationsViewState extends State<NotificationsView> {
                           maxLine: 3,
                           overflow: TextOverflow.ellipsis,
                         ),
-                      // Show tracking ID if available
-                      if (activity.activityData != null && activity.activityData!['trackingId'] != null)
+                      // Show order ID if available
+                      if (activity.activityData != null && 
+                          (activity.activityData!['orderId'] != null || 
+                           activity.activityData!['order_id'] != null ||
+                           activity.activityData!['orderID'] != null))
                         Padding(
                           padding: EdgeInsets.only(top: 4.h),
                           child: MyText(
-                            text: 'Tracking ID: ${activity.activityData!['trackingId']}',
+                            text: 'Order ID: ${activity.activityData!['orderId'] ?? activity.activityData!['order_id'] ?? activity.activityData!['orderID']}',
                             size: 10.sp,
                             fontWeight: FontWeight.w500,
                             color: primaryColor.withOpacity(0.8),
@@ -356,6 +368,136 @@ class _NotificationsViewState extends State<NotificationsView> {
         ),
       ),
     );
+  }
+  
+  Future<void> _handleDeliveryRatingTap(BuildContext context, Activity activity) async {
+    customPrint('========== DELIVERY RATING TAP HANDLER ==========');
+    customPrint('Activity ID: ${activity.id}');
+    customPrint('Activity Type: ${activity.activityType}');
+    customPrint('Activity Data: ${activity.activityData}');
+    
+    // Extract orderId from activityData
+    String? orderId;
+    
+    if (activity.activityData != null) {
+      if (activity.activityData is Map) {
+        final activityData = activity.activityData as Map<String, dynamic>;
+        orderId = activityData['orderId']?.toString() ?? 
+                  activityData['order_id']?.toString() ??
+                  activityData['orderID']?.toString();
+      }
+    }
+    
+    if (orderId == null || orderId.isEmpty) {
+      customPrint('⚠️  WARNING: No orderId found in activity data');
+      customPrint('Activity data: ${activity.activityData}');
+      if (context.mounted) {
+        showSnackbar(context, 'Order not found', color: redColor);
+      }
+      return;
+    }
+    
+    customPrint('Order ID from activity: $orderId');
+    customPrint('Opening review bottom sheet...');
+    
+    // Open review bottom sheet
+    await _openReviewBottomSheetByOrderId(context, orderId);
+    
+    customPrint('===========================================');
+  }
+  
+  Future<void> _openReviewBottomSheetByOrderId(BuildContext context, String orderId) async {
+    customPrint('Opening review bottom sheet with orderId: $orderId');
+    
+    final loadingProvider = Provider.of<LoadingProvider>(context, listen: false);
+    
+    try {
+      // Show loading
+      loadingProvider.setLoading(true);
+      
+      // Fetch all orders to find the specific order by orderId
+      final orderResponse = await CustomerOrderRepository.allCustomersOrders(context);
+      
+      // Find the order with matching orderId
+      Order? targetOrder;
+      CartItem? targetCartItem;
+      
+      for (var order in orderResponse.orders) {
+        if (order.id == orderId) {
+          targetOrder = order;
+          // Get the first cart item for product info
+          if (order.cartItem.isNotEmpty) {
+            targetCartItem = order.cartItem.first;
+          }
+          break;
+        }
+      }
+      
+      loadingProvider.setLoading(false);
+      
+      if (targetOrder == null) {
+        customPrint('⚠️  Order not found with orderId: $orderId');
+        if (context.mounted) {
+          showSnackbar(context, 'Order not found', color: redColor);
+        }
+        return;
+      }
+      
+      if (targetCartItem == null) {
+        customPrint('⚠️  No cart items found in order');
+        if (context.mounted) {
+          showSnackbar(context, 'Order not found', color: redColor);
+        }
+        return;
+      }
+      
+      final product = targetCartItem.productId;
+      
+      if (product == null) {
+        customPrint('⚠️  Product not found in cart item');
+        if (context.mounted) {
+          showSnackbar(context, 'Order not found', color: redColor);
+        }
+        return;
+      }
+      
+      customPrint('Found order and product info:');
+      customPrint('  Order ID: ${targetOrder.id}');
+      customPrint('  Product ID: ${product.id}');
+      customPrint('  Product Title: ${product.title}');
+      customPrint('  Product imgCover: ${product.imgCover}');
+      customPrint('  Product bulk: ${product.bulk}');
+      
+      // Show bottom sheet with order and product info
+      if (context.mounted) {
+        showModalBottomSheet(
+          backgroundColor: Colors.white,
+          isScrollControlled: true,
+          context: context,
+          builder: (context) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: RatingBottomSheet(
+                orderId: targetOrder!.id,
+                productId: product.id,
+                title: product.title,
+                img: product.imgCover,
+                bulk: product.bulk,
+                isForDelivery: true,
+              ),
+            );
+          },
+        );
+      }
+    } catch (e) {
+      loadingProvider.setLoading(false);
+      customPrint('❌ Error fetching order details: $e');
+      if (context.mounted) {
+        showSnackbar(context, 'Order not found', color: redColor);
+      }
+    }
   }
 }
 
