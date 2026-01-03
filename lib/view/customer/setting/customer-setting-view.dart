@@ -64,7 +64,10 @@ class CustomerSettingView extends StatelessWidget {
                     CustomerSettingWidget(title: AppLocalizations.of(context)!.termsandcondition, onPressed: (){
                       Navigator.pushNamed(context, RoutesNames.customerTermAndConditionView);
                     }),
-            
+                    CustomerSettingWidget(title: "Support Chat", onPressed: (){
+                      Navigator.pushNamed(context, RoutesNames.customerSupportChatView);
+                    }),
+
                     const YourCountry(),
                     CustomerSettingWidget(title: AppLocalizations.of(context)!.requestaccountdeletion, onPressed: (){
                       AwesomeDialog(

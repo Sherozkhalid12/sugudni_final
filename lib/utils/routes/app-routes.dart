@@ -35,6 +35,7 @@ import 'package:sugudeni/view/customer/trackOrder/customer-order-tracking-step-t
 import 'package:sugudeni/view/customer/trackOrder/customer-order-tracking-step-two.dart';
 import 'package:sugudeni/view/customer/trackOrder/customer-to-delivered-view.dart';
 import 'package:sugudeni/view/customer/visitStore/customer-visit-store-view.dart';
+import 'package:sugudeni/view/customer/support/customer-support-chat-view.dart';
 import 'package:sugudeni/view/driver/auth/driver-sign-up-view.dart';
 import 'package:sugudeni/view/driver/driver-profile-view.dart';
 import 'package:sugudeni/view/driver/help/help-center-view.dart';
@@ -58,7 +59,6 @@ import 'package:sugudeni/view/seller/category/seller-sub-categories-view.dart';
 import 'package:sugudeni/view/seller/health/seller-account-health-view.dart';
 import 'package:sugudeni/view/seller/income/seller-income-view.dart';
 import 'package:sugudeni/view/seller/me/seller-profile-view.dart';
-import 'package:sugudeni/view/seller/messages/seller-message-detailed-screen.dart';
 import 'package:sugudeni/view/seller/orders/seller-orders-view.dart';
 import 'package:sugudeni/view/seller/orders/seller-return-order-view.dart';
 import 'package:sugudeni/view/seller/products/seller-add-product-view.dart';
@@ -307,6 +307,9 @@ class Routes {
       case RoutesNames.customerHelpCenterView:
         return MaterialPageRoute(
             builder: (BuildContext context) =>  const CustomerHelpCenterOneView());
+      case RoutesNames.customerSupportChatView:
+        return MaterialPageRoute(
+            builder: (BuildContext context) =>  const CustomerSupportChatView());
         case RoutesNames.customerTermAndConditionView:
         return MaterialPageRoute(
             builder: (BuildContext context) =>  const CustomerTermAndConditionView());

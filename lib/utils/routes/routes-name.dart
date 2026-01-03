@@ -76,5 +76,6 @@ class RoutesNames{
   static const String customerToDeliverViewView = 'customer-to=delivered-view';
   static const String customerAccountView = 'customer-account-view';
   static const String customerHelpCenterView = 'customer-help-center-view';
+  static const String customerSupportChatView = 'customer-support-chat-view';
 
 }
