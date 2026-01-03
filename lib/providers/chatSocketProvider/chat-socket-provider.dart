@@ -41,9 +41,8 @@ Future<void> fetchThreads(BuildContext context) async {
 }
 void scrollToBottom() {
   if (scrollController.hasClients) {
-    // For reversed ListView, scroll to top (position 0) to show newest messages
     scrollController.animateTo(
-      0.0,
+      scrollController.position.maxScrollExtent,
       duration: const Duration(milliseconds: 200),
       curve: Curves.easeOut,
     );
@@ -255,7 +254,7 @@ void sendMedia(String receiverId,String senderId,BuildContext context) {
 
     WidgetsBinding.instance
         .addPostFrameCallback((_) => scrollToBottom());
-    // Don't clear messageController for media sending
+    messageController.clear();
 
 }
 void removeMessageById(String messageId) {

@@ -94,14 +94,20 @@ class _SellerMessagesViewState extends State<SellerMessagesView> {
                      return Consumer2<ChatSocketProvider, SellerMessagesProvider>(
                        builder: (context, chatProvider, messagesProvider, _) {
                          // Calculate unread counts dynamically from threads (only customer threads)
+                         const adminId = '67e26686ea078c3a5fdc0698';
                          final threads = chatProvider.sellerThreads?.threads ?? [];
                          final customerThreads = threads.where((thread) {
+                           // Check if thread involves admin
+                           final participants = thread.participants.map((p) => p.userId).toList();
+                           final hasAdmin = participants.contains(adminId);
+                           
                            // Filter to only customer threads for unread count
+                           // Exclude system threads AND admin threads
                            if (thread.threadType != null) {
-                             return thread.threadType!.toLowerCase() != 'system';
+                             return thread.threadType!.toLowerCase() != 'system' && !hasAdmin;
                            }
-                           // If threadType is not available, assume all are customer threads
-                           return true;
+                           // If threadType is not available, check by admin ID
+                           return !hasAdmin;
                          }).toList();
                          
                          // Deduplicate threads by ID to avoid counting the same thread multiple times
@@ -173,23 +179,138 @@ class _SellerMessagesViewState extends State<SellerMessagesView> {
                 }
               
               // Filter threads based on selected tab
+              const adminId = '67e26686ea078c3a5fdc0698';
               final allThreads = provider.sellerThreads!.threads;
               final isCustomerTab = messagesProvider.selectMessageTab == SellerMessagesTabs.customer;
               
               final filteredThreads = allThreads.where((thread) {
+                // Check if this thread involves the admin
+                final participants = thread.participants.map((p) => p.userId).toList();
+                final hasAdmin = participants.contains(adminId);
+                
                 // If threadType is available in the API response, use it
                 if (thread.threadType != null) {
                   if (isCustomerTab) {
-                    return thread.threadType!.toLowerCase() != 'system';
+                    // Customer tab: exclude system threads and admin threads
+                    return thread.threadType!.toLowerCase() != 'system' && !hasAdmin;
                   } else {
-                    return thread.threadType!.toLowerCase() == 'system';
+                    // System tab: include system threads OR admin threads
+                    return thread.threadType!.toLowerCase() == 'system' || hasAdmin;
                   }
                 }
-                // Fallback: If threadType is not available, assume all threads are customer threads
-                // This maintains backward compatibility
-                // System threads would need to be identified by other means (e.g., participant name)
-                return isCustomerTab;
+                // Fallback: If threadType is not available, check by admin ID
+                if (isCustomerTab) {
+                  return !hasAdmin; // Exclude admin threads from customer tab
+                } else {
+                  return hasAdmin; // Include admin threads in system tab
+                }
               }).toList();
+              
+              // For system tab, if no threads found, check if admin thread exists in all threads
+              if (!isCustomerTab && filteredThreads.isEmpty) {
+                // Check if there's a thread with admin in all threads
+                Thread? adminThread;
+                try {
+                  adminThread = allThreads.firstWhere(
+                    (thread) {
+                      final participants = thread.participants.map((p) => p.userId).toList();
+                      return participants.contains(adminId);
+                    },
+                  );
+                } catch (e) {
+                  adminThread = null;
+                }
+                
+                // If no admin thread exists, show "Start Chat" button
+                if (adminThread == null) {
+                  return FutureBuilder(
+                    future: getUserId(),
+                    builder: (context, userIdSnapshot) {
+                      final sellerId = userIdSnapshot.data ?? '';
+                      return Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(40.sp),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                width: 120.w,
+                                height: 120.h,
+                                decoration: BoxDecoration(
+                                  color: primaryColor.withOpacity(0.1),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.support_agent,
+                                  size: 60.sp,
+                                  color: primaryColor,
+                                ),
+                              ),
+                              24.height,
+                              MyText(
+                                text: 'No System Messages',
+                                size: 20.sp,
+                                fontWeight: FontWeight.w700,
+                                color: textPrimaryColor,
+                              ),
+                              12.height,
+                              MyText(
+                                text: 'Start a conversation with our support team to get help with your account, products, or any questions you may have.',
+                                size: 13.sp,
+                                fontWeight: FontWeight.w400,
+                                color: textPrimaryColor.withOpacity(0.7),
+                                textAlignment: TextAlign.center,
+                              ),
+                              32.height,
+                              ElevatedButton(
+                                onPressed: () async {
+                                  // Navigate directly to chat with admin
+                                  // The chat screen will handle creating the thread when first message is sent
+                                  final adminName = 'Support';
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => SellerMessageDetailView(
+                                        receiverId: adminId,
+                                        receiverName: adminName,
+                                        senderId: sellerId,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: primaryColor,
+                                  padding: EdgeInsets.symmetric(horizontal: 40.w, vertical: 16.h),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                  ),
+                                  elevation: 2,
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.chat_bubble_outline, color: whiteColor, size: 20.sp),
+                                    12.width,
+                                    MyText(
+                                      text: 'Start Chat with Support',
+                                      size: 15.sp,
+                                      fontWeight: FontWeight.w600,
+                                      color: whiteColor,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                } else {
+                  // Admin thread exists but wasn't in filtered threads - add it
+                  filteredThreads.add(adminThread);
+                }
+              }
               
               if (filteredThreads.isEmpty) {
                 return EmptyStateWidget(
@@ -216,16 +337,22 @@ class _SellerMessagesViewState extends State<SellerMessagesView> {
 
                               final data=sortedThreads[index];
                               String receiverId=data.participants.first.userId==userId ?data.participants.last.userId:data.participants.first.userId;
+                              const adminId = '67e26686ea078c3a5fdc0698';
+                              final isAdminChat = receiverId == adminId;
+                              final displayName = isAdminChat ? 'Support' : null;
+                              
                               return  FutureBuilder(
-                                  future: UserRepository.getUserNameAndId(receiverId, context),
+                                  future: isAdminChat ? null : UserRepository.getUserNameAndId(receiverId, context),
                                   builder: (context,snapshot){
-                                    if(snapshot.connectionState==ConnectionState.waiting){
+                                    if(!isAdminChat && snapshot.connectionState==ConnectionState.waiting){
                                       return  ShimmerEffects().shimmerForChats();
                                     }
                                     // if(snapshot.data!.message=='success'){
                                     //   return  ShimmerEffects().shimmerForChats();
                                     // }
-                                    var receiverData=snapshot.data;
+                                    var receiverData = isAdminChat ? null : snapshot.data;
+                                    final nameToDisplay = displayName ?? (receiverData?.user.name ?? '');
+                                    
                                     return Padding(
                                       padding: const EdgeInsets.only(bottom: 8.0),
                                       child: Material(
@@ -235,7 +362,7 @@ class _SellerMessagesViewState extends State<SellerMessagesView> {
                                           onTap: ()async{
                                             String senderId=await getUserId();
                                             Navigator.push(context, MaterialPageRoute(builder: (context)=>
-                                                SellerMessageDetailView(receiverId: receiverId, receiverName: receiverData.user.name, senderId: userId,)));
+                                                SellerMessageDetailView(receiverId: receiverId, receiverName: nameToDisplay, senderId: userId,)));
                                             //    Navigator.pushNamed(context, RoutesNames.sellerMessageDetailDetailView,arguments: receiverData!.user.name);
                                           },
                                           child: Container(
@@ -247,25 +374,25 @@ class _SellerMessagesViewState extends State<SellerMessagesView> {
                                                 crossAxisAlignment: CrossAxisAlignment.start,
                                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                                 children: [
-                                                  data.participants.last.profilePic.isEmpty?
-
-                                                  UserNameProfileWidget(name: receiverData!.user.name): MyCachedNetworkImage(
+                                                  isAdminChat || data.participants.last.profilePic.isEmpty?
+                                                  UserNameProfileWidget(name: nameToDisplay): MyCachedNetworkImage(
                                                       height: 40.h,
                                                       width: 40.w,
                                                       radius: 140.r,
                                                       imageUrl: "${ApiEndpoints.productUrl}/${data.participants.last.profilePic}"),
 
                                                   10.width,
-                                                  Column(
-                                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                                    mainAxisAlignment: MainAxisAlignment.center,
-                                                    children: [
-                                                      MyText(text: capitalizeFirstLetter(receiverData!.user.name),size: 14.sp,fontWeight: FontWeight.w700,),
-                                                      // MyText(text: data.participants.last.userId,size: 18.sp,fontWeight: FontWeight.w700,),
-                                                      MyText(text: data.lastMessage.isNotEmpty?data.lastMessage:AppLocalizations.of(context)!.media,size: 11.sp,fontWeight: FontWeight.w400,),
-                                                    ],
+                                                  Expanded(
+                                                    child: Column(
+                                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                                      mainAxisAlignment: MainAxisAlignment.center,
+                                                      children: [
+                                                        MyText(text: capitalizeFirstLetter(nameToDisplay),size: 14.sp,fontWeight: FontWeight.w700,),
+                                                        // MyText(text: data.participants.last.userId,size: 18.sp,fontWeight: FontWeight.w700,),
+                                                        MyText(text: data.lastMessage.isNotEmpty?data.lastMessage:AppLocalizations.of(context)!.media,size: 11.sp,fontWeight: FontWeight.w400,),
+                                                      ],
+                                                    ),
                                                   ),
-                                                  const Spacer(),
                                                   MyText(text: timeFormat(data.lastMessageTimestamp),size: 10.sp,fontWeight: FontWeight.w400,),
 
 
@@ -289,3 +416,4 @@ class _SellerMessagesViewState extends State<SellerMessagesView> {
     );
   }
 }
+

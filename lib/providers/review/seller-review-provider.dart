@@ -36,6 +36,7 @@ class SellerReviewProvider extends ChangeNotifier{
 
     isLoading = true;
     errorText = '';
+    notifyListeners(); // Notify that loading started
 
     try {
       var response = await ReviewRepository.getReviewsForSeller(currentPage, context);
@@ -47,6 +48,8 @@ class SellerReviewProvider extends ChangeNotifier{
         _filterReviews(); // Apply filter after fetching data
       } else {
         hasMoreData = false;
+        // Even if no new products, ensure filtered list is updated
+        _filterReviews();
       }
     } catch (e) {
       errorText = e.toString();

@@ -722,7 +722,6 @@ class _ActiveTabState extends State<ActiveTab> {
                                      provider.removeProductById(productData.id);
                                      showSnackbar(context, AppLocalizations.of(context)!.productdeletedsuccessfully,color: greenColor);
                                    });
-                                   Navigator.pop(context);
                                   }, onNo: (){
 
                                   });

@@ -443,7 +443,6 @@ class _InActiveTabState extends State<InActiveTab> {
                                             provider.removeProductById(productData.id);
                                             showSnackbar(context, AppLocalizations.of(context)!.productdeletedsuccessfully,color: greenColor);
                                           });
-                                          Navigator.pop(context);
                                         }, onNo: (){
 
                                         });

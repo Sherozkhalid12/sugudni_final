@@ -302,7 +302,6 @@ class ViolationDialog extends StatelessWidget {
                         await ProductRepository.deleteProduct(product.id, context).then((v){
                           showSnackbar(context, AppLocalizations.of(context)!.productdeletedsuccessfully,color: greenColor);
                         });
-                        Navigator.pop(context);
                       }, onNo: (){
 
                       });

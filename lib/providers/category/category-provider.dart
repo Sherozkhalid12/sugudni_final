@@ -182,7 +182,6 @@ class CategoryProvider extends ChangeNotifier{
         loadingProvider.setLoading(false);
         if(context.mounted){
           showSnackbar(context, AppLocalizations.of(context)!.successfullydeletedcategory,color: greenColor);
-          Navigator.pop(context);
         }
       }).onError((err,e){
         loadingProvider.setLoading(false);
@@ -208,7 +207,6 @@ class CategoryProvider extends ChangeNotifier{
         loadingProvider.setLoading(false);
         if(context.mounted){
           showSnackbar(context, AppLocalizations.of(context)!.sucssfullydeletedsubcategory,color: greenColor);
-          Navigator.pop(context);
         }
       }).onError((err,e){
         loadingProvider.setLoading(false);
@@ -238,7 +236,6 @@ class CategoryProvider extends ChangeNotifier{
         loadingProvider.setLoading(false);
         if(context.mounted){
           showSnackbar(context, AppLocalizations.of(context)!.categoryupdated,color: greenColor);
-          Navigator.pop(context);
         }
       }).onError((err,e){
         loadingProvider.setLoading(false);
@@ -268,7 +265,6 @@ class CategoryProvider extends ChangeNotifier{
         loadingProvider.setLoading(false);
         if(context.mounted){
           showSnackbar(context,AppLocalizations.of(context)!.subcategoryupdated ,color: greenColor);
-          Navigator.pop(context);
         }
       }).onError((err,e){
         loadingProvider.setLoading(false);

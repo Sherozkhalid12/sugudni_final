@@ -165,7 +165,6 @@ class _PendingTabState extends State<PendingTab> {
                                           await ProductRepository.deleteProduct(productData.id, context).then((v){
                                             showSnackbar(context, AppLocalizations.of(context)!.productdeletedsuccessfully,color: greenColor);
                                           });
-                                          Navigator.pop(context);
                                         }, onNo: (){
 
                                         });
