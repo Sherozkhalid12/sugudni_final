@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'package:sugudeni/models/activity/ActivityResponseModel.dart';
-import 'package:sugudeni/repositories/activity/activity-repository.dart';
+import 'package:sugudeni/providers/notification-provider.dart';
 import 'package:sugudeni/utils/constants/app-assets.dart';
 import 'package:sugudeni/utils/constants/colors.dart';
 import 'package:sugudeni/utils/customWidgets/app-bar-title-widget.dart';
@@ -23,29 +24,11 @@ class NotificationsView extends StatefulWidget {
 }
 
 class _NotificationsViewState extends State<NotificationsView> {
-  Future<ActivityResponseModel>? _activitiesFuture;
-  bool _isRefreshing = false;
-
   @override
   void initState() {
     super.initState();
-    _loadActivities();
-  }
-
-  void _loadActivities() {
-    setState(() {
-      _activitiesFuture = ActivityRepository.getAllActivities(context);
-    });
-  }
-
-  Future<void> _refreshActivities() async {
-    setState(() {
-      _isRefreshing = true;
-    });
-    await Future.delayed(const Duration(milliseconds: 500));
-    _loadActivities();
-    setState(() {
-      _isRefreshing = false;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<NotificationProvider>().loadNotifications(context);
     });
   }
 
@@ -167,75 +150,61 @@ class _NotificationsViewState extends State<NotificationsView> {
           ],
         ),
       ),
-      body: RefreshIndicator(
-        onRefresh: _refreshActivities,
-        child: FutureBuilder<ActivityResponseModel>(
-          future: _activitiesFuture,
-          builder: (context, snapshot) {
-            // Loading state
-            if (snapshot.connectionState == ConnectionState.waiting && !_isRefreshing) {
-              return ListView.builder(
-                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
-                itemCount: 5,
-                itemBuilder: (context, index) {
-                  return Container(
-                    margin: EdgeInsets.only(bottom: 12.h),
-                    child: const ListItemShimmer(height: 80),
-                  );
-                },
-              );
-            }
+      body: Consumer<NotificationProvider>(
+        builder: (context, notificationProvider, child) {
+          return RefreshIndicator(
+            onRefresh: () => notificationProvider.loadNotifications(context),
+            child: notificationProvider.isLoading
+                ? ListView.builder(
+                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+                    itemCount: 5,
+                    itemBuilder: (context, index) {
+                      return Container(
+                        margin: EdgeInsets.only(bottom: 12.h),
+                        child: const ListItemShimmer(height: 80),
+                      );
+                    },
+                  )
+                : notificationProvider.notifications.isEmpty
+                    ? _buildEmptyState()
+                    : (() {
+                        final groupedActivities = _groupActivitiesByDate(notificationProvider.notifications);
+                        return ListView.builder(
+                          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+                          itemCount: groupedActivities.length,
+                          itemBuilder: (context, index) {
+                            final dateKey = groupedActivities.keys.elementAt(index);
+                            final dateActivities = groupedActivities[dateKey]!;
 
-            // Error or empty state - handle gracefully
-            if (snapshot.hasError || 
-                snapshot.data == null || 
-                snapshot.data!.activities.isEmpty) {
-              return _buildEmptyState();
-            }
-
-            final activities = snapshot.data!.activities;
-            final groupedActivities = _groupActivitiesByDate(activities);
-
-            if (groupedActivities.isEmpty) {
-              return _buildEmptyState();
-            }
-
-            // Build grouped list
-            return ListView.builder(
-              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
-              itemCount: groupedActivities.length,
-              itemBuilder: (context, index) {
-                final dateKey = groupedActivities.keys.elementAt(index);
-                final dateActivities = groupedActivities[dateKey]!;
-                
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Date header
-                    Padding(
-                      padding: EdgeInsets.symmetric(vertical: 12.h, horizontal: 4.w),
-                      child: MyText(
-                        text: dateKey,
-                        size: 12.sp,
-                        fontWeight: FontWeight.w600,
-                        color: textPrimaryColor.withOpacity(0.6),
-                      ),
-                    ),
-                    // Activities for this date
-                    ...dateActivities.map((activity) => _buildActivityItem(activity)),
-                  ],
-                );
-              },
-            );
-          },
-        ),
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Date header
+                                Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 12.h, horizontal: 4.w),
+                                  child: MyText(
+                                    text: dateKey,
+                                    size: 12.sp,
+                                    fontWeight: FontWeight.w600,
+                                    color: textPrimaryColor.withOpacity(0.6),
+                                  ),
+                                ),
+                                // Activities for this date
+                                ...dateActivities.map((activity) => _buildActivityItem(activity, notificationProvider)),
+                              ],
+                            );
+                          },
+                        );
+                      })(),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildActivityItem(Activity activity) {
+  Widget _buildActivityItem(Activity activity, NotificationProvider notificationProvider) {
     final isRead = activity.isRead ?? false;
-    
+
     return Container(
       margin: EdgeInsets.only(bottom: 12.h),
       decoration: BoxDecoration(
@@ -253,7 +222,10 @@ class _NotificationsViewState extends State<NotificationsView> {
         color: Colors.transparent,
         child: InkWell(
           onTap: () {
-            // Handle tap if needed
+            // Mark as read when tapped
+            if (!isRead) {
+              notificationProvider.markAsRead(activity.id);
+            }
           },
           borderRadius: BorderRadius.circular(12.r),
           child: Padding(

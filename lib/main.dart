@@ -59,6 +59,7 @@ import 'l10n/app_localizations.dart';
 import 'providers/products/customer/all-customer-products.dart';
 import 'providers/products/seller-products-tabs/seller-active-tab-products-provider.dart';
 import 'providers/products/seller-products-tabs/seller-inactive-tab-products-provider.dart';
+import 'providers/notification-provider.dart';
 import 'view/customer/products/scan/bar-code-scan.dart';
 import 'services/firebase-messaging-service.dart';
 
@@ -127,6 +128,7 @@ class MyApp extends StatelessWidget {
       ChangeNotifierProvider(create: (_)=>CurrencyProvider()),
       ChangeNotifierProvider(create: (_)=>ChangeLanguageProvider()),
       ChangeNotifierProvider(create: (_)=>ResetPasswordProvider()),
+      ChangeNotifierProvider(create: (_)=>NotificationProvider()),
     ],child: ScreenUtilInit(
       designSize:   Size( 360,screenWidth<380? 685:800),
       minTextAdapt: true,
