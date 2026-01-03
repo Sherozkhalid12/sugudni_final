@@ -210,6 +210,7 @@ Future<void> updateLastMessage(String threadId, String newMessage)async {
         lastMessageTimestamp: DateTime.now(),
         contentType: thread.contentType,
         unreadCount: thread.unreadCount,
+        threadType: thread.threadType,
       );
       break;
 

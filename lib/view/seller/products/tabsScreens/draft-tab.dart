@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
 import 'package:sugudeni/api/api-endpoints.dart';
@@ -165,12 +166,52 @@ class _DraftTabState extends State<DraftTab> {
                                               builder: (context){
                                                 return const LoadingDialog();
                                               });
-                                          context.read<ProductsProvider>().clearResources();
-                                          context.read<ProductsProvider>(). setDraftToPublish();
-                                          context.read<ProductsProvider>(). setProductId(productData.id);
-                                          await context.read<ProductsProvider>().addFiles(productData.images);
+                                          
+                                          final productsProvider = context.read<ProductsProvider>();
+                                          
+                                          // Clear resources EXCEPT files - we need to preserve them
+                                          productsProvider.clearResourcesExceptFiles();
+                                          
+                                          productsProvider.setDraftToPublish();
+                                          productsProvider.setProductId(productData.id);
+                                          
+                                          // Prepare all image URLs including imgCover (avoid duplicates)
+                                          List<String> allImageUrls = [];
+                                          if (productData.imgCover.isNotEmpty) {
+                                            allImageUrls.add(productData.imgCover);
+                                          }
+                                          // Add images that are not already in the list (avoid duplicates)
+                                          for (String imageUrl in productData.images) {
+                                            if (imageUrl.isNotEmpty && !allImageUrls.contains(imageUrl)) {
+                                              allImageUrls.add(imageUrl);
+                                            }
+                                          }
+                                          
+                                          // Download images FIRST before navigating
+                                          customPrint("========== DRAFT TO PUBLISH DEBUG ==========");
+                                          customPrint("Product ID: ${productData.id}");
+                                          customPrint("imgCover: ${productData.imgCover}");
+                                          customPrint("Images list: ${productData.images}");
+                                          customPrint("All image URLs to download: $allImageUrls");
+                                          customPrint("Total images: ${allImageUrls.length}");
+                                          
+                                          await productsProvider.addFiles(allImageUrls);
+                                          
+                                          // Verify files were downloaded
+                                          customPrint("Files after download: ${productsProvider.files.length}");
+                                          for (int i = 0; i < productsProvider.files.length; i++) {
+                                            var file = productsProvider.files[i];
+                                            File fileCheck = File(file.path);
+                                            bool exists = await fileCheck.exists();
+                                            customPrint("File $i: ${file.path} - Exists: $exists");
+                                            if (exists) {
+                                              customPrint("  File size: ${fileCheck.lengthSync()} bytes");
+                                            }
+                                          }
+                                          customPrint("===========================================");
+                                          
                                           if(context.mounted){
-                                            context.read<ProductsProvider>().setValues(productData);
+                                            productsProvider.setValues(productData);
                                             Navigator.pop(context);
                                             Navigator.pushNamed(context, RoutesNames.sellerAddProductView);
                                           }

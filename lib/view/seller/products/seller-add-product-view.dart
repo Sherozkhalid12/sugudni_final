@@ -244,6 +244,24 @@ class _SellerAddProductViewState extends State<SellerAddProductView> {
                               ),
                             );
                           }
+                          if(snapshot.hasError){
+                            return Center(
+                              child: MyText(
+                                text: 'Error loading categories: ${snapshot.error}',
+                                size: 12.sp,
+                                color: redColor,
+                              ),
+                            );
+                          }
+                          if(!snapshot.hasData || snapshot.data == null){
+                            return Center(
+                              child: MyText(
+                                text: 'No categories available',
+                                size: 12.sp,
+                                color: textPrimaryColor,
+                              ),
+                            );
+                          }
                           if(snapshot.data!.getAllCategories.isEmpty){
                             return Center(
                               child: GestureDetector(
@@ -289,298 +307,20 @@ class _SellerAddProductViewState extends State<SellerAddProductView> {
                           });
                         }),
                     10.height,
-                    Consumer<ProductsProvider>(builder: (context,provider,child){
-                      return provider.categoryId==null? const SizedBox():  FutureBuilder(
-                          key: ValueKey('category_${provider.categoryId}'),
-                          future: CategoryRepository.allCategory(context),
-                          builder: (context,snapshot){
-                            if(snapshot.connectionState==ConnectionState.waiting){
-                              return const Center(
-                                child: SizedBox(),
-                              );
-                            }
-                            if(snapshot.data!.getAllCategories.isEmpty){
-                              return const SizedBox();
-                            }
-                            var data =snapshot.data!;
-                            var catList=data.getAllCategories;
-                            List<Map<String, String>> extractedList = catList.map((category) {
-                              return {
-                                'id': category.id,
-                                'name': category.name,
-                              };
-                            }).toList();
-                            return Consumer<CategoryProvider>(
-                              builder: (context, categoryProvider, _) {
-                                // Cache the future to prevent reloading on every state change
-                                Future<SubCategoryListResponse> cachedFuture;
-                                if (_subcategoryFutures.containsKey(provider.categoryId!)) {
-                                  cachedFuture = _subcategoryFutures[provider.categoryId!]!;
-                                } else {
-                                  cachedFuture = CategoryRepository.allSubCategory(provider.categoryId!, context);
-                                  _subcategoryFutures[provider.categoryId!] = cachedFuture;
-                                }
-                                
-                                return FutureBuilder<SubCategoryListResponse>(
-                                    key: ValueKey('subcategory_${provider.categoryId}_${categoryProvider.subcategoryRefreshKey}'),
-                                    future: cachedFuture,
-                                builder: (context,subSnapshot){
-                                  // Only show loader on initial load when there's no data at all
-                                  if(subSnapshot.connectionState==ConnectionState.waiting && !subSnapshot.hasData){
-                                    return Center(
-                                      child: SpinKitLoader(
-                                        type: SpinKitType.fadingCircle,
-                                        size: 30.sp,
-                                      ),
-                                    );
-                                  }
-                                  // If we have data, show it even if we're refreshing
-                                  if(subSnapshot.hasData){
-                                    // Continue to show the data below
-                                  } else if(subSnapshot.hasError){
-                                    return Center(
-                                      child: MyText(
-                                        text: 'Error loading subcategories',
-                                        color: redColor,
-                                        size: 12.sp,
-                                      ),
-                                    );
-                                  }
-                                  if(subSnapshot.data!.getAllSubCategories.isEmpty){
-                                    return Column(
-                                      children: [
-                                        text(title: AppLocalizations.of(context)!.selectsubcategory),
-                                        5.height,
-                                        GestureDetector(
-                                          onTap: () async {
-                                            // Navigate to subcategory selection screen even if empty
-                                            final result = await Navigator.pushNamed(
-                                              context,
-                                              RoutesNames.sellerSubCategoryView,
-                                              arguments: {
-                                                'categoryId': provider.categoryId!,
-                                                'isSelectionMode': true,
-                                              },
-                                            );
-                                            
-                                            if (result != null && result is Map) {
-                                              final selectedSubCategoryId = result['id'] as String;
-                                              final selectedSubCategoryName = result['name'] as String;
-                                              
-                                              customPrint("========== SUBCATEGORY SELECTED ==========");
-                                              customPrint("Selected SubCategory Name: $selectedSubCategoryName");
-                                              customPrint("Selected SubCategory ID: $selectedSubCategoryId");
-                                              
-                                              provider.changeSubCategoryList(selectedSubCategoryName);
-                                              provider.setSubCategoryId(selectedSubCategoryId);
-                                              
-                                              customPrint("After setting - SubCategory ID in provider: ${provider.subCategoryId}");
-                                              customPrint("After setting - SubCategory Name in provider: ${provider.subCategory}");
-                                              customPrint("===========================================");
-                                              
-                                              setState(() {});
-                                            }
-                                          },
-                                          child: Container(
-                                            width: double.infinity,
-                                            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 14.h),
-                                            decoration: BoxDecoration(
-                                              color: whiteColor,
-                                              borderRadius: BorderRadius.circular(5.r),
-                                              border: Border.all(color: borderColor, width: 1),
-                                            ),
-                                            child: Row(
-                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                              children: [
-                                                Expanded(
-                                                  child: MyText(
-                                                    text: AppLocalizations.of(context)!.subcategory,
-                                                    size: 12.sp,
-                                                    fontWeight: FontWeight.w400,
-                                                    color: textPrimaryColor.withOpacity(0.5),
-                                                  ),
-                                                ),
-                                                Icon(Icons.arrow_forward_ios, size: 14.sp, color: textPrimaryColor),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                        10.height,
-                                        RoundButton(
-                                          height: 40.h,
-                                          btnTextSize: 12.sp,
-                                          borderColor: primaryColor,
-                                          bgColor: transparentColor,
-                                          textColor: primaryColor,
-                                          borderRadius: BorderRadius.circular(5.r),
-                                          title: AppLocalizations.of(context)!.addsubcategory,
-                                          onTap: () {
-                                            final categoryProvider = context.read<CategoryProvider>();
-                                            categoryProvider.subcategoryNameController.clear();
-                                            context.showTextFieldDialog(
-                                              title: AppLocalizations.of(context)!.addsubcategory,
-                                              keyboardType: TextInputType.text,
-                                              controller: categoryProvider.subcategoryNameController,
-                                              confirmText: AppLocalizations.of(context)!.add,
-                                              declineText: AppLocalizations.of(context)!.cancel,
-                                              onNo: () {},
-                                              onYes: () {
-                                                if (categoryProvider.subcategoryNameController.text.trim().isEmpty) {
-                                                  showSnackbar(context, AppLocalizations.of(context)!.subcategorynamerequired, color: redColor);
-                                                  return;
-                                                }
-                                                categoryProvider.addSubCategory(provider.categoryId!, context).then((v) {
-                                                  // Trigger refresh to show new subcategory
-                                                  if (mounted) {
-                                                    setState(() {});
-                                                  }
-                                                });
-                                              },
-                                            );
-                                          },
-                                        ),
-                                        10.height,
-                                      ],
-                                    );
-                                  }
-                                  // Ensure we have valid data
-                                  if(!subSnapshot.hasData || subSnapshot.data == null){
-                                    return const SizedBox.shrink();
-                                  }
-                                  var data = subSnapshot.data!;
-                                  var catList = data.getAllSubCategories;
-                                  // Safely map the subcategories to the required format
-                                  List<Map<String, String>> extractedList = catList.map((category) {
-                                    return {
-                                      'id': category.id,
-                                      'name': category.name,
-                                    };
-                                  }).toList();
-                                  return Column(
-                                    children: [
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Expanded(
-                                            child: text(title: AppLocalizations.of(context)!.selectsubcategory),
-                                          ),
-                                          GestureDetector(
-                                            onTap: () {
-                                              final categoryProvider = context.read<CategoryProvider>();
-                                              categoryProvider.subcategoryNameController.clear();
-                                              context.showTextFieldDialog(
-                                                title: AppLocalizations.of(context)!.addsubcategory,
-                                                keyboardType: TextInputType.text,
-                                                controller: categoryProvider.subcategoryNameController,
-                                                confirmText: AppLocalizations.of(context)!.add,
-                                                declineText: AppLocalizations.of(context)!.cancel,
-                                                onNo: () {},
-                                                onYes: () {
-                                                  if (categoryProvider.subcategoryNameController.text.trim().isEmpty) {
-                                                    showSnackbar(context, AppLocalizations.of(context)!.subcategorynamerequired, color: redColor);
-                                                    return;
-                                                  }
-                                                  categoryProvider.addSubCategory(provider.categoryId!, context).then((v) {
-                                                    // Clear the cache and create a new future to reload with fresh data
-                                                    _subcategoryFutures.remove(provider.categoryId!);
-                                                    // Create new future for fresh data
-                                                    _subcategoryFutures[provider.categoryId!] = 
-                                                        CategoryRepository.allSubCategory(provider.categoryId!, context);
-                                                    // Refresh the FutureBuilder by triggering setState
-                                                    if (mounted) {
-                                                      setState(() {});
-                                                    }
-                                                  });
-                                                },
-                                              );
-                                            },
-                                            child: Container(
-                                              padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-                                              decoration: BoxDecoration(
-                                                color: primaryColor.withOpacity(0.1),
-                                                borderRadius: BorderRadius.circular(5.r),
-                                                border: Border.all(color: primaryColor, width: 1),
-                                              ),
-                                              child: Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  Icon(Icons.add, size: 14.sp, color: primaryColor),
-                                                  4.width,
-                                                  MyText(
-                                                    text: AppLocalizations.of(context)!.addsubcategory,
-                                                    size: 10.sp,
-                                                    fontWeight: FontWeight.w600,
-                                                    color: primaryColor,
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      5.height,
-                                      GestureDetector(
-                                        onTap: () async {
-                                          // Navigate to subcategory selection screen
-                                          final result = await Navigator.pushNamed(
-                                            context,
-                                            RoutesNames.sellerSubCategoryView,
-                                            arguments: {
-                                              'categoryId': provider.categoryId!,
-                                              'isSelectionMode': true,
-                                            },
-                                          );
-                                          
-                                          if (result != null && result is Map) {
-                                            final selectedSubCategoryId = result['id'] as String;
-                                            final selectedSubCategoryName = result['name'] as String;
-                                            
-                                            customPrint("========== SUBCATEGORY SELECTED ==========");
-                                            customPrint("Selected SubCategory Name: $selectedSubCategoryName");
-                                            customPrint("Selected SubCategory ID: $selectedSubCategoryId");
-                                            
-                                            provider.changeSubCategoryList(selectedSubCategoryName);
-                                            provider.setSubCategoryId(selectedSubCategoryId);
-                                            
-                                            customPrint("After setting - SubCategory ID in provider: ${provider.subCategoryId}");
-                                            customPrint("After setting - SubCategory Name in provider: ${provider.subCategory}");
-                                            customPrint("===========================================");
-                                            
-                                            setState(() {});
-                                          }
-                                        },
-                                        child: Container(
-                                          width: double.infinity,
-                                          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 14.h),
-                                          decoration: BoxDecoration(
-                                            color: whiteColor,
-                                            borderRadius: BorderRadius.circular(5.r),
-                                            border: Border.all(color: borderColor, width: 1),
-                                          ),
-                                          child: Row(
-                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              Expanded(
-                                                child: MyText(
-                                                  text: provider.subCategory ?? AppLocalizations.of(context)!.subcategory,
-                                                  size: 12.sp,
-                                                  fontWeight: FontWeight.w400,
-                                                  color: provider.subCategory != null ? blackColor : textPrimaryColor.withOpacity(0.5),
-                                                ),
-                                              ),
-                                              Icon(Icons.arrow_forward_ios, size: 14.sp, color: textPrimaryColor),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                      10.height,
-                                    ],
-                                  );
-                                });
-                              }
-                            );
-                          });
-                    }),
+                    // Use Selector to only rebuild when categoryId changes, not on every provider change
+                    Selector<ProductsProvider, String?>(
+                      selector: (_, provider) => provider.categoryId,
+                      builder: (context, categoryId, child) {
+                        if (categoryId == null) return const SizedBox();
+                        return _SubcategoryWidget(
+                          categoryId: categoryId,
+                          subcategoryFutures: _subcategoryFutures,
+                          onRefresh: () {
+                            if (mounted) setState(() {});
+                          },
+                        );
+                      },
+                    ),
                     text(title: AppLocalizations.of(context)!.selectweight),
                     5.height,
                     Consumer<ProductsProvider>(builder: (context,provider,child){
@@ -780,5 +520,276 @@ class _SellerAddProductViewState extends State<SellerAddProductView> {
       ],
     );
 
+  }
+}
+
+// Optimized subcategory widget that only rebuilds when categoryId changes
+class _SubcategoryWidget extends StatefulWidget {
+  final String categoryId;
+  final Map<String, Future<SubCategoryListResponse>> subcategoryFutures;
+  final VoidCallback onRefresh;
+
+  const _SubcategoryWidget({
+    required this.categoryId,
+    required this.subcategoryFutures,
+    required this.onRefresh,
+  });
+
+  @override
+  State<_SubcategoryWidget> createState() => _SubcategoryWidgetState();
+}
+
+class _SubcategoryWidgetState extends State<_SubcategoryWidget> {
+  @override
+  Widget build(BuildContext context) {
+    // Cache the future to prevent reloading on every state change
+    Future<SubCategoryListResponse> cachedFuture;
+    if (widget.subcategoryFutures.containsKey(widget.categoryId)) {
+      cachedFuture = widget.subcategoryFutures[widget.categoryId]!;
+    } else {
+      cachedFuture = CategoryRepository.allSubCategory(widget.categoryId, context);
+      widget.subcategoryFutures[widget.categoryId] = cachedFuture;
+    }
+
+    return FutureBuilder<SubCategoryListResponse>(
+      key: ValueKey('subcategory_${widget.categoryId}'),
+      future: cachedFuture,
+      builder: (context, subSnapshot) {
+        // Only show loader on initial load when there's no data at all
+        if (subSnapshot.connectionState == ConnectionState.waiting && !subSnapshot.hasData) {
+          return Center(
+            child: SpinKitLoader(
+              type: SpinKitType.fadingCircle,
+              size: 30.sp,
+            ),
+          );
+        }
+
+        if (subSnapshot.hasError) {
+          return Center(
+            child: MyText(
+              text: 'Error loading subcategories',
+              color: redColor,
+              size: 12.sp,
+            ),
+          );
+        }
+
+        if (!subSnapshot.hasData || subSnapshot.data == null) {
+          return const SizedBox.shrink();
+        }
+
+        if (subSnapshot.data!.getAllSubCategories.isEmpty) {
+          return Column(
+            children: [
+              Row(
+                children: [
+                  MyText(text: AppLocalizations.of(context)!.selectsubcategory, size: 12.sp, fontWeight: FontWeight.w500),
+                  MyText(text: "*", size: 12.sp, fontWeight: FontWeight.w500, color: appRedColor),
+                ],
+              ),
+              5.height,
+              GestureDetector(
+                onTap: () async {
+                  final result = await Navigator.pushNamed(
+                    context,
+                    RoutesNames.sellerSubCategoryView,
+                    arguments: {
+                      'categoryId': widget.categoryId,
+                      'isSelectionMode': true,
+                    },
+                  );
+
+                  if (result != null && result is Map) {
+                    final provider = context.read<ProductsProvider>();
+                    final selectedSubCategoryId = result['id'] as String;
+                    final selectedSubCategoryName = result['name'] as String;
+
+                    provider.changeSubCategoryList(selectedSubCategoryName);
+                    provider.setSubCategoryId(selectedSubCategoryId);
+                  }
+                },
+                child: Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 14.h),
+                  decoration: BoxDecoration(
+                    color: whiteColor,
+                    borderRadius: BorderRadius.circular(5.r),
+                    border: Border.all(color: borderColor, width: 1),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: MyText(
+                          text: AppLocalizations.of(context)!.subcategory,
+                          size: 12.sp,
+                          fontWeight: FontWeight.w400,
+                          color: textPrimaryColor.withOpacity(0.5),
+                        ),
+                      ),
+                      Icon(Icons.arrow_forward_ios, size: 14.sp, color: textPrimaryColor),
+                    ],
+                  ),
+                ),
+              ),
+              10.height,
+              RoundButton(
+                height: 40.h,
+                btnTextSize: 12.sp,
+                borderColor: primaryColor,
+                bgColor: transparentColor,
+                textColor: primaryColor,
+                borderRadius: BorderRadius.circular(5.r),
+                title: AppLocalizations.of(context)!.addsubcategory,
+                onTap: () {
+                  final categoryProvider = context.read<CategoryProvider>();
+                  categoryProvider.subcategoryNameController.clear();
+                  context.showTextFieldDialog(
+                    title: AppLocalizations.of(context)!.addsubcategory,
+                    keyboardType: TextInputType.text,
+                    controller: categoryProvider.subcategoryNameController,
+                    confirmText: AppLocalizations.of(context)!.add,
+                    declineText: AppLocalizations.of(context)!.cancel,
+                    onNo: () {},
+                    onYes: () {
+                      if (categoryProvider.subcategoryNameController.text.trim().isEmpty) {
+                        showSnackbar(context, AppLocalizations.of(context)!.subcategorynamerequired, color: redColor);
+                        return;
+                      }
+                      categoryProvider.addSubCategory(widget.categoryId, context).then((v) {
+                        // Clear the cache and create a new future to reload with fresh data
+                        widget.subcategoryFutures.remove(widget.categoryId);
+                        widget.subcategoryFutures[widget.categoryId] =
+                            CategoryRepository.allSubCategory(widget.categoryId, context);
+                        widget.onRefresh();
+                      });
+                    },
+                  );
+                },
+              ),
+              10.height,
+            ],
+          );
+        }
+
+        final provider = context.read<ProductsProvider>();
+        return Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      MyText(text: AppLocalizations.of(context)!.selectsubcategory, size: 12.sp, fontWeight: FontWeight.w500),
+                      MyText(text: "*", size: 12.sp, fontWeight: FontWeight.w500, color: appRedColor),
+                    ],
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () {
+                    final categoryProvider = context.read<CategoryProvider>();
+                    categoryProvider.subcategoryNameController.clear();
+                    context.showTextFieldDialog(
+                      title: AppLocalizations.of(context)!.addsubcategory,
+                      keyboardType: TextInputType.text,
+                      controller: categoryProvider.subcategoryNameController,
+                      confirmText: AppLocalizations.of(context)!.add,
+                      declineText: AppLocalizations.of(context)!.cancel,
+                      onNo: () {},
+                      onYes: () {
+                        if (categoryProvider.subcategoryNameController.text.trim().isEmpty) {
+                          showSnackbar(context, AppLocalizations.of(context)!.subcategorynamerequired, color: redColor);
+                          return;
+                        }
+                        categoryProvider.addSubCategory(widget.categoryId, context).then((v) {
+                          // Clear the cache and create a new future to reload with fresh data
+                          widget.subcategoryFutures.remove(widget.categoryId);
+                          widget.subcategoryFutures[widget.categoryId] =
+                              CategoryRepository.allSubCategory(widget.categoryId, context);
+                          widget.onRefresh();
+                        });
+                      },
+                    );
+                  },
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                    decoration: BoxDecoration(
+                      color: primaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(5.r),
+                      border: Border.all(color: primaryColor, width: 1),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.add, size: 14.sp, color: primaryColor),
+                        4.width,
+                        MyText(
+                          text: AppLocalizations.of(context)!.addsubcategory,
+                          size: 10.sp,
+                          fontWeight: FontWeight.w600,
+                          color: primaryColor,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            5.height,
+            GestureDetector(
+              onTap: () async {
+                final result = await Navigator.pushNamed(
+                  context,
+                  RoutesNames.sellerSubCategoryView,
+                  arguments: {
+                    'categoryId': widget.categoryId,
+                    'isSelectionMode': true,
+                  },
+                );
+
+                if (result != null && result is Map) {
+                  final selectedSubCategoryId = result['id'] as String;
+                  final selectedSubCategoryName = result['name'] as String;
+
+                  provider.changeSubCategoryList(selectedSubCategoryName);
+                  provider.setSubCategoryId(selectedSubCategoryId);
+                }
+              },
+              child: Container(
+                width: double.infinity,
+                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 14.h),
+                decoration: BoxDecoration(
+                  color: whiteColor,
+                  borderRadius: BorderRadius.circular(5.r),
+                  border: Border.all(color: borderColor, width: 1),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Selector<ProductsProvider, String?>(
+                        selector: (_, p) => p.subCategory,
+                        builder: (context, subCategory, _) {
+                          return MyText(
+                            text: subCategory ?? AppLocalizations.of(context)!.subcategory,
+                            size: 12.sp,
+                            fontWeight: FontWeight.w400,
+                            color: subCategory != null ? blackColor : textPrimaryColor.withOpacity(0.5),
+                          );
+                        },
+                      ),
+                    ),
+                    Icon(Icons.arrow_forward_ios, size: 14.sp, color: textPrimaryColor),
+                  ],
+                ),
+              ),
+            ),
+            10.height,
+          ],
+        );
+      },
+    );
   }
 }

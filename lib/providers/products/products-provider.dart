@@ -129,24 +129,71 @@ class ProductsProvider extends ChangeNotifier{
   final List<FileModel> _files = [];
   List<FileModel> get files => _files;
   Future<void> addFiles(List<String> imageUrls) async {
+    if (imageUrls.isEmpty) {
+      customPrint("No image URLs provided to addFiles");
+      notifyListeners();
+      return;
+    }
+    
     final directory = await getApplicationDocumentsDirectory();
+    
+    // Ensure directory exists
+    if (!directory.existsSync()) {
+      directory.createSync(recursive: true);
+    }
+    
+    // Clear existing files first to avoid duplicates
+    _files.clear();
+    customPrint("========== ADD FILES DEBUG ==========");
+    customPrint("Starting to download ${imageUrls.length} images...");
+    customPrint("Image URLs: $imageUrls");
 
-    for (String url in imageUrls) {
+    for (int index = 0; index < imageUrls.length; index++) {
+      String url = imageUrls[index];
       try {
-        final response = await http.get(Uri.parse("${ApiEndpoints.productUrl}$url"));
+        // Handle both full URLs and relative paths
+        String fullUrl = url.startsWith('http') ? url : "${ApiEndpoints.productUrl}$url";
+        customPrint("Downloading image $index from: $fullUrl");
+        
+        final response = await http.get(Uri.parse(fullUrl));
 
         if (response.statusCode == 200) {
           String fileName = url.split('/').last;
-          File file = File('${directory.path}/$fileName');
+          // Ensure unique filename to avoid conflicts
+          String uniqueFileName = "${DateTime.now().millisecondsSinceEpoch}_${index}_$fileName";
+          File file = File('${directory.path}/$uniqueFileName');
 
           await file.writeAsBytes(response.bodyBytes);
-
-          _files.add(FileModel(name: fileName, path: file.path));
+          
+          // Verify file was written successfully
+          if (await file.exists()) {
+            _files.add(FileModel(name: fileName, path: file.path));
+            customPrint("Successfully downloaded and added image: $fileName (saved as $uniqueFileName, size: ${file.lengthSync()} bytes)");
+          } else {
+            customPrint("ERROR: File was not created after write: $uniqueFileName");
+          }
+        } else {
+          customPrint("Failed to download image: HTTP ${response.statusCode} for $fullUrl");
         }
       } catch (e) {
-        customPrint("Error downloading image:================================================= $e");
+        customPrint("Error downloading image from $url: $e");
       }
     }
+    
+    // CRITICAL: Notify listeners after all files are added so UI updates
+    notifyListeners();
+    customPrint("Total files added: ${_files.length} out of ${imageUrls.length} requested");
+    
+    // Verify all files exist before returning
+    for (int i = 0; i < _files.length; i++) {
+      File fileCheck = File(_files[i].path);
+      bool exists = await fileCheck.exists();
+      customPrint("Final verification - File $i: ${_files[i].path} - Exists: $exists");
+      if (!exists) {
+        customPrint("ERROR: File $i does not exist after download!");
+      }
+    }
+    customPrint("===========================================");
   }
   Future<void> addFileFromBarcode(String imageUrl) async {
     final directory = await getApplicationDocumentsDirectory();
@@ -507,6 +554,17 @@ class ProductsProvider extends ChangeNotifier{
     final loadingProvider = Provider.of<LoadingProvider>(context, listen: false);
     final sellerDraftTabProvider = Provider.of<SellerDraftTabProductProvider>(context, listen: false);
     final sellerActiveTabProvider = Provider.of<SellerActiveTabProductProvider>(context, listen: false);
+    
+    // Debug: Print file information
+    customPrint("========== UPDATE PRODUCT DEBUG ==========");
+    customPrint("Files count: ${_files.length}");
+    for (int i = 0; i < _files.length; i++) {
+      File fileCheck = File(_files[i].path);
+      bool exists = await fileCheck.exists();
+      customPrint("File $i: ${_files[i].path} - Exists: $exists");
+    }
+    customPrint("===========================================");
+    
     if (_files.isEmpty) {
       showSnackbar(context, AppLocalizations.of(context)!.pleaseuploadproductimages, color: redColor);
       return;
@@ -581,14 +639,39 @@ class ProductsProvider extends ChangeNotifier{
 
       });
 
-      // Attach files
+      // Attach files - verify they exist first
+      List<FileModel> validFiles = [];
+      for (var file in _files) {
+        File fileCheck = File(file.path);
+        if (await fileCheck.exists()) {
+          validFiles.add(file);
+          customPrint("Valid file found: ${file.path}");
+        } else {
+          customPrint("WARNING: File does not exist: ${file.path}");
+        }
+      }
+      
+      if (validFiles.isEmpty) {
+        loadingProvider.setLoading(false);
+        if (context.mounted) {
+          showSnackbar(context, 'Error: Image files not found. Please re-select images.', color: redColor);
+        }
+        return;
+      }
+      
+      customPrint("Uploading ${validFiles.length} image files...");
+      
+      // Attach cover image (first file)
       request.files.add(await http.MultipartFile.fromPath(
-        'imgCover', _files[0].path,
-        contentType: MediaType('image', 'jpeg'), // Explicit content type
+        'imgCover', validFiles[0].path,
+        contentType: MediaType('image', 'jpeg'),
       ));
-      for (var i in _files){
-        request.files.add(await http.MultipartFile.fromPath('images',i.path,
-          contentType: MediaType('image', 'jpeg'), // Explicit content type
+      
+      // Attach all other images
+      for (var file in validFiles) {
+        request.files.add(await http.MultipartFile.fromPath(
+          'images', file.path,
+          contentType: MediaType('image', 'jpeg'),
         ));
       }
 
@@ -1023,6 +1106,24 @@ class ProductsProvider extends ChangeNotifier{
 
   clearResources(){
     _files.clear();
+    productTitleController.clear();
+    quantityController.clear();
+    discriptionController.clear();
+    priceController.clear();
+    category=null;
+    subCategory=null;
+    weight=null;
+    color=null;
+    size=null;
+    subCategoryId=null;
+    categoryId=null;
+    isDraftToPublish=false;
+    isViolationToPendingQc=false;
+    notifyListeners();
+  }
+  
+  // Clear resources but preserve files (used when editing draft products)
+  clearResourcesExceptFiles(){
     productTitleController.clear();
     quantityController.clear();
     discriptionController.clear();

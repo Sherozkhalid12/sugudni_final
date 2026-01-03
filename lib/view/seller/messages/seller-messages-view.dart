@@ -7,6 +7,7 @@ import 'package:sugudeni/api/network/api-client.dart';
 import 'package:sugudeni/providers/chatSocketProvider/chat-socket-provider.dart';
 import 'package:sugudeni/providers/messages/seller-messages-provider.dart';
 import 'package:sugudeni/repositories/messages/seller-messages-repository.dart';
+import 'package:sugudeni/models/messages/SellerThreadsResponse.dart';
 import 'package:sugudeni/repositories/user-repository.dart';
 import 'package:sugudeni/utils/customWidgets/cached-network-image.dart';
 import 'package:sugudeni/utils/customWidgets/my-text.dart';
@@ -92,12 +93,32 @@ class _SellerMessagesViewState extends State<SellerMessagesView> {
                      
                      return Consumer2<ChatSocketProvider, SellerMessagesProvider>(
                        builder: (context, chatProvider, messagesProvider, _) {
-                         // Calculate unread counts dynamically from threads
+                         // Calculate unread counts dynamically from threads (only customer threads)
                          final threads = chatProvider.sellerThreads?.threads ?? [];
-                         final totalThreadUnread = threads.fold<int>(0, (sum, thread) => sum + thread.unreadCount);
+                         final customerThreads = threads.where((thread) {
+                           // Filter to only customer threads for unread count
+                           if (thread.threadType != null) {
+                             return thread.threadType!.toLowerCase() != 'system';
+                           }
+                           // If threadType is not available, assume all are customer threads
+                           return true;
+                         }).toList();
                          
-                         // Use thread unread if available, otherwise use API count
-                         final displayCount = threads.isNotEmpty ? totalThreadUnread : totalUnread;
+                         // Deduplicate threads by ID to avoid counting the same thread multiple times
+                         final seenIds = <String>{};
+                         final deduplicatedThreads = customerThreads.where((thread) {
+                           if (seenIds.contains(thread.id)) {
+                             return false;
+                           }
+                           seenIds.add(thread.id);
+                           return true;
+                         }).toList();
+                         
+                         // Count conversations with unread messages (not total unread messages)
+                         final conversationsWithUnread = deduplicatedThreads.where((thread) => thread.unreadCount > 0).length;
+                         
+                         // Use conversation count if available, otherwise use API count
+                         final displayCount = deduplicatedThreads.isNotEmpty ? conversationsWithUnread : totalUnread;
                          
                          return Row(
                            children: [
@@ -127,35 +148,50 @@ class _SellerMessagesViewState extends State<SellerMessagesView> {
 
               ],
             ),
-            Consumer2<ChatSocketProvider, SellerMessagesProvider>(builder: (context, provider, messagesProvider, child){
-              if (provider.isLoading) {
-                return FullScreenSpinKitLoader(
-                  message: 'Loading messages...',
-                );
-              }
+            Expanded(
+              child: Consumer2<ChatSocketProvider, SellerMessagesProvider>(builder: (context, provider, messagesProvider, child){
+                if (provider.isLoading) {
+                  return FullScreenSpinKitLoader(
+                    message: 'Loading messages...',
+                  );
+                }
 
-              if (provider.errorMessage != null) {
-                return Center(
-                  child: Text(provider.errorMessage!,
-                      style: const TextStyle(color: Colors.red)),
-                );
-              }
+                if (provider.errorMessage != null) {
+                  return Center(
+                    child: Text(provider.errorMessage!,
+                        style: const TextStyle(color: Colors.red)),
+                  );
+                }
 
-              if (provider.sellerThreads == null ||
-                  provider.sellerThreads!.threads.isEmpty) {
-                return EmptyStateWidget(
-                  title: AppLocalizations.of(context)!.nochatfound,
-                  description: 'You don\'t have any conversations yet. Messages from customers will appear here once they contact you.',
-                  icon: Icons.chat_bubble_outline,
-                );
-              }
+                if (provider.sellerThreads == null ||
+                    provider.sellerThreads!.threads.isEmpty) {
+                  return EmptyStateWidget(
+                    title: AppLocalizations.of(context)!.nochatfound,
+                    description: 'You don\'t have any conversations yet. Messages from customers will appear here once they contact you.',
+                    icon: Icons.chat_bubble_outline,
+                  );
+                }
               
-              // For now, show all threads in customer tab (system tab implementation pending API support)
+              // Filter threads based on selected tab
               final allThreads = provider.sellerThreads!.threads;
-              final filteredThreads = allThreads;
+              final isCustomerTab = messagesProvider.selectMessageTab == SellerMessagesTabs.customer;
+              
+              final filteredThreads = allThreads.where((thread) {
+                // If threadType is available in the API response, use it
+                if (thread.threadType != null) {
+                  if (isCustomerTab) {
+                    return thread.threadType!.toLowerCase() != 'system';
+                  } else {
+                    return thread.threadType!.toLowerCase() == 'system';
+                  }
+                }
+                // Fallback: If threadType is not available, assume all threads are customer threads
+                // This maintains backward compatibility
+                // System threads would need to be identified by other means (e.g., participant name)
+                return isCustomerTab;
+              }).toList();
               
               if (filteredThreads.isEmpty) {
-                final isCustomerTab = messagesProvider.selectMessageTab == SellerMessagesTabs.customer;
                 return EmptyStateWidget(
                   title: isCustomerTab ? 'No Customer Messages' : 'No System Messages',
                   description: isCustomerTab 
@@ -165,8 +201,7 @@ class _SellerMessagesViewState extends State<SellerMessagesView> {
                 );
               }
               
-              return  Expanded(
-                child: FutureBuilder(
+                return FutureBuilder(
                     future: getUserId(),
                     builder: (context,userIdGet){
                       String userId=userIdGet.data ??'';
@@ -244,9 +279,9 @@ class _SellerMessagesViewState extends State<SellerMessagesView> {
                                   });
                             }),
                       );
-                    }),
-              );
-            })
+                    });
+              })
+            )
           ],
         ),
 
