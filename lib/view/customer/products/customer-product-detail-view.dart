@@ -8,7 +8,6 @@ import 'package:sugudeni/repositories/review/review-repositoy.dart';
 import 'package:sugudeni/repositories/user-repository.dart';
 import 'package:provider/provider.dart';
 import 'package:sugudeni/utils/customWidgets/cached-network-image.dart';
-import 'package:sugudeni/utils/customWidgets/loading-dialog.dart';
 import 'package:sugudeni/utils/customWidgets/round-button.dart';
 import 'package:sugudeni/utils/customWidgets/shimmer-widgets.dart';
 import 'package:sugudeni/utils/customWidgets/symetric-padding.dart';
@@ -921,9 +920,51 @@ class _CustomerProductDetailPageState extends State<CustomerProductDetailPage> {
                                 quantity: 1,
                                 price: product.price.toDouble(),
                                 totalProductDiscount: product.priceAfterDiscount.toDouble());
-                            showDialog(context: context, builder: (context){
-                              return  LoadingDialog(text: AppLocalizations.of(context)!.pleasewait,);
-                            });
+                            // Show professional loading overlay
+                            showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (BuildContext context) {
+                                return Dialog(
+                                  backgroundColor: Colors.transparent,
+                                  elevation: 0,
+                                  child: Container(
+                                    padding: EdgeInsets.all(20.sp),
+                                    decoration: BoxDecoration(
+                                      color: whiteColor,
+                                      borderRadius: BorderRadius.circular(12.r),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.1),
+                                          blurRadius: 10,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        SizedBox(
+                                          width: 20.sp,
+                                          height: 20.sp,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+                                          ),
+                                        ),
+                                        12.width,
+                                        MyText(
+                                          text: AppLocalizations.of(context)!.pleasewait,
+                                          size: 12.sp,
+                                          color: textPrimaryColor,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            );
                             await CartRepository.addProductToCart(model, context).then((v){
                               Navigator.pop(context);
                               Navigator.push(context, MaterialPageRoute(builder: (context)=>const CustomerCartView()));
@@ -953,9 +994,51 @@ class _CustomerProductDetailPageState extends State<CustomerProductDetailPage> {
                                 quantity: 1,
                                 price: product.price.toDouble(),
                                 totalProductDiscount: product.priceAfterDiscount.toDouble());
-                            showDialog(context: context, builder: (context){
-                              return  LoadingDialog(text: AppLocalizations.of(context)!.addingtocart,);
-                            });
+                            // Show professional loading overlay
+                            showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (BuildContext context) {
+                                return Dialog(
+                                  backgroundColor: Colors.transparent,
+                                  elevation: 0,
+                                  child: Container(
+                                    padding: EdgeInsets.all(20.sp),
+                                    decoration: BoxDecoration(
+                                      color: whiteColor,
+                                      borderRadius: BorderRadius.circular(12.r),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.1),
+                                          blurRadius: 10,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        SizedBox(
+                                          width: 20.sp,
+                                          height: 20.sp,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+                                          ),
+                                        ),
+                                        12.width,
+                                        MyText(
+                                          text: AppLocalizations.of(context)!.addingtocart,
+                                          size: 12.sp,
+                                          color: textPrimaryColor,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            );
                             await CartRepository.addProductToCart(model, context).then((v){
                               Navigator.pop(context);
                               showSnackbar(context, AppLocalizations.of(context)!.producthasaddedtocartsuccessfully,color: greenColor);
