@@ -1,7 +1,8 @@
 import 'package:country_currency_pickers/country.dart';
 import 'package:country_currency_pickers/country_pickers.dart';
-import 'package:country_flags/country_flags.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:sugudeni/providers/currency_provider.dart';
 import 'package:sugudeni/utils/constants/colors.dart';
 import 'package:sugudeni/utils/customWidgets/my-text.dart';
 import 'package:sugudeni/utils/global-functions.dart';
@@ -44,11 +45,8 @@ class _CurrencyCheckerState extends State<CurrencyChecker> {
                               isSearchable: true,
 
                            onValuePicked: (c) async {
-                             await  updateConversionRate(c.currencyCode!);
-                             setState(() {
-
-                             });
-                                customPrint(c.currencyCode!);
+                             await context.read<CurrencyProvider>().updateConversionRate(c.currencyCode!);
+                             customPrint(c.currencyCode!);
                            },
                             itemBuilder: _buildDialogItem,
                           )

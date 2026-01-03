@@ -5,7 +5,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'package:sugudeni/api/api-endpoints.dart';
 import 'package:sugudeni/models/user/UpdateCustomerModel.dart';
-import 'package:sugudeni/providers/image-pickers-provider.dart';
 import 'package:sugudeni/repositories/user-repository.dart';
 import 'package:sugudeni/utils/constants/colors.dart';
 import 'package:sugudeni/utils/customWidgets/symetric-padding.dart';
@@ -62,18 +61,23 @@ class _CustomerProfileSettingViewState extends State<CustomerProfileSettingView>
       },
       child: Scaffold(
         body: SafeArea(
-          child: SymmetricPadding(
-            child: SingleChildScrollView(
+          child: SingleChildScrollView(
+            child: SymmetricPadding(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   30.height,
-                  GestureDetector(
-                      onTap: (){
-                        Navigator.pop(context);
-                      },
-                      child: const Icon(Icons.arrow_back_ios)),
-                  5.height,
+                  Row(
+                    children: [
+                      InkWell(
+                          onTap:(){
+                            Navigator.pop(context);
+                          },
+                          splashColor: Colors.transparent,
+                          highlightColor: Colors.transparent,
+                          child: Icon(Icons.arrow_back_ios))
+                    ],
+                  ),
                   MyText(text:AppLocalizations.of(context)!.setting, size: 28.sp, fontWeight: FontWeight.w700),
                   5.height,
                   MyText(text: AppLocalizations.of(context)!.yourprofile, size: 16.sp, fontWeight: FontWeight.w500),
@@ -91,7 +95,7 @@ class _CustomerProfileSettingViewState extends State<CustomerProfileSettingView>
                             color: whiteColor
                           ),
                         ),
-
+              
                        Consumer<UserProfileProvider>(builder: (context,provider,child){
                          return profilePicture.isNotEmpty &&provider.isChangePicture==false?
                          Positioned(
@@ -149,7 +153,7 @@ class _CustomerProfileSettingViewState extends State<CustomerProfileSettingView>
                     ),
                   ),
                   30.height,
-
+              
                   CustomTextFiled(
                     controller: nameController,
                     borderRadius: 15.r,
@@ -159,10 +163,10 @@ class _CustomerProfileSettingViewState extends State<CustomerProfileSettingView>
                     hintText: AppLocalizations.of(context)!.fullname,
                     isShowPrefixImage: true,
                     prefixImgUrl: AppAssets.personIcon,
-
+              
                   ),
                   10.height,
-
+              
                   CustomTextFiled(
                     controller: emailController,
                     borderRadius: 15.r,
@@ -172,10 +176,10 @@ class _CustomerProfileSettingViewState extends State<CustomerProfileSettingView>
                     hintText: AppLocalizations.of(context)!.enteryouremail,
                     isShowPrefixImage: true,
                     prefixImgUrl: AppAssets.emailIcon,
-
+              
                   ),
                   10.height,
-
+              
                   CustomTextFiled(
                     controller: phoneController,
                     borderRadius: 15.r,
@@ -185,7 +189,7 @@ class _CustomerProfileSettingViewState extends State<CustomerProfileSettingView>
                     hintText: AppLocalizations.of(context)!.pleaseinputphonenumber,
                     isShowPrefixImage: true,
                     prefixImgUrl: AppAssets.callIcon,
-
+              
                   ),
                   10.height,
                   CustomTextFiled(
@@ -194,12 +198,12 @@ class _CustomerProfileSettingViewState extends State<CustomerProfileSettingView>
                     isShowPrefixIcon: true,
                     isBorder: true,
                     isPassword: true,
-
+              
                     isFilled: true,
                     hintText: AppLocalizations.of(context)!.enterpassword,
                     isShowPrefixImage: true,
                     prefixImgUrl: AppAssets.passwordIcon,
-
+              
                   ),
                   150.height,
                   RoundButton(
@@ -214,15 +218,15 @@ class _CustomerProfileSettingViewState extends State<CustomerProfileSettingView>
                          email: emailController.text.trim(),
                          phone: phoneController.text.trim(),
                        password: passwordController.text.isNotEmpty == true ? passwordController.text.trim(): null, // Only include password if not empty
-
-
+              
+              
                      );
-
-
+              
+              
                         provider.isChangePicture==true? await  provider.addProfilePicture(context):null;
                         provider.updateCustomerData(model, context);
-
-
+              
+              
                   }),
                 ],
               ),

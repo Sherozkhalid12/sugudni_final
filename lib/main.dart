@@ -7,7 +7,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sugudeni/providers/auth/auth-provider.dart';
 import 'package:sugudeni/providers/auth/social-provider.dart';
 import 'package:sugudeni/providers/bottom_navigation_provider.dart';
+import 'package:sugudeni/providers/card_provider.dart';
 import 'package:sugudeni/providers/carts/cart-provider.dart';
+import 'package:sugudeni/providers/currency_provider.dart';
 import 'package:sugudeni/providers/wishlist-provider.dart';
 import 'package:sugudeni/providers/category/category-provider.dart';
 import 'package:sugudeni/providers/chatSocketProvider/chat-socket-provider.dart';
@@ -51,10 +53,6 @@ import 'package:sugudeni/utils/constants/fonts.dart';
 import 'package:sugudeni/utils/constants/load-assets.dart';
 import 'package:sugudeni/utils/routes/app-routes.dart';
 import 'package:sugudeni/utils/routes/routes-name.dart';
-import 'package:sugudeni/view/customer/products/scan/scan-product.dart';
-import 'package:sugudeni/view/customer/products/scan/scanned-product-detail.dart';
-import 'package:sugudeni/view/customer/setting/customer-setting-view.dart';
-import 'package:sugudeni/view/seller/messages/rough-chat.dart';
 
 import 'firebase_options.dart';
 import 'l10n/app_localizations.dart';
@@ -121,6 +119,8 @@ class MyApp extends StatelessWidget {
       ChangeNotifierProvider(create: (_)=>SellerViolationTabProductProvider()),
       ChangeNotifierProvider(create: (_)=>SellerOutOfStockTabProductProvider()),
       ChangeNotifierProvider(create: (_)=>BottomNavigationProvider()),
+      ChangeNotifierProvider(create: (_)=>CardProvider()),
+      ChangeNotifierProvider(create: (_)=>CurrencyProvider()),
       ChangeNotifierProvider(create: (_)=>ChangeLanguageProvider()),
       ChangeNotifierProvider(create: (_)=>ResetPasswordProvider()),
     ],child: ScreenUtilInit(

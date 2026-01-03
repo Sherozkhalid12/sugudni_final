@@ -5,8 +5,6 @@ import 'package:sugudeni/utils/constants/colors.dart';
 import 'package:sugudeni/utils/customWidgets/my-text.dart';
 import 'package:sugudeni/utils/customWidgets/symetric-padding.dart';
 import 'package:sugudeni/utils/extensions/sizebox.dart';
-import 'package:sugudeni/view/driver/sidebar/driver-side-drawer.dart';
-
 import '../../../l10n/app_localizations.dart';
 
 
@@ -15,7 +13,6 @@ class CustomerTermAndConditionView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
 
     return Scaffold(
 
@@ -25,6 +22,18 @@ class CustomerTermAndConditionView extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  30.height,
+                  Row(
+                    children: [
+                      InkWell(
+                          onTap:(){
+                            Navigator.pop(context);
+                          },
+                          splashColor: Colors.transparent,
+                          highlightColor: Colors.transparent,
+                          child: Icon(Icons.arrow_back_ios))
+                    ],
+                  ),
 
                   Center(
                     child: Image.asset(

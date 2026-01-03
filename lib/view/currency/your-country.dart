@@ -3,82 +3,65 @@ import 'package:country_currency_pickers/country_pickers.dart';
 import 'package:country_flags/country_flags.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:sugudeni/view/currency/find-currency.dart';
+import 'package:provider/provider.dart';
+import 'package:sugudeni/providers/currency_provider.dart';
 
 import '../../utils/constants/colors.dart';
 import '../../utils/customWidgets/my-text.dart';
 import '../../utils/global-functions.dart';
-class YourCountry extends StatelessWidget {
+class YourCountry extends StatefulWidget {
   const YourCountry({super.key});
 
+  @override
+  State<YourCountry> createState() => _YourCountryState();
+}
+
+class _YourCountryState extends State<YourCountry> {
   @override
   Widget build(BuildContext context) {
     return   Padding(
       padding:  EdgeInsets.symmetric(vertical: 15.h),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              MyText(text: "Country", size: 16.sp, fontWeight: FontWeight.w600),
-         const FindFlag()
+      child: InkWell(
+        onTap: (){
+          showDialog(
+              context: context,
+              builder: (context) => Theme(
+                  data: Theme.of(context).copyWith(primaryColor: whiteColor),
+                  child: CountryPickerDialog(
 
-            ],
-          ),
-          Divider(
-            color: borderColor.withOpacity(0.2),
-          )
-        ],
+                    titlePadding: const EdgeInsets.all(8.0),
+                    searchCursorColor: whiteColor,
+                    searchInputDecoration: const InputDecoration(hintText: 'Search...'),
+                    isSearchable: true,
+
+                    onValuePicked: (c) async {
+                      await context.read<CurrencyProvider>().updateConversionRate(c.currencyCode!);
+                      customPrint(c.currencyCode!);
+                    },
+                    itemBuilder: _buildDialogItem,
+                  )
+              )
+          );
+        },
+        splashColor:Colors.transparent ,
+        highlightColor: Colors.transparent,
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                MyText(text: "Country", size: 16.sp, fontWeight: FontWeight.w600),
+           const FindFlag()
+
+              ],
+            ),
+            Divider(
+              color: borderColor.withOpacity(0.2),
+            )
+          ],
+        ),
       ),
     );
-  }
-}
-class FindFlag extends StatefulWidget {
-  const FindFlag({super.key});
-
-  @override
-  State<FindFlag> createState() => _FindFlagState();
-}
-
-class _FindFlagState extends State<FindFlag> {
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder(
-        future: getCountryCOde(),
-        builder: (context,snapshot){
-          if(snapshot.connectionState==ConnectionState.waiting){
-            return const SizedBox();
-          }
-          var data=snapshot.data;
-          String countryCode = currencyToCountry[data] ?? 'US';
-
-          return GestureDetector(
-              onTap: (){
-                showDialog(
-                    context: context,
-                    builder: (context) => Theme(
-                        data: Theme.of(context).copyWith(primaryColor: whiteColor),
-                        child: CountryPickerDialog(
-
-                          titlePadding: const EdgeInsets.all(8.0),
-                          searchCursorColor: whiteColor,
-                          searchInputDecoration: const InputDecoration(hintText: 'Search...'),
-                          isSearchable: true,
-
-                          onValuePicked: (c) async {
-                            await  updateConversionRate(c.currencyCode!);
-                            setState(() {
-
-                            });
-                            customPrint(c.currencyCode!);
-                          },
-                          itemBuilder: _buildDialogItem,
-                        )
-                    )
-                );
-              },
-              child: CountryFlag.fromCountryCode(countryCode,height: 20.h,width: 30.w));
-        });
   }
   Widget _buildDialogItem(Country country) => Row(
     children: <Widget>[
@@ -89,7 +72,21 @@ class _FindFlagState extends State<FindFlag> {
       Flexible(child: Text(country.name ?? ''))
     ],
   );
+}
+class FindFlag extends StatelessWidget {
+  const FindFlag({super.key});
 
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<CurrencyProvider>(
+      builder: (context, currencyProvider, child) {
+        String currencyCode = currencyProvider.currencyCode;
+        String countryCode = currencyToCountry[currencyCode] ?? 'US';
+
+        return CountryFlag.fromCountryCode(countryCode, height: 20.h, width: 30.w);
+      },
+    );
+  }
 }
 Map<String, String> currencyToCountry = {
   'AED': 'AE',
