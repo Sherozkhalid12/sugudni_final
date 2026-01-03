@@ -133,98 +133,114 @@ class _DriverHomeViewState extends State<DriverHomeView> with SingleTickerProvid
         // Check if driver status is underreview - show beautiful waiting message
         String? driverStatus = provider.driverStatus;
         if (driverStatus == 'underreview') {
-          return Center(
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 30.w, vertical: 50.h),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Animated icon container with gradient
-                    Container(
-                      width: 120.w,
-                      height: 120.w,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            primaryColor.withOpacity(0.2),
-                            primaryColor.withOpacity(0.1),
-                          ],
-                        ),
-                      ),
-                      child: Center(
-                        child: Container(
-                          width: 100.w,
-                          height: 100.w,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: primaryColor.withOpacity(0.1),
-                          ),
-                          child: Icon(
-                            Icons.hourglass_empty_rounded,
-                            size: 60.sp,
-                            color: primaryColor,
+          return RefreshIndicator(
+            onRefresh: () async {
+              // Check status when user pulls down to refresh
+              await provider.fetchDriverStatus(context);
+            },
+            child: Center(
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 30.w, vertical: 50.h),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Animated icon container with gradient
+                      Container(
+                        width: 120.w,
+                        height: 120.w,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              primaryColor.withOpacity(0.2),
+                              primaryColor.withOpacity(0.1),
+                            ],
                           ),
                         ),
-                      ),
-                    ),
-                    30.height,
-                    // Main title
-                    MyText(
-                      text: 'Waiting for Approval',
-                      size: 28.sp,
-                      fontWeight: FontWeight.w700,
-                      color: textPrimaryColor,
-                    ),
-                    15.height,
-                    // Subtitle with gradient text effect
-                    Container(
-                      padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
-                      decoration: BoxDecoration(
-                        color: primaryColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12.r),
-                        border: Border.all(
-                          color: primaryColor.withOpacity(0.3),
-                          width: 1,
+                        child: Center(
+                          child: Container(
+                            width: 100.w,
+                            height: 100.w,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: primaryColor.withOpacity(0.1),
+                            ),
+                            child: Icon(
+                              Icons.hourglass_empty_rounded,
+                              size: 60.sp,
+                              color: primaryColor,
+                            ),
+                          ),
                         ),
                       ),
-                      child: MyText(
-                        text: 'Your driver account is under review',
-                        size: 16.sp,
-                        fontWeight: FontWeight.w600,
-                        color: primaryColor,
+                      30.height,
+                      // Main title
+                      MyText(
+                        text: 'Waiting for Approval',
+                        size: 28.sp,
+                        fontWeight: FontWeight.w700,
+                        color: textPrimaryColor,
+                      ),
+                      15.height,
+                      // Subtitle with gradient text effect
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
+                        decoration: BoxDecoration(
+                          color: primaryColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12.r),
+                          border: Border.all(
+                            color: primaryColor.withOpacity(0.3),
+                            width: 1,
+                          ),
+                        ),
+                        child: MyText(
+                          text: 'Your driver account is under review',
+                          size: 16.sp,
+                          fontWeight: FontWeight.w600,
+                          color: primaryColor,
+                          textAlignment: TextAlign.center,
+                        ),
+                      ),
+                      25.height,
+                      // Description
+                      MyText(
+                        text: 'Our team is reviewing your application. You\'ll be notified once your account is approved.',
+                        size: 14.sp,
+                        fontWeight: FontWeight.w400,
+                        color: textPrimaryColor.withOpacity(0.7),
                         textAlignment: TextAlign.center,
                       ),
-                    ),
-                    25.height,
-                    // Description
-                    MyText(
-                      text: 'Our team is reviewing your application. You\'ll be notified once your account is approved.',
-                      size: 14.sp,
-                      fontWeight: FontWeight.w400,
-                      color: textPrimaryColor.withOpacity(0.7),
-                      textAlignment: TextAlign.center,
-                    ),
-                    40.height,
-                    // Decorative dots
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(3, (index) {
-                        return Container(
-                          margin: EdgeInsets.symmetric(horizontal: 4.w),
-                          width: 8.w,
-                          height: 8.w,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: primaryColor.withOpacity(0.3 + (index * 0.2)),
-                          ),
-                        );
-                      }),
-                    ),
-                  ],
+                      15.height,
+                      // Pull to refresh hint
+                      MyText(
+                        text: 'Pull down to check your approval status',
+                        size: 12.sp,
+                        fontWeight: FontWeight.w400,
+                        color: textPrimaryColor.withOpacity(0.5),
+                        textAlignment: TextAlign.center,
+                      ),
+                      25.height,
+                      // Decorative dots
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(3, (index) {
+                          return Container(
+                            margin: EdgeInsets.symmetric(horizontal: 4.w),
+                            width: 8.w,
+                            height: 8.w,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: primaryColor.withOpacity(0.3 + (index * 0.2)),
+                            ),
+                          );
+                        }),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -232,7 +248,13 @@ class _DriverHomeViewState extends State<DriverHomeView> with SingleTickerProvid
         }
         
         // Normal content when not under review
-        return SingleChildScrollView(
+        return RefreshIndicator(
+          onRefresh: () async {
+            // Check status when user pulls down to refresh
+            await provider.fetchDriverStatus(context);
+          },
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -419,6 +441,7 @@ class _DriverHomeViewState extends State<DriverHomeView> with SingleTickerProvid
                 );
               }),
             ],
+          ),
           ),
         );
       }),
