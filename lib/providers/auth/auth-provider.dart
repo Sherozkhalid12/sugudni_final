@@ -7,6 +7,7 @@ import 'package:sugudeni/models/auth/SignInWithPhoneModel.dart';
 import 'package:sugudeni/models/auth/SignUpModel.dart';
 import 'package:sugudeni/models/auth/VerifySignInOtpModel.dart';
 import 'package:sugudeni/models/auth/VerifySignUpOtpModel.dart';
+import 'package:sugudeni/providers/bottom_navigation_provider.dart';
 import 'package:sugudeni/providers/loading-provider.dart';
 import 'package:sugudeni/providers/select-role-provider.dart';
 import 'package:sugudeni/repositories/auth/auth-repository.dart';
@@ -309,6 +310,10 @@ class AuthProvider extends ChangeNotifier {
             }
           });
           // Navigate immediately to prevent showing message after navigation
+          // Reset bottom navigation to home tab for customers
+          if (roleProvider.selectedRole == UserRoles.customer) {
+            Provider.of<BottomNavigationProvider>(context, listen: false).setIndex(0);
+          }
           navigateBasedOnRole(roleProvider.selectedRole, context);
           clearSignUpResources(); // Clear resources after successful verification
         }
@@ -396,6 +401,10 @@ class AuthProvider extends ChangeNotifier {
         await saveUserType(v.role);
         if (context.mounted) {
           showSnackbar(context, AppLocalizations.of(context)!.loggedinsuccessfully, color: greenColor);
+          // Reset bottom navigation to home tab for customers
+          if (v.role == UserRoles.customer) {
+            Provider.of<BottomNavigationProvider>(context, listen: false).setIndex(0);
+          }
           navigateBasedOnRole(v.role, context);
           clearSignUpResources(); // Clear resources after successful verification
         }
@@ -439,6 +448,10 @@ class AuthProvider extends ChangeNotifier {
               Navigator.pushNamedAndRemoveUntil(context, RoutesNames.driverHomeView, (route) => false);
             }
           } else {
+            // Reset bottom navigation to home tab for customers
+            if (v.role == UserRoles.customer) {
+              Provider.of<BottomNavigationProvider>(context, listen: false).setIndex(0);
+            }
             navigateBasedOnRole(role, context);
           }
           clearResources();

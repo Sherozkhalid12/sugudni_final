@@ -10,6 +10,7 @@ import 'package:provider/provider.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:sugudeni/models/auth/social/AppleLoginModel.dart';
 import 'package:sugudeni/models/auth/social/GoogleLoginModel.dart';
+import 'package:sugudeni/providers/bottom_navigation_provider.dart';
 import 'package:sugudeni/providers/select-role-provider.dart';
 import 'package:sugudeni/repositories/auth/social/social-auth-repository.dart';
 import 'package:sugudeni/services/social-services.dart';
@@ -18,6 +19,7 @@ import 'package:sugudeni/utils/sharePreference/save-user-token.dart';
 import 'package:sugudeni/utils/sharePreference/save-user-type.dart';
 
 import '../../utils/global-functions.dart';
+import '../../utils/user-roles.dart';
 import '../../l10n/app_localizations.dart';
 
 class SocialProvider extends ChangeNotifier{
@@ -55,6 +57,10 @@ class SocialProvider extends ChangeNotifier{
             await saveUserId(v.user.id);
             await saveSessionToken(v.token);
             await saveUserType(role);
+            // Reset bottom navigation to home tab for customers
+            if (role == UserRoles.customer) {
+              Provider.of<BottomNavigationProvider>(context, listen: false).setIndex(0);
+            }
             navigateBasedOnRole(role, context);
           });
         }
@@ -75,6 +81,10 @@ class SocialProvider extends ChangeNotifier{
               await saveSessionToken(v.token);
               await saveUserType(roleProvider.selectedRole);
 
+              // Reset bottom navigation to home tab for customers
+              if (roleProvider.selectedRole == UserRoles.customer) {
+                Provider.of<BottomNavigationProvider>(context, listen: false).setIndex(0);
+              }
               navigateBasedOnRole(roleProvider.selectedRole, context);
             });
           });
@@ -102,6 +112,10 @@ class SocialProvider extends ChangeNotifier{
             await saveUserId(v.user.id);
             await saveSessionToken(v.token);
             await saveUserType(role);
+            // Reset bottom navigation to home tab for customers
+            if (role == UserRoles.customer) {
+              Provider.of<BottomNavigationProvider>(context, listen: false).setIndex(0);
+            }
             navigateBasedOnRole(role, context);
           });
         }
@@ -166,7 +180,11 @@ class SocialProvider extends ChangeNotifier{
               await saveSessionToken(v.token);
               await saveUserType(role);
 
-              navigateBasedOnRole(role, context);
+              // Reset bottom navigation to home tab for customers
+            if (role == UserRoles.customer) {
+              Provider.of<BottomNavigationProvider>(context, listen: false).setIndex(0);
+            }
+            navigateBasedOnRole(role, context);
             });
           }
           else{
@@ -189,7 +207,11 @@ class SocialProvider extends ChangeNotifier{
                 await saveSessionToken(v.token);
                 await saveUserType(roleProvider.selectedRole);
 
-                navigateBasedOnRole(roleProvider.selectedRole, context);
+                // Reset bottom navigation to home tab for customers
+              if (roleProvider.selectedRole == UserRoles.customer) {
+                Provider.of<BottomNavigationProvider>(context, listen: false).setIndex(0);
+              }
+              navigateBasedOnRole(roleProvider.selectedRole, context);
               });
             });
           }
@@ -208,7 +230,11 @@ class SocialProvider extends ChangeNotifier{
               await saveUserId(v.user.id);
               await saveSessionToken(v.token);
               await saveUserType(role);
-              navigateBasedOnRole(role, context);
+              // Reset bottom navigation to home tab for customers
+            if (role == UserRoles.customer) {
+              Provider.of<BottomNavigationProvider>(context, listen: false).setIndex(0);
+            }
+            navigateBasedOnRole(role, context);
             });}
           print('Existing Apple user signeasdasdd in!');
         }
@@ -279,7 +305,11 @@ class SocialProvider extends ChangeNotifier{
                 await saveSessionToken(v.token);
                 await saveUserType(v.role);
 
-                navigateBasedOnRole(role, context);
+                // Reset bottom navigation to home tab for customers
+            if (role == UserRoles.customer) {
+              Provider.of<BottomNavigationProvider>(context, listen: false).setIndex(0);
+            }
+            navigateBasedOnRole(role, context);
               } else {
                 print("Invalid API response: $v");
                 showSnackbar(context, "Login failed: Invalid server response",
@@ -311,7 +341,11 @@ class SocialProvider extends ChangeNotifier{
                 await saveUserId(v.user!.id);
                 await saveSessionToken(v.token);
                 await saveUserType(role);
-                navigateBasedOnRole(role, context);
+                // Reset bottom navigation to home tab for customers
+            if (role == UserRoles.customer) {
+              Provider.of<BottomNavigationProvider>(context, listen: false).setIndex(0);
+            }
+            navigateBasedOnRole(role, context);
               } else {
                 print("Invalid API response: $v");
                 showSnackbar(context, AppLocalizations.of(context)!.loginfailedinvalidserverresponse,
