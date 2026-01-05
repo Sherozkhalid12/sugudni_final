@@ -321,8 +321,7 @@ void sendMessage(String receiverId,String senderId) {
     // Check if socket is connected before sending
     if (socket == null || !socket!.connected) {
       customPrint('Socket not connected, message will be sent when socket connects');
-      // Wait a bit and retry (socket should be initialized by the chat screen)
-      Future.delayed(const Duration(milliseconds: 500), () {
+     print("this is teh message being sent=======$message");
         if (socket != null && socket!.connected) {
           _sendMessageToSocket(receiverId, senderId, message);
         } else {
@@ -330,7 +329,7 @@ void sendMessage(String receiverId,String senderId) {
           chatHistoryResponse!.chat.removeWhere((m) => m.id == tempMessageId);
           notifyListeners();
         }
-      });
+     
     } else {
       _sendMessageToSocket(receiverId, senderId, message);
     }

@@ -453,18 +453,20 @@ void sendMessage(String receiverId, String senderId, {bool? attachment, Map<Stri
     attachment: attachment ?? false,
     attachmentData: attachmentData,
   );
+  print("this is the optimistic message=======$optimisticMessage");
   chatHistoryResponse!.chat.add(optimisticMessage);
   notifyListeners();
   WidgetsBinding.instance.addPostFrameCallback((_) => scrollToBottom());
   
   messageController.clear();
   notifyListeners();
-  
+    print("this is the message=======$message");
+    print("going to send message ");
+print('staut of socket ${socket!.connected}');
   // Check if socket is connected before sending
   if (socket == null || !socket!.connected) {
     customPrint('Socket not connected, message will be sent when socket connects');
-    // Wait a bit and retry (socket should be initialized by the chat screen)
-    Future.delayed(const Duration(milliseconds: 500), () {
+  
       if (socket != null && socket!.connected) {
         _sendMessageToSocket(receiverId, senderId, message, attachment: attachment, attachmentData: attachmentData);
       } else {
@@ -472,17 +474,15 @@ void sendMessage(String receiverId, String senderId, {bool? attachment, Map<Stri
         chatHistoryResponse!.chat.removeWhere((m) => m.id == tempMessageId);
         notifyListeners();
       }
-    });
+
   } else {
     _sendMessageToSocket(receiverId, senderId, message, attachment: attachment, attachmentData: attachmentData);
   }
 }
 
 void _sendMessageToSocket(String receiverId, String senderId, String message, {bool? attachment, Map<String, dynamic>? attachmentData}) {
-  if (socket == null || !socket!.connected) {
-    customPrint('Cannot send message: socket is null or not connected');
-    return;
-  }
+print('socket is connected ${socket!.connected}');
+print('goitn to send message inside socket function');
   
   Map<String, dynamic> messageData = {
     'senderid': senderId,
