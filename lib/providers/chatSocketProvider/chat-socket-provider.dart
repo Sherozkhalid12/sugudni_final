@@ -324,8 +324,13 @@ void aboutThreads(BuildContext context) async{
     notifyListeners();
     customPrint("Thread Update =================================$data");
   });
-  socket!.on('newThread', (data) {
+  socket!.on('newThread', (data) async {
     customPrint("New Thread =================================$data");
+    // Fetch updated threads to refresh the count
+    if (context.mounted) {
+      sellerThreads = await SellerMessagesRepository.getThreadsForSeller(context);
+      notifyListeners();
+    }
   });
   socket!.on('unreadMessagesCount', (data) {
     customPrint("Unread message count =================================$data");
