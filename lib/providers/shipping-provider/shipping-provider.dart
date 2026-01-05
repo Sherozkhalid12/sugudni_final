@@ -86,6 +86,15 @@ class ShippingProvider extends ChangeNotifier{
     completedShipments = null;
     lastFetchTime = null;
     lastCompletedFetchTime = null;
+    notifyListeners();
+  }
+  
+  // Remove a specific shipment from the list immediately (for instant UI update)
+  void removeShipmentById(String shipmentId) {
+    if (shipmentModel != null) {
+      shipmentModel = shipmentModel!.where((shipment) => shipment.id != shipmentId).toList();
+      notifyListeners();
+    }
   }
 
   String selectDate=orderFormatDate(DateTime.now());

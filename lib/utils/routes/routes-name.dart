@@ -27,6 +27,7 @@ class RoutesNames{
   static const String driverPendingDeliveriesView = 'driver-pending-delivery-view';
   static const String driverCompletedDeliveryView = 'driver-completed-delivery-view';
   static const String driverCompletedShipmentDetailView = 'driver-completed-shipment-detail-view';
+  static const String driverSupportChatView = 'driver-support-chat-view';
 
 
   ///seller routes

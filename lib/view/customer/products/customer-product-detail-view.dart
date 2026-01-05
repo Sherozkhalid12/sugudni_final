@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:sugudeni/api/api-endpoints.dart';
 import 'package:sugudeni/models/cart/AddToCartModel.dart';
+import 'package:sugudeni/providers/carts/cart-provider.dart';
 import 'package:sugudeni/providers/wishlist-provider.dart';
 import 'package:sugudeni/repositories/carts/cart-repository.dart';
 import 'package:sugudeni/repositories/review/review-repositoy.dart';
@@ -113,28 +114,40 @@ class _CustomerProductDetailPageState extends State<CustomerProductDetailPage> {
            // 8.width,
             //Image.asset(AppAssets.shareIcon,scale: 2,width: 20.w,height: 20.h,),
             8.width,
-            Stack(
-              children: [
-                GestureDetector(
-                    onTap: (){
-                      Navigator.push(context, MaterialPageRoute(builder: (context)=>const CustomerCartView()));
-                    },
-                    child: Image.asset(AppAssets.cartBottomIcon,scale: 1,color: primaryColor,width: 30.w,height: 30.h,)),
-                // Positioned(
-                //   right: 0,
-                //   child: Container(
-                //     height: 13.h,
-                //     width: 13.w,
-                //     decoration: const BoxDecoration(
-                //       color: appRedColor,
-                //       shape: BoxShape.circle
-                //     ),
-                //     child: Center(
-                //       child: MyText(text: '0',color: whiteColor,size: 7.sp,fontFamily: AppFonts.jost,),
-                //     ),
-                //   ),
-                // )
-              ],
+            Consumer<CartProvider>(
+              builder: (context, cartProvider, child) {
+                final itemCount = cartProvider.getTotalCartItemsCount();
+                return Stack(
+                  children: [
+                    GestureDetector(
+                        onTap: () {
+                          Navigator.push(context, MaterialPageRoute(builder: (context) => const CustomerCartView()));
+                        },
+                        child: Image.asset(AppAssets.cartBottomIcon, scale: 1, color: primaryColor, width: 30.w, height: 30.h)),
+                    if (itemCount > 0)
+                      Positioned(
+                        right: 0,
+                        top: 0,
+                        child: Container(
+                          height: 16.h,
+                          width: 16.w,
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: MyText(
+                              text: itemCount > 99 ? '99+' : itemCount.toString(),
+                              color: whiteColor,
+                              size: 8.sp,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              },
             ),
             8.width,
            GestureDetector(
@@ -914,65 +927,84 @@ class _CustomerProductDetailPageState extends State<CustomerProductDetailPage> {
                               showSnackbar(context, AppLocalizations.of(context)!.pleaselogintouseacount,color: redColor);
                               return;
                             }
-                            var model=AddToCartModel(
-                                sellerId: product.sellerId!.id,
-                                productId: product.id,
-                                quantity: 1,
-                                price: product.price.toDouble(),
-                                totalProductDiscount: product.priceAfterDiscount.toDouble());
-                            // Show professional loading overlay
-                            showDialog(
-                              context: context,
-                              barrierDismissible: false,
-                              builder: (BuildContext context) {
-                                return Dialog(
-                                  backgroundColor: Colors.transparent,
-                                  elevation: 0,
-                                  child: Container(
-                                    padding: EdgeInsets.all(20.sp),
-                                    decoration: BoxDecoration(
-                                      color: whiteColor,
-                                      borderRadius: BorderRadius.circular(12.r),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withOpacity(0.1),
-                                          blurRadius: 10,
-                                          offset: const Offset(0, 4),
-                                        ),
-                                      ],
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        SizedBox(
-                                          width: 20.sp,
-                                          height: 20.sp,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
-                                          ),
-                                        ),
-                                        12.width,
-                                        MyText(
-                                          text: AppLocalizations.of(context)!.pleasewait,
-                                          size: 12.sp,
-                                          color: textPrimaryColor,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                            );
-                            await CartRepository.addProductToCart(model, context).then((v){
-                              Navigator.pop(context);
+
+                            // Check if product is already in cart
+                            final cartProvider = Provider.of<CartProvider>(context, listen: false);
+                            bool isAlreadyInCart = false;
+
+                            if (cartProvider.cartResponse != null) {
+                              isAlreadyInCart = cartProvider.cartResponse!.cart.cartItem
+                                  .any((cartItem) => cartItem.productId.id == product.id);
+                            }
+
+                            if (isAlreadyInCart) {
+                              // Product already in cart, just navigate to cart
                               Navigator.push(context, MaterialPageRoute(builder: (context)=>const CustomerCartView()));
+                            } else {
+                              // Add product to cart first, then navigate
+                              var model=AddToCartModel(
+                                  sellerId: product.sellerId!.id,
+                                  productId: product.id,
+                                  quantity: 1,
+                                  price: product.price.toDouble(),
+                                  totalProductDiscount: product.priceAfterDiscount.toDouble());
 
-                            }).onError((err,e){
+                              // Show professional loading overlay
+                              showDialog(
+                                context: context,
+                                barrierDismissible: false,
+                                builder: (BuildContext context) {
+                                  return Dialog(
+                                    backgroundColor: Colors.transparent,
+                                    elevation: 0,
+                                    child: Container(
+                                      padding: EdgeInsets.all(20.sp),
+                                      decoration: BoxDecoration(
+                                        color: whiteColor,
+                                        borderRadius: BorderRadius.circular(12.r),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(0.1),
+                                            blurRadius: 10,
+                                            offset: const Offset(0, 4),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          SizedBox(
+                                            width: 20.sp,
+                                            height: 20.sp,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+                                            ),
+                                          ),
+                                          12.width,
+                                          MyText(
+                                            text: AppLocalizations.of(context)!.pleasewait,
+                                            size: 12.sp,
+                                            color: textPrimaryColor,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              );
 
-                            });
-
+                              await CartRepository.addProductToCart(model, context).then((v){
+                                Navigator.pop(context);
+                                // Refresh cart data to update badge count
+                                final cartProvider = Provider.of<CartProvider>(context, listen: false);
+                                cartProvider.getCartData(context);
+                                Navigator.push(context, MaterialPageRoute(builder: (context)=>const CustomerCartView()));
+                              }).onError((err,e){
+                                Navigator.pop(context);
+                              });
+                            }
                           }                      ),
                       RoundButton(
                           width: 108.w,
@@ -1041,6 +1073,9 @@ class _CustomerProductDetailPageState extends State<CustomerProductDetailPage> {
                             );
                             await CartRepository.addProductToCart(model, context).then((v){
                               Navigator.pop(context);
+                              // Refresh cart data to update badge count
+                              final cartProvider = Provider.of<CartProvider>(context, listen: false);
+                              cartProvider.getCartData(context);
                               showSnackbar(context, AppLocalizations.of(context)!.producthasaddedtocartsuccessfully,color: greenColor);
                             }).onError((err,e){
                               Navigator.pop(context);

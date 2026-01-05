@@ -56,6 +56,17 @@ import '../../utils/global-functions.dart';
     int getSelectedItemsCount() {
       return selectedIndex.length;
     }
+
+    // Get total cart items count (sum of all quantities)
+    int getTotalCartItemsCount() {
+      if (cartResponse == null || cartResponse!.cart.cartItem.isEmpty) return 0;
+
+      int totalCount = 0;
+      for (var cartItem in cartResponse!.cart.cartItem) {
+        totalCount += cartItem.quantity;
+      }
+      return totalCount;
+    }
     selectSlot(String s){
       selectedSlot=s;
       notifyListeners();

@@ -23,6 +23,10 @@ class DriverProvider extends ChangeNotifier{
   // Load online status from preferences
   Future<void> loadOnlineStatus() async {
     _isOnline = await isDriverOnline();
+    // Ensure it's never null
+    if (_isOnline == null) {
+      _isOnline = false;
+    }
     notifyListeners();
   }
 
@@ -76,11 +80,23 @@ class DriverProvider extends ChangeNotifier{
   Future<void>toggleDriver(BuildContext context)async{
     if (isToggling) return; // Prevent multiple simultaneous toggles
     
+    // Ensure _isOnline is never null - initialize if needed
+    if (_isOnline == null) {
+      _isOnline = await isDriverOnline();
+    }
+    
     // Optimistic update - update UI immediately
-    final currentStatus = _isOnline ?? false;
+    final currentStatus = _isOnline!;
     _isOnline = !currentStatus;
     isToggling = true;
-    notifyListeners(); // Update UI immediately
+    
+    // Notify listeners immediately for instant UI update (before async operations)
+    notifyListeners();
+    
+    // Update preferences in background (fire-and-forget for instant UI response)
+    setDriverOnlineStatus(_isOnline!).catchError((e) {
+      customPrint("Error saving online status to preferences: $e");
+    });
     
     try{
       await DriverAuthRepository.toggleDriver(context).then((v){

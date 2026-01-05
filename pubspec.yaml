@@ -81,6 +81,7 @@ dependencies:
   share_plus: ^10.1.4
   country_flags: ^3.2.0
   country_currency_pickers: ^3.0.0
+  url_launcher: ^6.3.1
 
   flutter_localizations:
     sdk: flutter
