@@ -57,10 +57,8 @@ class _CustomerSupportChatViewState extends State<CustomerSupportChatView> {
         // Connect to socket if not already connected
         chatProvider.connectSocketInInitial(context);
 
-        // Get chat history between current user and admin (only once)
-        if (chatProvider.chatHistoryResponse == null) {
-          await chatProvider.getChatHistory(context, adminUserId, currentUserId!);
-        }
+        // Always fetch chat history for support chat when page loads (force reload)
+        await chatProvider.getChatHistory(context, adminUserId, currentUserId!, forceReload: true);
 
         // Connect socket for this conversation
         chatProvider.connectSocket(adminUserId, currentUserId!, context);

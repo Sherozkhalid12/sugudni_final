@@ -49,9 +49,9 @@ void scrollToBottom() {
     );
   }
 }
-getChatHistory(BuildContext context,String receiverId,String senderId)async{
-  // Don't reload if we already have chat history for the same conversation
-  if (chatHistoryResponse != null && 
+getChatHistory(BuildContext context,String receiverId,String senderId, {bool forceReload = false})async{
+  // Don't reload if we already have chat history for the same conversation (unless forceReload is true)
+  if (!forceReload && chatHistoryResponse != null && 
       _currentReceiverId == receiverId && 
       _currentSenderId == senderId) {
     customPrint('Chat history already loaded for this conversation, skipping reload');
