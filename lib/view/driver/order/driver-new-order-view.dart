@@ -4,10 +4,11 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:sugudeni/models/shipment/GetAllAvailableShipmentModel.dart';
 import 'package:sugudeni/providers/loading-provider.dart';
+import 'package:sugudeni/providers/shipping-provider/shipping-provider.dart';
 import 'package:sugudeni/repositories/driver/driver-shipping-repository.dart';
 import 'package:sugudeni/utils/constants/app-assets.dart';
 import 'package:sugudeni/utils/constants/colors.dart';
-import 'package:sugudeni/utils/constants/fonts.dart';
+import 'package:sugudeni/utils/constants/enum.dart';
 import 'package:sugudeni/utils/customWidgets/round-button.dart';
 import 'package:sugudeni/utils/customWidgets/symetric-padding.dart';
 import 'package:sugudeni/utils/extensions/sizebox.dart';
@@ -145,6 +146,63 @@ class _DriverNewOrderViewState extends State<DriverNewOrderView> {
                       ),
                     ),
                   ),
+            // Track on Google Map button
+            if (_shipmentModel != null && _shipmentModel!.pickupAddress != null && _shipmentModel!.shippingAddress != null)
+              SymmetricPadding(
+                child: Container(
+                  margin: EdgeInsets.symmetric(vertical: 10.h),
+                  child: GestureDetector(
+                    onTap: () {
+                      final pickupLat = _shipmentModel!.pickupAddress.latitude;
+                      final pickupLng = _shipmentModel!.pickupAddress.longitude;
+                      final destLat = _shipmentModel!.shippingAddress!.latitude;
+                      final destLng = _shipmentModel!.shippingAddress!.longitude;
+                      
+                      // Open Google Maps
+                      openGoogleMapsDirections(
+                        originLat: pickupLat,
+                        originLng: pickupLng,
+                        destLat: destLat,
+                        destLng: destLng,
+                      );
+                    },
+                    child: Container(
+                      padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
+                      decoration: BoxDecoration(
+                        color: primaryColor,
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.map,
+                            color: whiteColor,
+                            size: 20.sp,
+                          ),
+                          10.width,
+                          MyText(
+                            text: 'Track on Google Map',
+                            size: 14.sp,
+                            fontWeight: FontWeight.w600,
+                            color: whiteColor,
+                          ),
+                          if (_shipmentModel != null && _shipmentModel!.pickupAddress != null && _shipmentModel!.shippingAddress != null)
+                            ...[
+                              10.width,
+                              MyText(
+                                text: '(${formatDistance(calculateDistance(_shipmentModel!.pickupAddress.latitude, _shipmentModel!.pickupAddress.longitude, _shipmentModel!.shippingAddress!.latitude, _shipmentModel!.shippingAddress!.longitude))})',
+                                size: 12.sp,
+                                fontWeight: FontWeight.w500,
+                                color: whiteColor.withOpacity(0.9),
+                              ),
+                            ],
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             SymmetricPadding(child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -231,27 +289,96 @@ class _DriverNewOrderViewState extends State<DriverNewOrderView> {
                       color: const Color(0xff005613),
                       fontWeight: FontWeight.w600),
                 ),  20.height,
-                Material(
-                  elevation: 5,
-                  borderRadius: BorderRadius.circular(40.r),
-                  child: RoundButton(
-                      isLoad: true,
-                      height:66.h ,
-                      title: AppLocalizations.of(context)!.accept,
-                      onTap: ()async{
-                        try{
-                          loadingProvider.setLoading(true);
-                          await DriverShippingRepository.acceptDeliveryToShip(shipmentModel.id, context).then((v){
-                            loadingProvider.setLoading(false);
-                            showSnackbar(context, AppLocalizations.of(context)!.orderacceptedforshipping,color: greenColor);
-                            Navigator.pop(context);
-                          });
-                        }catch(e){
-                          loadingProvider.setLoading(false);
-
-                        }
-                        // Navigator.pushNamed(context, RoutesNames.arrivedAtVendor);
-                  }),
+                // Check if shipment is already accepted
+                Builder(
+                  builder: (context) {
+                    // Check if shipment is already accepted (trackingStatus == shipping)
+                    bool isAlreadyAccepted = shipmentModel.trackingStatus == DeliveryStatus.shipping;
+                    
+                    if (isAlreadyAccepted) {
+                      // Show message that shipment is already accepted
+                      return Column(
+                        children: [
+                          Container(
+                            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
+                            decoration: BoxDecoration(
+                              color: greenColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12.r),
+                              border: Border.all(
+                                color: greenColor.withOpacity(0.3),
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.check_circle,
+                                  color: greenColor,
+                                  size: 20.sp,
+                                ),
+                                10.width,
+                                MyText(
+                                  text: 'This shipment has already been accepted',
+                                  size: 14.sp,
+                                  fontWeight: FontWeight.w600,
+                                  color: greenColor,
+                                ),
+                              ],
+                            ),
+                          ),
+                          15.height,
+                          // Show "Go to Pending Deliveries" button if already accepted
+                          Material(
+                            elevation: 5,
+                            borderRadius: BorderRadius.circular(40.r),
+                            child: RoundButton(
+                              isLoad: false,
+                              height: 66.h,
+                              title: 'Go to Pending Deliveries',
+                              onTap: () {
+                                // Navigate to pending deliveries
+                                Navigator.pushNamed(context, RoutesNames.driverPendingDeliveriesView);
+                              },
+                            ),
+                          ),
+                        ],
+                      );
+                    } else {
+                      // Show "Accept" button if not yet accepted
+                      return Material(
+                        elevation: 5,
+                        borderRadius: BorderRadius.circular(40.r),
+                        child: RoundButton(
+                          isLoad: true,
+                          height: 66.h,
+                          title: AppLocalizations.of(context)!.accept,
+                          onTap: () async {
+                            try {
+                              loadingProvider.setLoading(true);
+                              await DriverShippingRepository.acceptDeliveryToShip(shipmentModel.id, context).then((v) {
+                                loadingProvider.setLoading(false);
+                                showSnackbar(context, AppLocalizations.of(context)!.orderacceptedforshipping, color: greenColor);
+                                
+                                // Immediately remove the shipment from the list for instant UI update
+                                final shippingProvider = Provider.of<ShippingProvider>(context, listen: false);
+                                shippingProvider.removeShipmentById(shipmentModel.id);
+                                
+                                // Also refresh from API in background to ensure consistency
+                                shippingProvider.getAllAvailableShipments(context, forceRefresh: true);
+                                
+                                // Navigate to pending deliveries after acceptance
+                                Navigator.pop(context);
+                                Navigator.pushNamed(context, RoutesNames.driverPendingDeliveriesView);
+                              });
+                            } catch (e) {
+                              loadingProvider.setLoading(false);
+                            }
+                          },
+                        ),
+                      );
+                    }
+                  },
                 ),
                 20.height,
               ],

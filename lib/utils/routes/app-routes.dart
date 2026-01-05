@@ -38,6 +38,7 @@ import 'package:sugudeni/view/customer/visitStore/customer-visit-store-view.dart
 import 'package:sugudeni/view/customer/support/customer-support-chat-view.dart';
 import 'package:sugudeni/view/driver/auth/driver-sign-up-view.dart';
 import 'package:sugudeni/view/driver/driver-profile-view.dart';
+import 'package:sugudeni/view/driver/chat/driver-support-chat-view.dart';
 import 'package:sugudeni/view/driver/help/help-center-view.dart';
 import 'package:sugudeni/view/driver/home/driver-home-view.dart';
 import 'package:sugudeni/view/driver/order/arrived-at-customer.dart';
@@ -169,6 +170,9 @@ class Routes {
       case RoutesNames.driverHelpCenterView:
         return MaterialPageRoute(
             builder: (BuildContext context) => const HelpCenterView());
+      case RoutesNames.driverSupportChatView:
+        return MaterialPageRoute(
+            builder: (BuildContext context) => const DriverSupportChatView());
       case RoutesNames.driverPendingDeliveriesView:
         return MaterialPageRoute(
             builder: (BuildContext context) => const DriverPendingShipmentView());

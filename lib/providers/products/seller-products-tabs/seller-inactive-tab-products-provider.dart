@@ -96,8 +96,11 @@ class SellerInActiveTabProductProvider extends ChangeNotifier {
     }
   }
   void addProduct(Product product) {
-    productList.add(product);
-    notifyListeners();
+    // Check if product already exists to avoid duplicates
+    if (!productList.any((p) => p.id == product.id)) {
+      productList.add(product);
+      notifyListeners();
+    }
   }
   void clearResources() {
     productList.clear();

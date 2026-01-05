@@ -7,6 +7,9 @@ import 'package:sugudeni/utils/customWidgets/my-text.dart';
 import 'package:sugudeni/utils/customWidgets/symetric-padding.dart';
 import 'package:sugudeni/utils/extensions/sizebox.dart';
 import 'package:sugudeni/utils/global-functions.dart';
+import 'package:sugudeni/utils/routes/routes-name.dart';
+import 'package:sugudeni/view/customer/products/customer-all-products-view.dart';
+import 'package:sugudeni/view/customer/account/customer-to-receive-order-view.dart';
 
 import '../../../utils/constants/colors.dart';
 
@@ -250,19 +253,41 @@ class ChatWithOwnerView extends StatelessWidget {
                             MyText(text: "Photos",size: 10.sp,fontWeight: FontWeight.w500,color: const Color(0xff545454),)
                           ],
                         ),
-                        Column(
-                          spacing: 10.h,
-                          children: [
-                            Image.asset(AppAssets.productChatImg,scale: 3,),
-                            MyText(text: "Products",size: 10.sp,fontWeight: FontWeight.w500,color: const Color(0xff545454),)
-                          ],
+                        GestureDetector(
+                          onTap: () {
+                            provider.toggle(); // Close the options menu
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const CustomerAllProductsView(),
+                              ),
+                            );
+                          },
+                          child: Column(
+                            spacing: 10.h,
+                            children: [
+                              Image.asset(AppAssets.productChatImg,scale: 3,),
+                              MyText(text: "Products",size: 10.sp,fontWeight: FontWeight.w500,color: const Color(0xff545454),)
+                            ],
+                          ),
                         ),
-                        Column(
-                          spacing: 10.h,
-                          children: [
-                            Image.asset(AppAssets.ordersChatImg,scale: 3,),
-                            MyText(text: "Orders",size: 10.sp,fontWeight: FontWeight.w500,color: const Color(0xff545454),)
-                          ],
+                        GestureDetector(
+                          onTap: () {
+                            provider.toggle(); // Close the options menu
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const CustomerToReceiveOrderView(),
+                              ),
+                            );
+                          },
+                          child: Column(
+                            spacing: 10.h,
+                            children: [
+                              Image.asset(AppAssets.ordersChatImg,scale: 3,),
+                              MyText(text: "Orders",size: 10.sp,fontWeight: FontWeight.w500,color: const Color(0xff545454),)
+                            ],
+                          ),
                         )
 
                         ,                    ],

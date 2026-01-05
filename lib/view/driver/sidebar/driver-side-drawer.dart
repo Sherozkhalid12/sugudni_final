@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:provider/provider.dart';
-import 'package:sugudeni/providers/chatSocketProvider/chat-socket-provider.dart';
 import 'package:sugudeni/services/social-services.dart';
 import 'package:sugudeni/utils/customWidgets/my-text.dart';
 import 'package:sugudeni/utils/extensions/sizebox.dart';
@@ -24,10 +22,6 @@ class DriverDrawer extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           60.height,
-          Padding(
-            padding:  EdgeInsets.symmetric(horizontal: 20.w),
-            child: MyText(text: "Amaar Ahmad",fontWeight: FontWeight.w700,size: 22.sp,),
-          ),
           40.height,
           const DrawerWidget(title: "Home", img: AppAssets.homeSideIcon),
            DrawerWidget(title: AppLocalizations.of(context)!.myprofiles, img: AppAssets.myProfileSideIcon,
@@ -45,6 +39,11 @@ class DriverDrawer extends StatelessWidget {
           onPressed: (){
             Navigator.pushNamed(context, RoutesNames.driverCompletedDeliveryView);
 
+          },
+          ),
+           DrawerWidget(title: "Support Chat", img: AppAssets.helpCenterIcon,
+          onPressed: (){
+            Navigator.pushNamed(context, RoutesNames.driverSupportChatView);
           },
           ),
            DrawerWidget(title: AppLocalizations.of(context)!.termsandconditions, img: AppAssets.termAndConditionIcon,onPressed: (){

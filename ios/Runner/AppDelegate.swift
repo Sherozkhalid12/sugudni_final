@@ -48,10 +48,8 @@ import FirebaseMessaging
                             didFailToRegisterForRemoteNotificationsWithError error: Error) {
     print("Failed to register for remote notifications: \(error.localizedDescription)")
   }
-}
-
-// MARK: - UNUserNotificationCenterDelegate
-extension AppDelegate: UNUserNotificationCenterDelegate {
+  
+  // MARK: - UNUserNotificationCenterDelegate
   // Handle notification when app is in foreground
   override func userNotificationCenter(_ center: UNUserNotificationCenter,
                                        willPresent notification: UNNotification,

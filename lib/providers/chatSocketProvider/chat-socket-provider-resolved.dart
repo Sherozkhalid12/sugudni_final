@@ -1,5 +1,4 @@
 
-import 'dart:io';
 import 'package:provider/provider.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
@@ -11,8 +10,6 @@ import 'package:sugudeni/providers/customer-chat-add-doc-provider.dart';
 import 'package:sugudeni/repositories/messages/seller-messages-repository.dart';
 import 'package:sugudeni/utils/global-functions.dart';
 import 'package:sugudeni/utils/sharePreference/save-user-token.dart';
-
-import '../../utils/constants/colors.dart';
 
 class ChatSocketProvider extends ChangeNotifier{
 bool isLoading=false;
@@ -160,52 +157,20 @@ void setupSocketListeners(String? currentUserId,BuildContext context) {
       return;
     }
     
-    // Check if this is a duplicate of an optimistic message (same content, sender, receiver, recent)
-    // Remove optimistic message if found and replace with real one
-    String? optimisticMessageId;
-    for (var msg in chatHistoryResponse!.chat) {
-      // First check if content matches (same sender, receiver, message)
-      bool matchesContent = msg.senderId == value.senderId &&
-                           msg.receiverId == value.receiverId &&
-                           msg.message == value.message;
-      
-      if (matchesContent) {
-        // Check if this is an optimistic message (ID is a timestamp string, not a MongoDB ObjectId)
-        // Optimistic messages have numeric IDs (timestamps), real messages have MongoDB ObjectIds (24 hex chars)
-        bool isOptimistic = msg.id.length >= 10 && 
-                           int.tryParse(msg.id) != null &&
-                           !msg.id.contains(RegExp(r'[a-fA-F]')); // No hex chars = not MongoDB ID
-        
-        if (isOptimistic) {
-          // Check if message was sent recently (within last 10 seconds to be safe)
-          try {
-            DateTime optimisticTime = DateTime.fromMillisecondsSinceEpoch(int.parse(msg.id));
-            if (DateTime.now().difference(optimisticTime).inSeconds < 10) {
-              optimisticMessageId = msg.id;
-              customPrint('Found matching optimistic message: $optimisticMessageId (sent ${DateTime.now().difference(optimisticTime).inSeconds}s ago)');
-              break;
-            }
-          } catch (e) {
-            // If parsing fails, still remove if content matches (fallback for safety)
-            optimisticMessageId = msg.id;
-            customPrint('Found matching optimistic message (fallback): $optimisticMessageId');
-            break;
-          }
-        }
-      }
-    }
-    
-    // Remove optimistic message if found
-    if (optimisticMessageId != null) {
-      chatHistoryResponse!.chat.removeWhere((msg) => msg.id == optimisticMessageId);
-      customPrint('Removed optimistic message: $optimisticMessageId');
-    }
+    // Remove any temporary messages with the same content from the same sender
+    chatHistoryResponse!.chat.removeWhere((msg) => 
+      msg.id.startsWith('temp_') && 
+      msg.senderId == data['senderid'] && 
+      msg.message == data['message']
+    );
     
     // Add the real message from server
     chatHistoryResponse!.chat.add(value);
+    
     WidgetsBinding.instance
         .addPostFrameCallback((_) => scrollToBottom());
     notifyListeners();
+
   });
   socket!.on('newMedia', (data) {
     customPrint("New Media =================================$data");
@@ -238,46 +203,12 @@ void setupSocketListeners(String? currentUserId,BuildContext context) {
       return;
     }
     
-    // Check if this is a duplicate of an optimistic media message
-    // Remove optimistic message if found and replace with real one
-    String? optimisticMessageId;
-    for (var msg in chatHistoryResponse!.chat) {
-      // First check if content matches (same sender, receiver, content type)
-      bool matchesContent = msg.senderId == value.senderId &&
-                           msg.receiverId == value.receiverId &&
-                           msg.contentType == value.contentType;
-      
-      if (matchesContent) {
-        // Check if this is an optimistic message (ID is a timestamp string, not a MongoDB ObjectId)
-        // Optimistic messages have numeric IDs (timestamps), real messages have MongoDB ObjectIds (24 hex chars)
-        bool isOptimistic = msg.id.length >= 10 && 
-                           int.tryParse(msg.id) != null &&
-                           !msg.id.contains(RegExp(r'[a-fA-F]')); // No hex chars = not MongoDB ID
-        
-        if (isOptimistic) {
-          // Check if message was sent recently (within last 10 seconds to be safe)
-          try {
-            DateTime optimisticTime = DateTime.fromMillisecondsSinceEpoch(int.parse(msg.id));
-            if (DateTime.now().difference(optimisticTime).inSeconds < 10) {
-              optimisticMessageId = msg.id;
-              customPrint('Found matching optimistic media message: $optimisticMessageId (sent ${DateTime.now().difference(optimisticTime).inSeconds}s ago)');
-              break;
-            }
-          } catch (e) {
-            // If parsing fails, still remove if content matches (fallback for safety)
-            optimisticMessageId = msg.id;
-            customPrint('Found matching optimistic media message (fallback): $optimisticMessageId');
-            break;
-          }
-        }
-      }
-    }
-    
-    // Remove optimistic message if found
-    if (optimisticMessageId != null) {
-      chatHistoryResponse!.chat.removeWhere((msg) => msg.id == optimisticMessageId);
-      customPrint('Removed optimistic media message: $optimisticMessageId');
-    }
+    // Remove any temporary messages with the same content from the same sender
+    chatHistoryResponse!.chat.removeWhere((msg) => 
+      msg.id.startsWith('temp_') && 
+      msg.senderId == data['senderid'] && 
+      msg.contentType == data['contentType']
+    );
     
     // Add the real message from server
     chatHistoryResponse!.chat.add(value);
@@ -285,6 +216,7 @@ void setupSocketListeners(String? currentUserId,BuildContext context) {
         .addPostFrameCallback((_) => scrollToBottom());
     notifyListeners();
     context.read<SellerChatAddDocProvider>().reset();
+
   });
   socket!.on('messageDeleted', (data) {
     customPrint("Message Deleted =================================$data");
@@ -324,13 +256,8 @@ void aboutThreads(BuildContext context) async{
     notifyListeners();
     customPrint("Thread Update =================================$data");
   });
-  socket!.on('newThread', (data) async {
+  socket!.on('newThread', (data) {
     customPrint("New Thread =================================$data");
-    // Fetch updated threads to refresh the count
-    if (context.mounted) {
-      sellerThreads = await SellerMessagesRepository.getThreadsForSeller(context);
-      notifyListeners();
-    }
   });
   socket!.on('unreadMessagesCount', (data) {
     customPrint("Unread message count =================================$data");
@@ -359,15 +286,15 @@ Future<void> updateLastMessage(String threadId, String newMessage)async {
 void sendMessage(String receiverId,String senderId) {
   if (messageController.text.isNotEmpty) {
     String message = messageController.text;
-    String tempMessageId = DateTime.now().millisecondsSinceEpoch.toString();
+    String tempMessageId = 'temp_${DateTime.now().millisecondsSinceEpoch}';
     
     // Initialize chatHistoryResponse if null (for new chats)
     if (chatHistoryResponse == null) {
       chatHistoryResponse = ChatHistoryResponse(chat: []);
     }
     
-    // Add optimistic message to UI immediately
-    final optimisticMessage = ChatMessage(
+    // Optimistic UI update - add message immediately
+    var optimisticMessage = ChatMessage(
       id: tempMessageId,
       senderId: senderId,
       receiverId: receiverId,
@@ -385,11 +312,12 @@ void sendMessage(String receiverId,String senderId) {
     );
     chatHistoryResponse!.chat.add(optimisticMessage);
     notifyListeners();
-    WidgetsBinding.instance.addPostFrameCallback((_) => scrollToBottom());
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => scrollToBottom());
     
+    // Clear input immediately for better UX
     messageController.clear();
-    notifyListeners();
-    
+
     // Check if socket is connected before sending
     if (socket == null || !socket!.connected) {
       customPrint('Socket not connected, message will be sent when socket connects');
@@ -431,7 +359,7 @@ void sendMedia(String receiverId,String senderId,BuildContext context) {
     return;
   }
   
-  String tempMessageId = DateTime.now().millisecondsSinceEpoch.toString();
+  String tempMessageId = 'temp_${DateTime.now().millisecondsSinceEpoch}';
   
   // Initialize chatHistoryResponse if null (for new chats)
   if (chatHistoryResponse == null) {
@@ -529,3 +457,4 @@ void disconnectSocket(){
   customPrint("Socket disconnected");
 }
 }
+

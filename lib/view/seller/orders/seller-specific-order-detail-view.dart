@@ -415,7 +415,7 @@ void printInvoice(Order order) async {
             pw.SizedBox(height: 10),
             pw.Align(
               alignment: pw.Alignment.centerRight,
-              child: pw.Text("Grand Total: \$100", style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+              child: pw.Text("Grand Total: \$${order.totalPriceAfterDiscount > 0 ? order.totalPriceAfterDiscount.toStringAsFixed(2) : order.totalPrice.toStringAsFixed(2)}", style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
             ),
           ],
         );

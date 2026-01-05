@@ -25,6 +25,9 @@ import 'package:sugudeni/utils/sharePreference/save-user-token.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../utils/constants/colors.dart';
+import '../../../utils/routes/routes-name.dart';
+import '../products/seller-my-products-view.dart';
+import '../orders/seller-orders-view.dart';
 
 class SellerMessageDetailView extends StatefulWidget {
   final String receiverName;
@@ -329,6 +332,7 @@ class _SellerMessageDetailViewState extends State<SellerMessageDetailView> {
                                 child: Image.asset(AppAssets.cancelIcon,scale: 1.3,),
                               ),
                               7.width,
+                              
                             ],
                             Flexible(
                                 child: TextFormField(
@@ -342,9 +346,7 @@ class _SellerMessageDetailViewState extends State<SellerMessageDetailView> {
                                     hintText: AppLocalizations.of(context)!.typeyourmessage,
                                     //suffixIcon: Image.asset(AppAssets.emojiIcon,scale: 2,),
                                     hintStyle: TextStyle(
-                                        fontWeight: FontWeight.w500,
-                                        fontSize: 10.sp,
-                                        color: const Color(0xff545454)
+                                        fontWeight: FontWeight.w500,color: const Color(0xff545454)
                                     ),
                                     border: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(12.r),
@@ -423,19 +425,41 @@ class _SellerMessageDetailViewState extends State<SellerMessageDetailView> {
                                 ],
                               ),
                             ),
-                            Column(
-                              spacing: 10.h,
-                              children: [
-                                Image.asset(AppAssets.productChatImg,scale: 3,),
-                                MyText(text: AppLocalizations.of(context)!.products,size: 10.sp,fontWeight: FontWeight.w500,color: const Color(0xff545454),)
-                              ],
+                            GestureDetector(
+                              onTap: () {
+                                mediaProvider.reset(); // Close the options menu
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => SellerMyProductsView(),
+                                  ),
+                                );
+                              },
+                              child: Column(
+                                spacing: 10.h,
+                                children: [
+                                  Image.asset(AppAssets.productChatImg,scale: 3,),
+                                  MyText(text: AppLocalizations.of(context)!.products,size: 10.sp,fontWeight: FontWeight.w500,color: const Color(0xff545454),)
+                                ],
+                              ),
                             ),
-                            Column(
-                              spacing: 10.h,
-                              children: [
-                                Image.asset(AppAssets.ordersChatImg,scale: 3,),
-                                MyText(text: AppLocalizations.of(context)!.orders,size: 10.sp,fontWeight: FontWeight.w500,color: const Color(0xff545454),)
-                              ],
+                            GestureDetector(
+                              onTap: () {
+                                mediaProvider.reset(); // Close the options menu
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => SellerOrderView(),
+                                  ),
+                                );
+                              },
+                              child: Column(
+                                spacing: 10.h,
+                                children: [
+                                  Image.asset(AppAssets.ordersChatImg,scale: 3,),
+                                  MyText(text: AppLocalizations.of(context)!.orders,size: 10.sp,fontWeight: FontWeight.w500,color: const Color(0xff545454),)
+                                ],
+                              ),
                             ),
                           ],
                         )

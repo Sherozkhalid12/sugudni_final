@@ -89,7 +89,9 @@ class DriverStatusWidget extends StatelessWidget {
                      : provider.isPendingApproval;
                  
                  // Use cached online status from provider for instant updates
+                 // Ensure it's never null - default to false
                  bool inOnline = provider.isOnline ?? false;
+                 bool isToggling = provider.isToggling;
                  
                  return Row(
                    children: [
@@ -101,8 +103,9 @@ class DriverStatusWidget extends StatelessWidget {
                          child: Switch(
                              activeColor: const Color(0xff00C000),
                              value: inOnline,
-                             onChanged: (provider.isToggling || isPendingApproval) ? null : (v) {
+                             onChanged: (isToggling || isPendingApproval) ? null : (v) {
                                // Toggle immediately - provider handles optimistic update
+                               // Don't await - let it run async while UI updates immediately
                                provider.toggleDriver(context);
                              }),
                        ),
