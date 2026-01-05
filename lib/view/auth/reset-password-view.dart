@@ -62,21 +62,29 @@ class _ResetPasswordViewState extends State<ResetPasswordView> {
 
                   MyText(text: AppLocalizations.of(context)!.newpassword,size: 18.sp,fontWeight: FontWeight.w500),
                   5.height,
-                  CustomTextFiled(
-                    borderRadius: 15.r,
-                    controller: provider.passwordController,
-                    isShowPrefixIcon: true,
-                    isBorder: true,
-                    isPassword: true,
-                    onChange: (v){
-                      provider.notify();
-                      return null;
+                  Consumer<ResetPasswordProvider>(
+                    builder: (context, resetProvider, child) {
+                      return CustomTextFiled(
+                        key: resetProvider.passwordFieldKey,
+                        borderRadius: 15.r,
+                        controller: resetProvider.passwordController,
+                        isShowPrefixIcon: true,
+                        isBorder: true,
+                        isPassword: true,
+                        isObscure: !resetProvider.showPassword,
+                        passwordFunction: () {
+                          resetProvider.togglePasswordVisibility();
+                        },
+                        onChange: (v){
+                          resetProvider.notify();
+                          return null;
+                        },
+                        isFilled: true,
+                        hintText: AppLocalizations.of(context)!.enternewpassword,
+                        isShowPrefixImage: true,
+                        prefixImgUrl: AppAssets.passwordIcon,
+                      );
                     },
-                    isFilled: true,
-                    hintText: AppLocalizations.of(context)!.enternewpassword,
-                    isShowPrefixImage: true,
-                    prefixImgUrl: AppAssets.passwordIcon,
-
                   ),
                   /// Password Strength Indicator
                   20.height,
@@ -143,18 +151,25 @@ class _ResetPasswordViewState extends State<ResetPasswordView> {
                   20.height,
                   MyText(text: AppLocalizations.of(context)!.confirmpassword,size: 18.sp,fontWeight: FontWeight.w500),
                   5.height,
-                  CustomTextFiled(
-                    controller: provider.confirmPasswordController,
-                    borderRadius: 15.r,
-                    isShowPrefixIcon: true,
-                    isBorder: true,
-                    isPassword: true,
-
-                    isFilled: true,
-                    hintText: AppLocalizations.of(context)!.reenternewpassword,
-                    isShowPrefixImage: true,
-                    prefixImgUrl: AppAssets.passwordIcon,
-
+                  Consumer<ResetPasswordProvider>(
+                    builder: (context, resetProvider, child) {
+                      return CustomTextFiled(
+                        key: resetProvider.confirmPasswordFieldKey,
+                        controller: resetProvider.confirmPasswordController,
+                        borderRadius: 15.r,
+                        isShowPrefixIcon: true,
+                        isBorder: true,
+                        isPassword: true,
+                        isObscure: !resetProvider.showConfirmPassword,
+                        passwordFunction: () {
+                          resetProvider.toggleConfirmPasswordVisibility();
+                        },
+                        isFilled: true,
+                        hintText: AppLocalizations.of(context)!.reenternewpassword,
+                        isShowPrefixImage: true,
+                        prefixImgUrl: AppAssets.passwordIcon,
+                      );
+                    },
                   ),
                   80.height,
                   RoundButton(

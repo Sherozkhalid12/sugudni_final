@@ -537,11 +537,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get enter5digitcondewetexttoyouremail =>
-      'Enter 5-digit code we just texted to your email';
+      'Enter 4-digit code we just texted to your email';
 
   @override
   String get enter5digitcondewetexttoyourphonenumber =>
-      'Enter 5-digit code we just texted to your phone number';
+      'Enter 4-digit code we just texted to your phone number';
 
   @override
   String get resendcode => 'Resend Code';

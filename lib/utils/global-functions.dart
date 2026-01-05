@@ -183,7 +183,8 @@ DateTime mergeDateAndTime(DateTime date, String time) {
 }
 void navigateBasedOnRole(String role,BuildContext context)async{
   if(role==UserRoles.admin){
-    Navigator.pushNamedAndRemoveUntil(context, RoutesNames.signUpView, (route) => false);
+    // Admin role removed from selection, redirect to customer
+    Navigator.pushNamedAndRemoveUntil(context, RoutesNames.customerBottomNav, (route) => false);
   }else if(role==UserRoles.seller){
     Navigator.pushNamedAndRemoveUntil(context, RoutesNames.sellerBottomNav, (route) => false);
   }else if(role==UserRoles.driver){

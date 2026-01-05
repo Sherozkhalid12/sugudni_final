@@ -2,7 +2,6 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
-import 'package:sugudeni/main.dart';
 import 'package:sugudeni/providers/select-role-provider.dart';
 import 'package:sugudeni/utils/constants/app-assets.dart';
 import 'package:sugudeni/utils/constants/fonts.dart';
@@ -22,7 +21,6 @@ class SelectRoleView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final provider=Provider.of<SelectRoleProvider>(context,listen: false);
     return Scaffold(
       backgroundColor: bgColor,
       body: SingleChildScrollView(
@@ -50,30 +48,19 @@ class SelectRoleView extends StatelessWidget {
               child: Column(
                 children: [
 
-                 Row(
-                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                   children: [
-                     Consumer<SelectRoleProvider>(builder: (context,provider,child){
-                       return SelectRoleWidget(
-                           title: capitalizeFirstLetter('Customer'),
-                           isSelected: provider.selectedRole==UserRoles.customer,
-                           onPressed: (){
-                         provider.changeRole(UserRoles.customer);
-                       }, img: AppAssets.customerIcon);
-
-                     }) ,
-                     Consumer<SelectRoleProvider>(builder: (context,provider,child){
-                       return SelectRoleWidget(
-                           title: capitalizeFirstLetter(UserRoles.driver),
-                           isSelected: provider.selectedRole==UserRoles.driver,
-                           onPressed: (){
-                         provider.changeRole(UserRoles.driver);
-                       }, img: AppAssets.driverIcon);
-
-                     })
-                   ],
+                 // Top row: Customer centered
+                 Center(
+                   child: Consumer<SelectRoleProvider>(builder: (context,provider,child){
+                     return SelectRoleWidget(
+                         title: capitalizeFirstLetter('Customer'),
+                         isSelected: provider.selectedRole==UserRoles.customer,
+                         onPressed: (){
+                       provider.changeRole(UserRoles.customer);
+                     }, img: AppAssets.customerIcon);
+                   }),
                  ),
-                 20.height,
+                 30.height,
+                 // Bottom row: Seller and Driver
                  Row(
                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                    children: [
@@ -84,16 +71,14 @@ class SelectRoleView extends StatelessWidget {
                            onPressed: (){
                          provider.changeRole(UserRoles.seller);
                        }, img: AppAssets.sellerIcon);
-
-                     }) ,
+                     }),
                      Consumer<SelectRoleProvider>(builder: (context,provider,child){
                        return SelectRoleWidget(
-                           title: capitalizeFirstLetter(UserRoles.admin),
-                           isSelected: provider.selectedRole==UserRoles.admin,
+                           title: capitalizeFirstLetter(UserRoles.driver),
+                           isSelected: provider.selectedRole==UserRoles.driver,
                            onPressed: (){
-                         provider.changeRole(UserRoles.admin);
-                       }, img: AppAssets.adminIcon);
-
+                         provider.changeRole(UserRoles.driver);
+                       }, img: AppAssets.driverIcon);
                      })
                    ],
                  ),

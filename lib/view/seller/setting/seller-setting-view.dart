@@ -35,7 +35,9 @@ class _SellerAccountSettingViewState extends State<SellerAccountSettingView> {
   final emailController=TextEditingController();
   final phoneController=TextEditingController();
   final passwordController=TextEditingController();
-  
+
+  bool _showPassword = false;
+
   // Store original values to detect changes
   String originalEmail = '';
   String originalPhone = '';
@@ -138,6 +140,7 @@ class _SellerAccountSettingViewState extends State<SellerAccountSettingView> {
                 MyText(text: AppLocalizations.of(context)!.password,size: 12.sp,fontWeight: FontWeight.w500,),
                 5.height,
                 CustomTextFiled(
+                  key: ValueKey(_showPassword),
                   controller: passwordController,
                   borderRadius: 15.r,
                   isShowPrefixIcon: true,
@@ -146,6 +149,12 @@ class _SellerAccountSettingViewState extends State<SellerAccountSettingView> {
                   hintText: AppLocalizations.of(context)!.enteryourpassword,
                   isShowPrefixImage: true,
                   isPassword: true,
+                  isObscure: !_showPassword,
+                  passwordFunction: () {
+                    setState(() {
+                      _showPassword = !_showPassword;
+                    });
+                  },
                   prefixImgUrl: AppAssets.passwordIcon,
                 ),
                 150.height,

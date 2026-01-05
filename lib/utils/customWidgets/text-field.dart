@@ -4,7 +4,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../constants/colors.dart';
 import '../constants/fonts.dart';
-import '../constants/app-assets.dart';
 
 class CustomTextFiled extends StatelessWidget {
   final String? hintText;
@@ -100,11 +99,12 @@ class CustomTextFiled extends StatelessWidget {
         suffixIcon: isPassword == true
             ? IconButton(
                 onPressed: passwordFunction,
-                icon: Image.asset(
+                icon: Icon(
                   isObscure == true
-                      ? AppAssets.passwordEyeIcon
-                      : AppAssets.passwordEyeIcon,
-                  scale: 2.5,
+                      ? Icons.visibility_off
+                      : Icons.visibility,
+                  color: textPrimaryColor.withOpacity(0.5),
+                  size: 20.sp,
                 ))
             : (suffixIcon != null ? Icon(suffixIcon) : null),
         prefixIcon: isShowPrefixIcon == false

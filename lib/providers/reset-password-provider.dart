@@ -32,11 +32,30 @@ class ResetPasswordProvider extends ChangeNotifier{
   bool usingEmail=true;
   String otpPreference = 'sms'; // Default selection
 
+  bool _showPassword = false;
+  bool _showConfirmPassword = false;
+
+  bool get showPassword => _showPassword;
+  bool get showConfirmPassword => _showConfirmPassword;
+
+  ValueKey<bool> get passwordFieldKey => ValueKey(_showPassword);
+  ValueKey<bool> get confirmPasswordFieldKey => ValueKey(_showConfirmPassword);
+
   final TextEditingController otpController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController confirmPasswordController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
+  void togglePasswordVisibility() {
+    _showPassword = !_showPassword;
+    notifyListeners();
+  }
+
+  void toggleConfirmPasswordVisibility() {
+    _showConfirmPassword = !_showConfirmPassword;
+    notifyListeners();
+  }
+
   // Add methods to refresh state if necessary
   void notify() {
     notifyListeners();

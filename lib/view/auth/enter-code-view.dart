@@ -5,13 +5,11 @@ import 'package:provider/provider.dart';
 import 'package:sugudeni/models/auth/ResetPasswordModel.dart';
 import 'package:sugudeni/providers/reset-password-provider.dart';
 import 'package:sugudeni/utils/constants/colors.dart';
-import 'package:sugudeni/utils/constants/fonts.dart';
 import 'package:sugudeni/utils/customWidgets/my-text.dart';
 import 'package:sugudeni/utils/customWidgets/round-button.dart';
 import 'package:sugudeni/utils/customWidgets/symetric-padding.dart';
 import 'package:sugudeni/utils/extensions/sizebox.dart';
 import 'package:sugudeni/utils/global-functions.dart';
-import 'package:sugudeni/utils/routes/routes-name.dart';
 
 import '../../l10n/app_localizations.dart';
 
@@ -92,13 +90,27 @@ class EnterCodeView extends StatelessWidget {
                   await resetPasswordProvider.verifyResetPasswordRequest(context, model);
                 }
               }),
-              // 20.height,
-              // RoundButton(
-              //     borderRadius: BorderRadius.circular(13.r),
-              //     bgColor: transparentColor,
-              //     borderColor: primaryColor,
-              //     textColor: blackColor,
-              //     title: "Resend Code", onTap: (){}),
+              20.height,
+              Center(
+                child: TextButton(
+                  onPressed: () {
+                    // Resend OTP logic for password reset
+                    if (resetPasswordProvider.usingEmail) {
+                      // Resend email OTP
+                      resetPasswordProvider.resetPasswordRequestUsingEmail(context);
+                    } else {
+                      // Resend phone OTP
+                      resetPasswordProvider.resetPasswordRequestUsingPhone(context);
+                    }
+                  },
+                  child: MyText(
+                    text: AppLocalizations.of(context)!.resendcode,
+                    color: primaryColor,
+                    size: 16.sp,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
 
             ],
           ),

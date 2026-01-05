@@ -101,6 +101,7 @@ class ForgetPasswordPhoneView extends StatelessWidget {
                   children: [
                     Flexible(
                       child: ListTile(
+                        contentPadding: EdgeInsets.zero,
                         title: const Text('SMS'),
                         leading: Radio<String>(
                           value: 'sms',
@@ -114,6 +115,7 @@ class ForgetPasswordPhoneView extends StatelessWidget {
                     ),
                     Flexible(
                       child: ListTile(
+                        contentPadding: EdgeInsets.zero,
                         title: const Text('WhatsApp'),
                         leading: Radio<String>(
                           value: 'whatsapp',

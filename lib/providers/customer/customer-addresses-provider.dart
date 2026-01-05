@@ -30,6 +30,7 @@ class CustomerAddressProvider extends ChangeNotifier{
   String selectedAddress = "Fetching current location...";
   bool isDragging = false;
   bool safeForUpdate = false;
+  bool isLocationLoading = false;
   Marker? marker;
 
   String? lat;
@@ -71,43 +72,83 @@ class CustomerAddressProvider extends ChangeNotifier{
   //   notifyListeners();
   // }
   Future<void> getUserLocation(BuildContext context) async {
-    while (!await Geolocator.isLocationServiceEnabled()) {
-      //showErrorDialog("Location services are disabled. Please enable them.", context);
-      await Geolocator.openLocationSettings();
-      await Future.delayed(const Duration(seconds: 2));
-    }
+    isLocationLoading = true;
+    selectedAddress = "Getting your location...";
 
-    LocationPermission permission;
-    do {
-      permission = await Geolocator.checkPermission();
+    // Defer notifyListeners to avoid calling during build phase
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      notifyListeners();
+    });
+
+    try {
+      // Check location services once
+      if (!await Geolocator.isLocationServiceEnabled()) {
+        showErrorDialog(
+          AppLocalizations.of(context)!.locationpermissionispermanentenlydenied,
+          context,
+        );
+        return;
+      }
+
+      // Check and request permission
+      LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          showErrorDialog("Location permission is required to fetch your address.", context);
+          return;
+        }
       }
+
       if (permission == LocationPermission.deniedForever) {
         showErrorDialog(
           AppLocalizations.of(context)!.locationpermissionispermanentenlydenied,
           context,
         );
-        await Geolocator.openAppSettings();
-        await Future.delayed(const Duration(seconds: 2));
+        return;
       }
-    } while (permission == LocationPermission.denied || permission == LocationPermission.deniedForever);
 
-    // Get current location
+    // Get current location with medium accuracy for faster response
     Position position = await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
+      desiredAccuracy: LocationAccuracy.medium,
     );
 
-    LatLng currentLatLng = LatLng(position.latitude, position.longitude);
-    selectedLocation = currentLatLng;
-    marker = Marker(
-      markerId: const MarkerId("selected-location"),
-      position: currentLatLng,
-    );
+      LatLng currentLatLng = LatLng(position.latitude, position.longitude);
+      selectedLocation = currentLatLng;
+      marker = Marker(
+        markerId: const MarkerId("selected-location"),
+        position: currentLatLng,
+      );
 
-    mapController?.animateCamera(CameraUpdate.newLatLngZoom(currentLatLng, 14));
-    _getAddressFromLatLng(currentLatLng);
-    notifyListeners();
+      mapController?.animateCamera(CameraUpdate.newLatLngZoom(currentLatLng, 14));
+
+      // Start geocoding immediately for faster UI response
+      _getAddressFromLatLng(currentLatLng).then((_) {
+        isLocationLoading = false;
+        // Defer to avoid calling during build phase
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          notifyListeners();
+        });
+      }).catchError((error) {
+        isLocationLoading = false;
+        selectedAddress = "Unable to fetch address";
+        // Defer to avoid calling during build phase
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          notifyListeners();
+        });
+      });
+
+      // Defer notifyListeners to avoid calling during build phase
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        notifyListeners(); // Update UI immediately with location
+      });
+
+    } catch (e) {
+      isLocationLoading = false;
+      selectedAddress = "Failed to get location";
+      showErrorDialog("Unable to get your current location. Please try again.", context);
+      notifyListeners();
+    }
   }
 
   void moveToLocation() {
@@ -119,25 +160,42 @@ class CustomerAddressProvider extends ChangeNotifier{
     notifyListeners();
   }
 
-  /// Get address from LatLng
+  /// Get address from LatLng with timeout for faster response
   Future<void> _getAddressFromLatLng(LatLng position) async {
     try {
-      List<Placemark> placemarks =
-      await placemarkFromCoordinates(position.latitude, position.longitude);
+      // Add timeout to prevent hanging
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude
+      ).timeout(const Duration(seconds: 5), onTimeout: () => []);
+
       if (placemarks.isNotEmpty) {
         Placemark place = placemarks.first;
-        selectedAddress =
-        "${place.street}, ${place.locality}, ${place.country}";
-        addressController.text=place.street!;
-        cityController.text=place.locality!;
-        countryController.text=place.country!;
-        postalCode=place.postalCode!;
-        lat=position.latitude.toString();
-        lng=position.longitude.toString();
-        notifyListeners();
+        selectedAddress = "${place.street}, ${place.locality}, ${place.country}";
+
+        // Fill form fields with geocoded data
+        if (place.street?.isNotEmpty == true) {
+          addressController.text = place.street!;
+        }
+        if (place.locality?.isNotEmpty == true) {
+          cityController.text = place.locality!;
+        }
+        if (place.country?.isNotEmpty == true) {
+          countryController.text = place.country!;
+        }
+        if (place.postalCode?.isNotEmpty == true) {
+          postalCode = place.postalCode!;
+        }
+
+        lat = position.latitude.toString();
+        lng = position.longitude.toString();
+      } else {
+        // Fallback if geocoding fails
+        selectedAddress = "Address not found";
       }
     } catch (e) {
       print("Error getting address: $e");
+      selectedAddress = "Unable to fetch address";
     }
   }
 

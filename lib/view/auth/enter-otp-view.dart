@@ -153,24 +153,28 @@ class _EnterOtpViewState extends State<EnterOtpView> {
                         signUpProvider.verifySignOtp(context, otpController.text, isEmail: isEmail, isSignUp: false);
                       }
                     },
-                  ),                  20.height,
-                  RoundButton(
-                    borderRadius: BorderRadius.circular(13.r),
-                    bgColor: transparentColor,
-                    borderColor: primaryColor,
-                    textColor: blackColor,
-                    title: AppLocalizations.of(context)!.resendcode,
-                    onTap: () {
-                      if (isSignUp) {
-                        signUpProvider.signUpUser(context); // Resend OTP for sign-up
-                      } else {
-                        if (isEmail) {
-                          signUpProvider.signInUser(context); // Resend OTP for email sign-in
+                  ),
+                  20.height,
+                  Center(
+                    child: TextButton(
+                      onPressed: () {
+                        if (isSignUp) {
+                          signUpProvider.signUpUser(context); // Resend OTP for sign-up
                         } else {
-                          signUpProvider.signInUserWithPhone(context); // Resend OTP for phone sign-in
+                          if (isEmail) {
+                            signUpProvider.signInUser(context); // Resend OTP for email sign-in
+                          } else {
+                            signUpProvider.signInUserWithPhone(context); // Resend OTP for phone sign-in
+                          }
                         }
-                      }
-                    },
+                      },
+                      child: MyText(
+                        text: AppLocalizations.of(context)!.resendcode,
+                        color: primaryColor,
+                        size: 16.sp,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ],
               ),

@@ -221,16 +221,25 @@ class _SignUpViewState extends State<SignUpView> {
                       ),
                     ),
                   10.height,
-                  CustomTextFiled(
-                    controller: signUpProvider.signUpPasswordController,
-                    borderRadius: 15.r,
-                    isShowPrefixIcon: true,
-                    isBorder: true,
-                    isFilled: true,
-                    hintText: AppLocalizations.of(context)!.enterpassword,
-                    isShowPrefixImage: true,
-                    isPassword: true,
-                    prefixImgUrl: AppAssets.passwordIcon,
+                  Consumer<AuthProvider>(
+                    builder: (context, authProvider, child) {
+                      return CustomTextFiled(
+                        key: authProvider.passwordFieldKey,
+                        controller: authProvider.signUpPasswordController,
+                        borderRadius: 15.r,
+                        isShowPrefixIcon: true,
+                        isBorder: true,
+                        isFilled: true,
+                        hintText: AppLocalizations.of(context)!.enterpassword,
+                        isShowPrefixImage: true,
+                        prefixImgUrl: AppAssets.passwordIcon,
+                        isPassword: true,
+                        isObscure: !authProvider.showPassword,
+                        passwordFunction: () {
+                          authProvider.togglePasswordVisibility();
+                        },
+                      );
+                    },
                   ),
                   10.height,
                   if (!signUpProvider.isEmail)
@@ -251,6 +260,7 @@ class _SignUpViewState extends State<SignUpView> {
                               Flexible(
                                 child: ListTile(
                                   title: const Text('SMS'),
+                                  contentPadding: EdgeInsets.zero,
                                   leading: Radio<String>(
                                     value: 'sms',
                                     groupValue: provider.otpPreference,
@@ -262,9 +272,11 @@ class _SignUpViewState extends State<SignUpView> {
                               ),
                               Flexible(
                                 child: ListTile(
-                                  title: const Text('WhatsApp'),
+                                  contentPadding: EdgeInsets.zero,
+                                  title: const Text('WhatsApp',),
                                   leading: Radio<String>(
                                     value: 'whatsapp',
+                                    
                                     groupValue: provider.otpPreference,
                                     onChanged: (value) {
                                       provider.setOptPreferences(value!);

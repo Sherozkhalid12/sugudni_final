@@ -144,8 +144,16 @@ ${AppLocalizations.of(context)!.beforeyoumakepayment}''',size: 11.sp,),
                   shipping:context.read<CartProvider>().shippingId!,
                   deliverySlot:context.read<CartProvider>().deliverySlotId!,
               );
-              await CartRepository.createCashOrder(
-                  model,context.read<CartProvider>().cartResponse!.cart.id, context).then((v) async {
+              // Create order for selected items only
+              final cartProvider = context.read<CartProvider>();
+              final cartId = await cartProvider.createOrderForSelectedItems(context);
+              if (cartId == null) {
+                showSnackbar(context, "No items selected for checkout", color: redColor);
+                loadingProvider.setLoading(false);
+                return;
+              }
+
+              await CartRepository.createCashOrder(model, cartId, context).then((v) async {
                 loadingProvider.setLoading(false);
                 if(context.mounted){
                   final cartProvider = context.read<CartProvider>();
@@ -170,8 +178,16 @@ ${AppLocalizations.of(context)!.beforeyoumakepayment}''',size: 11.sp,),
                     shipping:context.read<CartProvider>().shippingId!,
                     deliverySlot:context.read<CartProvider>().deliverySlotId!,
                   );
-                  await CartRepository.createCheckoutOrderForStripe(
-                      model,context.read<CartProvider>().cartResponse!.cart.id, context).then((v){
+                  // Create order for selected items only
+                  final cartProvider = context.read<CartProvider>();
+                  final cartId = await cartProvider.createOrderForSelectedItems(context);
+                  if (cartId == null) {
+                    showSnackbar(context, "No items selected for checkout", color: redColor);
+                    loadingProvider.setLoading(false);
+                    return;
+                  }
+
+                  await CartRepository.createCheckoutOrderForStripe(model, cartId, context).then((v){
                     loadingProvider.setLoading(false);
                     if(context.mounted){
                      // showSnackbar(context, "Checkout created successfully",color: greenColor);
@@ -196,8 +212,16 @@ ${AppLocalizations.of(context)!.beforeyoumakepayment}''',size: 11.sp,),
                     shipping:context.read<CartProvider>().shippingId!,
                     deliverySlot:context.read<CartProvider>().deliverySlotId!,
                   );
-                  await CartRepository.createCheckoutOrderForOrangeMoney(
-                      model,context.read<CartProvider>().cartResponse!.cart.id, context).then((v){
+                  // Create order for selected items only
+                  final cartProvider = context.read<CartProvider>();
+                  final cartId = await cartProvider.createOrderForSelectedItems(context);
+                  if (cartId == null) {
+                    showSnackbar(context, "No items selected for checkout", color: redColor);
+                    loadingProvider.setLoading(false);
+                    return;
+                  }
+
+                  await CartRepository.createCheckoutOrderForOrangeMoney(model, cartId, context).then((v){
                     loadingProvider.setLoading(false);
                     if(context.mounted){
                       // showSnackbar(context, "Checkout created successfully",color: greenColor);

@@ -9,7 +9,6 @@ Future<void> preloadImages() async {
     AppAssets.appIcon,
     AppAssets.appLogo,
     AppAssets.roleEllipse,
-    AppAssets.adminIcon,
     AppAssets.customerIcon,
     AppAssets.driverIcon,
     AppAssets.selectRoleIcon,

@@ -546,11 +546,11 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get enter5digitcondewetexttoyouremail =>
-      'Entrez le code à 5 chiffres que nous venons d\'envoyer par SMS à votre adresse e-mail';
+      'Entrez le code à 4 chiffres que nous venons d\'envoyer par SMS à votre adresse e-mail';
 
   @override
   String get enter5digitcondewetexttoyourphonenumber =>
-      'Entrez le code à 5 chiffres que nous venons d\'envoyer par SMS à votre numéro de téléphone';
+      'Entrez le code à 4 chiffres que nous venons d\'envoyer par SMS à votre numéro de téléphone';
 
   @override
   String get resendcode => 'Renvoyer le code';

@@ -29,12 +29,43 @@ class CustomerAccountView extends StatelessWidget {
           var userId=token.data?? '';
           
           if(userId.isEmpty){
-            return  Center(
-              child: GestureDetector(
-                  onTap: (){
-                    Navigator.pushNamedAndRemoveUntil(context, RoutesNames.selectRoleView, (route) => false,);
-                  },
-                  child:  MyText(text: AppLocalizations.of(context)!.signuplogintoyouraccount)),
+            return Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20.w),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.symmetric(vertical: 16.h),
+                      decoration: BoxDecoration(
+                        color: primaryColor,
+                        borderRadius: BorderRadius.circular(12.r),
+                        boxShadow: [
+                          BoxShadow(
+                            color: primaryColor.withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.pushNamedAndRemoveUntil(context, RoutesNames.selectRoleView, (route) => false);
+                        },
+                        child: Center(
+                          child: MyText(
+                            text: AppLocalizations.of(context)!.signuplogintoyouraccount,
+                            color: whiteColor,
+                            size: 16.sp,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             );
           }
       return  FutureBuilder(

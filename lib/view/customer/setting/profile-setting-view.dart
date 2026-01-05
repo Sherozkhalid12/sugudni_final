@@ -31,6 +31,8 @@ class _CustomerProfileSettingViewState extends State<CustomerProfileSettingView>
   final phoneController=TextEditingController();
   final passwordController=TextEditingController();
   String profilePicture='';
+
+  bool _showPassword = false;
   void fetchData()async{
     customPrint("Init ===============================================");
     var data=await UserRepository.getCustomerData(context);
@@ -121,10 +123,18 @@ class _CustomerProfileSettingViewState extends State<CustomerProfileSettingView>
                                  width: 105.w,
                                  decoration:  BoxDecoration(
                                    shape: BoxShape.circle,
-                                   image: DecorationImage(image:provider.customerProfilePic==null? const AssetImage(AppAssets.dummyUserThree):
-                                   FileImage(File(provider.customerProfilePic!.path))
-                                       ,fit: BoxFit.cover),
+                                   color: provider.customerProfilePic == null ? Colors.orange.shade400 : null,
+                                   image: provider.customerProfilePic == null
+                                       ? null
+                                       : DecorationImage(image: FileImage(File(provider.customerProfilePic!.path)), fit: BoxFit.cover),
                                  ),
+                                 child: provider.customerProfilePic == null
+                                     ? Icon(
+                                         Icons.person,
+                                         color: whiteColor,
+                                         size: 50.sp,
+                                       )
+                                     : null,
                                );
                              })
                          );
@@ -193,17 +203,22 @@ class _CustomerProfileSettingViewState extends State<CustomerProfileSettingView>
                   ),
                   10.height,
                   CustomTextFiled(
+                    key: ValueKey(_showPassword),
                     controller: passwordController,
                     borderRadius: 15.r,
                     isShowPrefixIcon: true,
                     isBorder: true,
                     isPassword: true,
-              
+                    isObscure: !_showPassword,
+                    passwordFunction: () {
+                      setState(() {
+                        _showPassword = !_showPassword;
+                      });
+                    },
                     isFilled: true,
                     hintText: AppLocalizations.of(context)!.enterpassword,
                     isShowPrefixImage: true,
                     prefixImgUrl: AppAssets.passwordIcon,
-              
                   ),
                   150.height,
                   RoundButton(

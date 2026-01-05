@@ -1121,13 +1121,13 @@ abstract class AppLocalizations {
   /// No description provided for @enter5digitcondewetexttoyouremail.
   ///
   /// In en, this message translates to:
-  /// **'Enter 5-digit code we just texted to your email'**
+  /// **'Enter 4-digit code we just texted to your email'**
   String get enter5digitcondewetexttoyouremail;
 
   /// No description provided for @enter5digitcondewetexttoyourphonenumber.
   ///
   /// In en, this message translates to:
-  /// **'Enter 5-digit code we just texted to your phone number'**
+  /// **'Enter 4-digit code we just texted to your phone number'**
   String get enter5digitcondewetexttoyourphonenumber;
 
   /// No description provided for @resendcode.

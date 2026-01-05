@@ -56,10 +56,18 @@ class CustomerAccountAppBar extends StatelessWidget implements PreferredSizeWidg
                     width: 42.w,
                     decoration:  BoxDecoration(
                       shape: BoxShape.circle,
+                      color: userData.profilePic.isNotEmpty ? null : Colors.orange.shade400,
                       image: userData.profilePic.isNotEmpty
                       ? DecorationImage(image: NetworkImage("${ApiEndpoints.productUrl}/${userData.profilePic}"),fit: BoxFit.cover)
-                      : const DecorationImage(image: AssetImage(AppAssets.dummyUserThree),fit: BoxFit.cover),
+                      : null,
                     ),
+                    child: userData.profilePic.isNotEmpty
+                        ? null
+                        : Icon(
+                            Icons.person,
+                            color: whiteColor,
+                            size: 24.sp,
+                          ),
                   ),
                 );
               })
