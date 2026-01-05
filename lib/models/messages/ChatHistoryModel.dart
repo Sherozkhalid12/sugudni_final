@@ -1,3 +1,5 @@
+import 'package:sugudeni/utils/global-functions.dart';
+
 class ChatHistoryResponse {
   final List<ChatMessage> chat;
 
@@ -56,6 +58,12 @@ class ChatMessage {
   });
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) {
+    final attachmentData = json['attachmentData'] != null
+        ? (json['attachmentData'] is Map
+            ? Map<String, dynamic>.from(json['attachmentData'] as Map)
+            : null)
+        : null;
+    
     return ChatMessage(
       id: json['_id'] as String,
       senderId: json['senderid'] as String,
@@ -80,11 +88,7 @@ class ChatMessage {
       contentType: json['contentType'] as String? ?? '',
       liked: json['liked'] as bool? ?? false,
       attachment: json['attachment'] as bool? ?? false,
-      attachmentData: json['attachmentData'] != null
-          ? (json['attachmentData'] is Map
-              ? Map<String, dynamic>.from(json['attachmentData'] as Map)
-              : null)
-          : null,
+      attachmentData: attachmentData,
     );
   }
 

@@ -46,6 +46,8 @@ class SellerMessagesRepository{
     if(!isConnected){
       throw 'Please check your internet and try again.';
     }
+    customPrint("========== FETCHING CHAT HISTORY ==========");
+    customPrint("Sender ID: $senderId, Receiver ID: $receiverId");
     final response = await ApiClient.getRequest("${ApiEndpoints.chatHistory}/$senderId/$receiverId",headers:await ApiClient.bearerHeader).timeout(const Duration(seconds: 30),onTimeout: (){
       throw 'Request timed out. Please try again.';
     });
@@ -53,8 +55,11 @@ class SellerMessagesRepository{
     final statusCode=response.statusCode;
     customPrint("Body type:================${body.runtimeType}");
     customPrint("Status code:================$statusCode");
+    customPrint("Raw response body: ${response.body}");
+    
     if(response.statusCode==200||response.statusCode==201){
-      return _handleResponse(response, (data) => ChatHistoryResponse.fromJson(body));
+      final chatHistory = _handleResponse(response, (data) => ChatHistoryResponse.fromJson(body));
+      return chatHistory;
     }else{
       final error=body['error'];
       showSnackbar(context, error.toString(),color: redColor);

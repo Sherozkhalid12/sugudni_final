@@ -36,7 +36,10 @@ class CustomerOrderRepository{
       return _handleResponse(response, (data) => GetCustomerAllOrderResponseModel.fromJson(body));
     }else{
       final error=body['error'];
-      showSnackbar(context, error.toString(),color: redColor);
+      // Don't show snackbar for authorization errors (401) - they're expected for sellers
+      if(response.statusCode != 401){
+        showSnackbar(context, error.toString(),color: redColor);
+      }
       throw error;
     }
   }

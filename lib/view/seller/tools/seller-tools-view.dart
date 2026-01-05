@@ -10,8 +10,10 @@ import 'package:sugudeni/utils/customWidgets/my-text.dart';
 import 'package:sugudeni/utils/customWidgets/symetric-padding.dart';
 import 'package:sugudeni/utils/extensions/sizebox.dart';
 import 'package:sugudeni/utils/routes/routes-name.dart';
+import 'package:sugudeni/utils/sharePreference/save-user-token.dart';
 import 'package:sugudeni/view/seller/home/seller-home-view.dart';
 import 'package:sugudeni/view/seller/products/seller-my-products-view.dart';
+import 'package:sugudeni/view/seller/messages/seller-support-chat-view.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/seller-products-tab-provider.dart';
@@ -49,22 +51,10 @@ class SellerToolsView extends StatelessWidget {
              Navigator.pushNamed(context, RoutesNames.sellerAddProductView);
            },),
           15.height,
-          ToolsWidget(title: AppLocalizations.of(context)!.addcategory,    iconScale: 2,img: AppAssets.addCategory,iconImg: AppAssets.addIcon,onPressed: (){
-            context.read<CategoryProvider>().clearResources();
-
-            Navigator.pushNamed(context, RoutesNames.sellerAddCategoryView);
-           },),
-          15.height,
            ToolsWidget(title: AppLocalizations.of(context)!.myproducts, img: AppAssets.myProductSellerIcon,onPressed: (){
              context.read<SellerProductsTabProvider>().clearResources();
 
              Navigator.pushNamed(context, RoutesNames.sellerMyProductsView);
-          },),
-          15.height,
-           ToolsWidget(title: AppLocalizations.of(context)!.mycategories, img: AppAssets.myCategory,
-             iconScale: 2,
-             onPressed: (){
-            Navigator.pushNamed(context, RoutesNames.sellerMyCategoriesView);
           },),
           15.height,
 
@@ -88,10 +78,18 @@ class SellerToolsView extends StatelessWidget {
     // },),
           15.height,
 
-           // ToolsWidget(title: "Contact Help center", img: AppAssets.helpCenterIcon,onPressed: (){
-           //   Navigator.pushNamed(context, RoutesNames.driverHelpCenterView);
-           //
-           // },),
+           ToolsWidget(title: "Contact Help Center", img: AppAssets.helpCenterIcon,onPressed: () async {
+             // Navigate to seller support chat with admin
+             final userId = await getUserId();
+             if (userId != null && userId.isNotEmpty) {
+               Navigator.push(
+                 context,
+                 MaterialPageRoute(
+                   builder: (context) => SellerSupportChatView(),
+                 ),
+               );
+             }
+           },),
 
         ],
       ),

@@ -26,6 +26,10 @@ import '../../customer/chat/select-product-modal.dart';
 import '../../customer/chat/chat-attachment-card.dart';
 import '../../../models/orders/GetAllOrdersCutomerModel.dart';
 import '../../../repositories/orders/customer-order-repository.dart';
+import 'select-seller-product-modal.dart';
+import 'select-seller-order-modal.dart';
+import '../../../models/orders/GetAllOrderSellerResponseModel.dart';
+import '../../../repositories/orders/seller-order-repository.dart';
 
 class SellerMessageDetailView extends StatefulWidget {
   final String receiverName;
@@ -40,6 +44,9 @@ class SellerMessageDetailView extends StatefulWidget {
 class _SellerMessageDetailViewState extends State<SellerMessageDetailView> {
   GetCustomerAllOrderResponseModel? _cachedOrders;
   bool _ordersLoaded = false;
+  GetAllOrderSellerResponse? _cachedSellerOrders;
+  bool _sellerOrdersLoaded = false;
+  // Note: _cachedOrders is kept for compatibility but not loaded for sellers
 
   @override
   void initState() {
@@ -49,38 +56,41 @@ class _SellerMessageDetailViewState extends State<SellerMessageDetailView> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final chatProvider = context.read<ChatSocketProvider>();
       
-      // Initialize socket if not already connected
-      if (chatProvider.socket == null || !chatProvider.socket!.connected) {
-        chatProvider.connectSocketInInitial(context);
-        // Wait for connection
-        await Future.delayed(const Duration(milliseconds: 300));
-      }
+      // Connect to socket if not already connected
+      chatProvider.connectSocketInInitial(context);
       
-      // Connect socket for this specific chat
+      // Wait a bit for socket to initialize
+      await Future.delayed(const Duration(milliseconds: 300));
+      
+      // Always fetch chat history when page loads (force reload)
+      await chatProvider.getChatHistory(context, widget.receiverId, widget.senderId, forceReload: true);
+      
+      // Connect socket for this conversation (this sets up listeners)
       chatProvider.connectSocket(widget.receiverId, widget.senderId, context);
-      
-      // Load chat history
-      await chatProvider.getChatHistory(context, widget.receiverId, widget.senderId);
       
       // Mark as unread
       chatProvider.markAsUnread(widget.senderId, widget.receiverId, context);
       
-      // Pre-load orders data for customer side chats
-      _loadOrdersData();
+      // Pre-load seller orders data for seller side chats only
+      // Note: Sellers should not load customer orders as they don't have access
+      _loadSellerOrdersData();
     });
   }
 
-  Future<void> _loadOrdersData() async {
-    if (_ordersLoaded) return;
+  // Removed _loadOrdersData() - sellers should not load customer orders
+  // This was causing authorization errors
+
+  Future<void> _loadSellerOrdersData() async {
+    if (_sellerOrdersLoaded) return;
     try {
-      _cachedOrders = await CustomerOrderRepository.allCustomersOrders(context);
+      _cachedSellerOrders = await SellerOrderRepository.allSellerOrders(context);
       if (mounted) {
         setState(() {
-          _ordersLoaded = true;
+          _sellerOrdersLoaded = true;
         });
       }
     } catch (e) {
-      customPrint('Error loading orders: $e');
+      customPrint('Error loading seller orders: $e');
     }
   }
 
@@ -89,7 +99,7 @@ class _SellerMessageDetailViewState extends State<SellerMessageDetailView> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => SelectOrderModal(
+      builder: (context) => SelectSellerOrderModal(
         onOrderSelected: (order) {
           final chatProvider = context.read<ChatSocketProvider>();
           final mediaProvider = context.read<SellerChatAddDocProvider>();
@@ -100,10 +110,11 @@ class _SellerMessageDetailViewState extends State<SellerMessageDetailView> {
           // Ensure message controller is clear for attachment
           chatProvider.messageController.clear();
           
-          // Create attachment data
+          // Create attachment data - for order, orderid is the actual order id, productid is empty string
           Map<String, dynamic> attachmentData = {
             'attachmentType': 'order',
             'orderid': order.id,
+            'productid': '', // Empty string when sending order
           };
           
           customPrint('Sending order attachment - orderId: ${order.id}');
@@ -124,8 +135,8 @@ class _SellerMessageDetailViewState extends State<SellerMessageDetailView> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => SelectProductModal(
-        onProductSelected: (orderId, productId) {
+      builder: (context) => SelectSellerProductModal(
+        onProductSelected: (productId, product) {
           final chatProvider = context.read<ChatSocketProvider>();
           final mediaProvider = context.read<SellerChatAddDocProvider>();
           
@@ -135,14 +146,14 @@ class _SellerMessageDetailViewState extends State<SellerMessageDetailView> {
           // Ensure message controller is clear for attachment
           chatProvider.messageController.clear();
           
-          // Create attachment data
+          // Create attachment data - for product, productid is the actual product id, orderid is empty string
           Map<String, dynamic> attachmentData = {
             'attachmentType': 'product',
-            'orderid': orderId,
+            'orderid': '', // Empty string when sending product
             'productid': productId,
           };
           
-          customPrint('Sending product attachment - orderId: $orderId, productId: $productId');
+          customPrint('Sending product attachment - productId: $productId');
           
           chatProvider.sendMessage(
             widget.receiverId,
@@ -275,6 +286,7 @@ class _SellerMessageDetailViewState extends State<SellerMessageDetailView> {
                                           message: messageData,
                                           isSender: false,
                                           cachedOrders: _cachedOrders,
+                                          cachedSellerOrders: _cachedSellerOrders,
                                         ),
                                       ],
                                     ),
@@ -285,6 +297,7 @@ class _SellerMessageDetailViewState extends State<SellerMessageDetailView> {
                                       message: messageData,
                                       isSender: true,
                                       cachedOrders: _cachedOrders,
+                                      cachedSellerOrders: _cachedSellerOrders,
                                     ),
                                   );
                           }
@@ -555,58 +568,6 @@ class _SellerMessageDetailViewState extends State<SellerMessageDetailView> {
                                 children: [
                                   Image.asset(AppAssets.photosImg,scale: 3,),
                                   MyText(text: AppLocalizations.of(context)!.photos,size: 10.sp,fontWeight: FontWeight.w500,color: const Color(0xff545454),)
-                                ],
-                              ),
-                            ),
-                            GestureDetector(
-                              onTap: () {
-                                // For customer side chats, show product selection modal
-                                // For seller side chats, navigate to products view
-                                if (widget.senderId != widget.receiverId) {
-                                  // Customer side - show modal
-                                  _showProductSelectionModal(context);
-                                } else {
-                                  // Seller side - navigate
-                                  mediaProvider.reset();
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => SellerMyProductsView(),
-                                    ),
-                                  );
-                                }
-                              },
-                              child: Column(
-                                spacing: 10.h,
-                                children: [
-                                  Image.asset(AppAssets.productChatImg,scale: 3,),
-                                  MyText(text: AppLocalizations.of(context)!.products,size: 10.sp,fontWeight: FontWeight.w500,color: const Color(0xff545454),)
-                                ],
-                              ),
-                            ),
-                            GestureDetector(
-                              onTap: () {
-                                // For customer side chats, show order selection modal
-                                // For seller side chats, navigate to orders view
-                                if (widget.senderId != widget.receiverId) {
-                                  // Customer side - show modal
-                                  _showOrderSelectionModal(context);
-                                } else {
-                                  // Seller side - navigate
-                                  mediaProvider.reset();
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => SellerOrderView(),
-                                    ),
-                                  );
-                                }
-                              },
-                              child: Column(
-                                spacing: 10.h,
-                                children: [
-                                  Image.asset(AppAssets.ordersChatImg,scale: 3,),
-                                  MyText(text: AppLocalizations.of(context)!.orders,size: 10.sp,fontWeight: FontWeight.w500,color: const Color(0xff545454),)
                                 ],
                               ),
                             ),

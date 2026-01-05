@@ -59,6 +59,10 @@ class SocialProvider extends ChangeNotifier{
             await saveUserId(v.user.id);
             await saveSessionToken(v.token);
             await saveUserType(role);
+            
+            // Send FCM token to backend
+            _sendFcmTokenToBackend(context);
+            
             // Reset bottom navigation to home tab for customers
             if (role == UserRoles.customer) {
               Provider.of<BottomNavigationProvider>(context, listen: false).setIndex(0);
@@ -82,6 +86,9 @@ class SocialProvider extends ChangeNotifier{
               await saveUserId(v.user.id);
               await saveSessionToken(v.token);
               await saveUserType(roleProvider.selectedRole);
+
+              // Send FCM token to backend
+              _sendFcmTokenToBackend(context);
 
               // Reset bottom navigation to home tab for customers
               if (roleProvider.selectedRole == UserRoles.customer) {
@@ -114,6 +121,10 @@ class SocialProvider extends ChangeNotifier{
             await saveUserId(v.user.id);
             await saveSessionToken(v.token);
             await saveUserType(role);
+            
+            // Send FCM token to backend
+            _sendFcmTokenToBackend(context);
+            
             // Reset bottom navigation to home tab for customers
             if (role == UserRoles.customer) {
               Provider.of<BottomNavigationProvider>(context, listen: false).setIndex(0);

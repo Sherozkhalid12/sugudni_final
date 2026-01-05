@@ -3,9 +3,11 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:sugudeni/api/api-endpoints.dart';
 import 'package:sugudeni/models/messages/ChatHistoryModel.dart';
 import 'package:sugudeni/models/orders/GetAllOrdersCutomerModel.dart';
+import 'package:sugudeni/models/orders/GetAllOrderSellerResponseModel.dart' as SellerOrderModel;
 import 'package:sugudeni/utils/constants/colors.dart';
 import 'package:sugudeni/utils/customWidgets/cached-network-image.dart';
 import 'package:sugudeni/models/products/SimpleProductModel.dart';
+import 'package:sugudeni/models/products/SellerIdProductReponseModel.dart';
 import 'package:sugudeni/utils/customWidgets/my-text.dart';
 import 'package:sugudeni/utils/extensions/sizebox.dart';
 import 'package:sugudeni/utils/routes/routes-name.dart';
@@ -16,12 +18,14 @@ class ChatAttachmentCard extends StatelessWidget {
   final ChatMessage message;
   final bool isSender;
   final GetCustomerAllOrderResponseModel? cachedOrders;
+  final SellerOrderModel.GetAllOrderSellerResponse? cachedSellerOrders;
 
   const ChatAttachmentCard({
     super.key,
     required this.message,
     required this.isSender,
     this.cachedOrders,
+    this.cachedSellerOrders,
   });
 
   @override
@@ -99,6 +103,9 @@ class ChatAttachmentCard extends StatelessWidget {
             Map<String, dynamic> orderJson = Map<String, dynamic>.from(orderIdValue);
             customPrint('Order JSON keys: ${orderJson.keys.toList()}');
             
+            // Check if this is a seller order (has trackingStatus) or customer order (has status)
+            final isSellerOrder = orderJson.containsKey('trackingStatus');
+            
             // Normalize userId if it's a Map
             if (orderJson['userId'] is Map) {
               final userIdMap = orderJson['userId'] as Map;
@@ -112,9 +119,19 @@ class ChatAttachmentCard extends StatelessWidget {
               orderJson['paymentMethod'] = '';
             }
             
-            // Ensure status exists
-            if (orderJson['status'] == null) {
-              orderJson['status'] = '';
+            // Handle status - seller orders use trackingStatus, customer orders use status
+            if (isSellerOrder) {
+              // Convert seller order to customer order format
+              if (orderJson['trackingStatus'] != null) {
+                orderJson['status'] = orderJson['trackingStatus'];
+              } else {
+                orderJson['status'] = '';
+              }
+            } else {
+              // Ensure status exists for customer orders
+              if (orderJson['status'] == null) {
+                orderJson['status'] = '';
+              }
             }
             
             // Ensure cartItem exists and is a List, and normalize nested structures
@@ -204,18 +221,32 @@ class ChatAttachmentCard extends StatelessWidget {
           final orderIdString = orderId.toString();
           customPrint('Looking for order with ID: $orderIdString in cached orders');
           
-          if (cachedOrders != null) {
+          // Try seller orders first
+          if (cachedSellerOrders != null && cachedSellerOrders!.orders != null) {
+            try {
+              final sellerOrder = cachedSellerOrders!.orders!.firstWhere(
+                (o) => o.id == orderIdString,
+              );
+              // Convert seller order to customer order format for display
+              // We'll create a compatible order object
+              order = _convertSellerOrderToCustomerOrder(sellerOrder);
+              customPrint('Found order in cached seller orders: ${order.id}');
+            } catch (e) {
+              customPrint('Order not found in cached seller orders: $e');
+            }
+          }
+          
+          // Try customer orders if not found in seller orders
+          if (order == null && cachedOrders != null) {
             try {
               order = cachedOrders!.orders.firstWhere(
                 (o) => o.id == orderIdString,
               );
-              customPrint('Found order in cached orders: ${order.id}');
+              customPrint('Found order in cached customer orders: ${order.id}');
             } catch (e) {
-              customPrint('Order not found in cached orders: $e');
+              customPrint('Order not found in cached customer orders: $e');
               customPrint('Available order IDs: ${cachedOrders!.orders.map((o) => o.id).toList()}');
             }
-          } else {
-            customPrint('Cached orders is null, cannot look up order');
           }
         }
         
@@ -223,7 +254,7 @@ class ChatAttachmentCard extends StatelessWidget {
           return _buildOrderCard(context, order, isSender);
         } else {
           // Show loading if we don't have cached orders yet
-          if (cachedOrders == null) {
+          if (cachedOrders == null && cachedSellerOrders == null) {
             return Container(
               padding: EdgeInsets.all(12.w),
               decoration: BoxDecoration(
@@ -247,7 +278,8 @@ class ChatAttachmentCard extends StatelessWidget {
       }
     } 
     // Handle product attachment
-    else if (attachmentType == 'product' && orderId != null && orderId.toString().isNotEmpty && productId != null && productId.toString().isNotEmpty) {
+    // For seller products, orderId may be empty string, but productId must be present
+    else if (attachmentType == 'product' && productId != null && productId.toString().isNotEmpty) {
       try {
         Product? product;
         Order? order;
@@ -260,8 +292,20 @@ class ChatAttachmentCard extends StatelessWidget {
         if (productIdValue is Map) {
           try {
             product = Product.fromJson(Map<String, dynamic>.from(productIdValue));
+            customPrint('Successfully parsed product from attachmentData (productIdValue is Map)');
           } catch (e) {
             customPrint('Error parsing product from attachmentData: $e');
+          }
+        }
+        
+        // Also check if there's a 'product' key in attachmentData with full product object
+        // This is used for optimistic messages where we include the full product
+        if (product == null && attachmentData.containsKey('product') && attachmentData['product'] is Map) {
+          try {
+            product = Product.fromJson(Map<String, dynamic>.from(attachmentData['product']));
+            customPrint('Successfully parsed product from attachmentData (product key)');
+          } catch (e) {
+            customPrint('Error parsing product from attachmentData product key: $e');
           }
         }
         
@@ -354,53 +398,68 @@ class ChatAttachmentCard extends StatelessWidget {
         }
         
         // If we couldn't parse from attachmentData, try to find them in cached orders
-        if ((product == null || order == null) && cachedOrders != null) {
-          final orderIdString = orderId.toString();
+        // For seller products, orderId may be empty, so we only need product
+        final orderIdString = orderId?.toString() ?? '';
+        final hasOrderId = orderIdString.isNotEmpty;
+        
+        if (product == null) {
           final productIdString = productId.toString();
           
-          try {
-            // Find order if not already parsed
-            Order? foundOrder = order;
-            if (foundOrder == null) {
-              foundOrder = cachedOrders!.orders.firstWhere(
-                (o) => o.id == orderIdString,
-              );
-              order = foundOrder;
-            }
-            
-            // Find product if not already parsed
-            if (product == null) {
+          // If we have orderId, try to find in cached orders
+          if (hasOrderId && cachedOrders != null) {
+            try {
+              // Find order if not already parsed
+              Order? foundOrder = order;
+              if (foundOrder == null) {
+                foundOrder = cachedOrders!.orders.firstWhere(
+                  (o) => o.id == orderIdString,
+                );
+                order = foundOrder;
+              }
+              
+              // Find product in order
               final cartItem = foundOrder.cartItem.firstWhere(
                 (item) => item.productId.id == productIdString,
               );
               product = cartItem.productId;
+            } catch (e) {
+              customPrint('Product or order not found in cached orders: $e');
             }
-          } catch (e) {
-            customPrint('Product or order not found in cached orders: $e');
           }
         }
         
-        if (product != null && order != null) {
-          return _buildProductCard(context, product, order, isSender);
+        // For seller products without orderId, we can still display if we have the product
+        if (product != null) {
+          // If we don't have an order, create a minimal one for display purposes
+          final displayOrder = order ?? Order(
+            id: '',
+            userId: '',
+            paymentMethod: '',
+            isPaid: false,
+            status: '',
+            totalPrice: 0,
+            totalPriceAfterDiscount: 0,
+            itemsCount: 0,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+            cartItem: [],
+          );
+          return _buildProductCard(context, product, displayOrder, isSender);
         } else {
-          // Show loading if we don't have cached orders yet
-          if (cachedOrders == null) {
-            return Container(
-              padding: EdgeInsets.all(12.w),
-              decoration: BoxDecoration(
-                color: whiteColor,
-                borderRadius: BorderRadius.circular(12.r),
-                border: Border.all(
-                  color: isSender 
-                      ? const Color(0xffD5FF00).withOpacity(0.3)
-                      : primaryColor.withOpacity(0.3),
-                ),
+          // Show loading if we don't have the product yet
+          return Container(
+            padding: EdgeInsets.all(12.w),
+            decoration: BoxDecoration(
+              color: whiteColor,
+              borderRadius: BorderRadius.circular(12.r),
+              border: Border.all(
+                color: isSender 
+                    ? const Color(0xffD5FF00).withOpacity(0.3)
+                    : primaryColor.withOpacity(0.3),
               ),
-              child: const Center(child: CircularProgressIndicator()),
-            );
-          }
-          // Product or order not found - return empty widget
-          return const SizedBox.shrink();
+            ),
+            child: const Center(child: CircularProgressIndicator()),
+          );
         }
       } catch (e) {
         customPrint('Error building product card: $e');
@@ -626,12 +685,13 @@ class ChatAttachmentCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   4.height,
-                  MyText(
-                    text: 'Order #${order.id.substring(order.id.length - 8)}',
-                    size: 12.sp,
-                    fontWeight: FontWeight.w500,
-                    color: textSecondaryColor,
-                  ),
+                  if (order.id.isNotEmpty)
+                    MyText(
+                      text: 'Order #${order.id.length > 8 ? order.id.substring(order.id.length - 8) : order.id}',
+                      size: 12.sp,
+                      fontWeight: FontWeight.w500,
+                      color: textSecondaryColor,
+                    ),
                 ],
               ),
             ),
@@ -639,6 +699,149 @@ class ChatAttachmentCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  // Helper method to convert seller order to customer order format for display
+  Order _convertSellerOrderToCustomerOrder(dynamic sellerOrder) {
+    // Import the seller Order type with an alias to avoid conflict
+    // Since both use the same name, we need to handle this carefully
+    try {
+      // The seller order has different structure, so we need to adapt it
+      // Create cart items compatible with customer order format
+      final sellerOrderTyped = sellerOrder as SellerOrderModel.Order; // This will be the seller Order type
+      final customerCartItems = sellerOrderTyped.cartItem.map((item) {
+        // Convert seller cart item to customer cart item format
+        final product = item.product ?? Product(
+          sku: '',
+          supplierName: '',
+          brand: '',
+          upc: '',
+          condition: 'new',
+          shippingPrice: 0.0,
+          manufacturerProdId: '',
+          shippingLength: '',
+          shippingWidth: '',
+          shippingHeight: '',
+          salesTaxState: '',
+          salesTaxPct: '',
+          shipFrom: '',
+          shipTo: '',
+          returnPolicy: '',
+          avgShippingDays: '',
+          w2bFee: 0.0,
+          attributes: '',
+          handlingFee: 0.0,
+          mapPrice: 0.0,
+          wholesale: 0.0,
+          bulk: false,
+          saleDiscount: 0.0,
+          featured: false,
+          ratingAvg: 0.0,
+          ratingCount: 0,
+          id: '',
+          sellerId: SellerIdProductResponseModel(
+            id: '',
+            firstname: '',
+            lastname: '',
+            adminPrivileges: [],
+            appleId: '',
+            twitterId: '',
+            fcmToken: [],
+            driverStatus: '',
+            rejectionReason: '',
+            pickups: [],
+            name: '',
+            phone: '',
+            email: '',
+            password: '',
+            role: '',
+            isActive: false,
+            verified: false,
+            blocked: false,
+            emailVerified: false,
+            phoneVerified: false,
+            profilePic: '',
+            licenseNumber: '',
+            bikeRegistrationNumber: '',
+            licenseFront: '',
+            licenseBack: '',
+            wishlist: [],
+            addresses: [],
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+            walletId: '',
+          ),
+          title: 'Unknown Product',
+          imgCover: '',
+          weight: '',
+          color: '',
+          size: '',
+          images: [],
+          description: '',
+          price: 0.0,
+          priceAfterDiscount: 0.0,
+          quantity: 0,
+          sold: 0,
+          category: null,
+          subcategory: null,
+          status: '',
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+          v: 0,
+          reviews: [],
+        );
+        
+        return CartItem(
+          sellerId: item.sellerId,
+          productId: product,
+          quantity: item.quantity,
+          price: item.price,
+          totalProductDiscount: item.totalProductDiscount,
+          priceAfterDiscount: item.priceAfterDiscount,
+          trackingId: '',
+          status: sellerOrderTyped.trackingStatus,
+          isDelivered: sellerOrderTyped.isDelivered,
+          failureReason: sellerOrderTyped.failureReason,
+          deliveredAt: sellerOrderTyped.deliveredAt,
+          estimatedArrival: sellerOrderTyped.estimatedArrival,
+          currentLocation: sellerOrderTyped.currentLocation,
+          currentLocationLatLong: sellerOrderTyped.currentLocationLatLong,
+          id: item.id,
+        );
+      }).toList();
+
+      // Return customer order format (using Order from GetAllOrdersCutomerModel)
+      return Order(
+        id: sellerOrderTyped.id,
+        userId: sellerOrderTyped.userId?.id ?? '',
+        paymentMethod: sellerOrderTyped.paymentMethod,
+        isPaid: sellerOrderTyped.isPaid,
+        status: sellerOrderTyped.trackingStatus,
+        totalPrice: sellerOrderTyped.totalPrice,
+        totalPriceAfterDiscount: sellerOrderTyped.totalPriceAfterDiscount,
+        itemsCount: sellerOrderTyped.itemsCount,
+        createdAt: sellerOrderTyped.createdAt,
+        updatedAt: sellerOrderTyped.updatedAt,
+        cartItem: customerCartItems,
+      );
+    } catch (e) {
+      customPrint('Error converting seller order: $e');
+      // Return a minimal order if conversion fails
+      final sellerOrderTyped = sellerOrder as SellerOrderModel.Order;
+      return Order(
+        id: sellerOrderTyped.id,
+        userId: sellerOrderTyped.userId?.id ?? '',
+        paymentMethod: sellerOrderTyped.paymentMethod,
+        isPaid: sellerOrderTyped.isPaid,
+        status: sellerOrderTyped.trackingStatus,
+        totalPrice: sellerOrderTyped.totalPrice,
+        totalPriceAfterDiscount: sellerOrderTyped.totalPriceAfterDiscount,
+        itemsCount: sellerOrderTyped.itemsCount,
+        createdAt: sellerOrderTyped.createdAt,
+        updatedAt: sellerOrderTyped.updatedAt,
+        cartItem: [],
+      );
+    }
   }
 }
 
