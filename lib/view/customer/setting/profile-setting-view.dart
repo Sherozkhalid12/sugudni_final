@@ -214,6 +214,7 @@ class _CustomerProfileSettingViewState extends State<CustomerProfileSettingView>
                       setState(() {
                         _showPassword = !_showPassword;
                       });
+                      return null;
                     },
                     isFilled: true,
                     hintText: AppLocalizations.of(context)!.enterpassword,
@@ -224,10 +225,6 @@ class _CustomerProfileSettingViewState extends State<CustomerProfileSettingView>
                   RoundButton(
                       isLoad: true,
                       title: AppLocalizations.of(context)!.savechanges, onTap: ()async{
-                     if(nameController.text.isEmpty||emailController.text.isEmpty||phoneController.text.isEmpty){
-                       showSnackbar(context, AppLocalizations.of(context)!.allfieldsarerequired,color: redColor);
-                       return;
-                     }
                      var model=UpdateCustomerModel(
                          name: nameController.text.trim(),
                          email: emailController.text.trim(),

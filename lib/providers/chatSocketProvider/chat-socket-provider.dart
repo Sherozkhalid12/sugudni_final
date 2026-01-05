@@ -1,5 +1,3 @@
-
-import 'dart:io';
 import 'package:provider/provider.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
@@ -12,7 +10,6 @@ import 'package:sugudeni/repositories/messages/seller-messages-repository.dart';
 import 'package:sugudeni/utils/global-functions.dart';
 import 'package:sugudeni/utils/sharePreference/save-user-token.dart';
 
-import '../../utils/constants/colors.dart';
 
 class ChatSocketProvider extends ChangeNotifier{
 bool isLoading=false;
@@ -22,6 +19,8 @@ final ScrollController scrollController = ScrollController();
 TextEditingController messageController = TextEditingController();
 String? errorMessage;
 SellerThreadResponse? sellerThreads;
+String? _currentReceiverId;
+String? _currentSenderId;
 
 Future<void> fetchThreads(BuildContext context) async {
   try {
@@ -41,14 +40,27 @@ Future<void> fetchThreads(BuildContext context) async {
 }
 void scrollToBottom() {
   if (scrollController.hasClients) {
+    // For reversed ListView (reverse: true), scroll to position 0.0 to show newest messages
+    // Position 0.0 is at the bottom for reversed ListViews
     scrollController.animateTo(
-      scrollController.position.maxScrollExtent,
+      0.0,
       duration: const Duration(milliseconds: 200),
       curve: Curves.easeOut,
     );
   }
 }
 getChatHistory(BuildContext context,String receiverId,String senderId)async{
+  // Don't reload if we already have chat history for the same conversation
+  if (chatHistoryResponse != null && 
+      _currentReceiverId == receiverId && 
+      _currentSenderId == senderId) {
+    customPrint('Chat history already loaded for this conversation, skipping reload');
+    return;
+  }
+  
+  _currentReceiverId = receiverId;
+  _currentSenderId = senderId;
+  
   isLoading=true;
   notifyListeners();
   try {
@@ -133,6 +145,25 @@ void setupSocketListeners(String? currentUserId,BuildContext context) {
   socket!.on('newMessage', (data) {
     customPrint("New message =================================$data");
     
+    // Check if this message belongs to the current conversation
+    final messageSenderId = data['senderid']?.toString() ?? '';
+    final messageReceiverId = data['receiverid']?.toString() ?? '';
+    
+    // Only process if this message is for the current conversation
+    // Message should be from current receiver to current sender, or vice versa
+    bool belongsToCurrentConversation = false;
+    if (_currentReceiverId != null && _currentSenderId != null) {
+      belongsToCurrentConversation = 
+          (messageSenderId == _currentReceiverId && messageReceiverId == _currentSenderId) ||
+          (messageSenderId == _currentSenderId && messageReceiverId == _currentReceiverId);
+    }
+    
+    if (!belongsToCurrentConversation) {
+      customPrint('Message not for current conversation - sender: $messageSenderId, receiver: $messageReceiverId');
+      customPrint('Current conversation - sender: $_currentSenderId, receiver: $_currentReceiverId');
+      return;
+    }
+    
     // Initialize chatHistoryResponse if null
     if (chatHistoryResponse == null) {
       chatHistoryResponse = ChatHistoryResponse(chat: []);
@@ -142,7 +173,7 @@ void setupSocketListeners(String? currentUserId,BuildContext context) {
       id: data['_id'],
       senderId: data['senderid'],
       receiverId: data['receiverid'],
-      message: data['message'],
+      message: data['message'] ?? '',
       likedBy: [],
       replyOf: [],
       read: false,
@@ -152,7 +183,11 @@ void setupSocketListeners(String? currentUserId,BuildContext context) {
       updatedAt: DateTime.now(),
       contentURL: '',
       contentType: '',
-      liked: false);
+      liked: false,
+      attachment: data['attachment'] as bool? ?? false,
+      attachmentData: data['attachmentData'] != null 
+          ? Map<String, dynamic>.from(data['attachmentData'])
+          : null);
     
     // Check if message already exists by ID (avoid duplicates)
     if (chatHistoryResponse!.chat.any((msg) => msg.id == value.id)) {
@@ -164,10 +199,22 @@ void setupSocketListeners(String? currentUserId,BuildContext context) {
     // Remove optimistic message if found and replace with real one
     String? optimisticMessageId;
     for (var msg in chatHistoryResponse!.chat) {
-      // First check if content matches (same sender, receiver, message)
+      // First check if content matches (same sender, receiver, message, and attachment data if present)
       bool matchesContent = msg.senderId == value.senderId &&
                            msg.receiverId == value.receiverId &&
-                           msg.message == value.message;
+                           msg.message == value.message &&
+                           msg.attachment == value.attachment;
+      
+      // Also check attachment data if both have attachments
+      if (matchesContent && msg.attachment == true && value.attachment == true) {
+        if (msg.attachmentData != null && value.attachmentData != null) {
+          matchesContent = msg.attachmentData!['attachmentType'] == value.attachmentData!['attachmentType'] &&
+                         msg.attachmentData!['orderid'] == value.attachmentData!['orderid'] &&
+                         msg.attachmentData!['productid'] == value.attachmentData!['productid'];
+        } else {
+          matchesContent = false;
+        }
+      }
       
       if (matchesContent) {
         // Check if this is an optimistic message (ID is a timestamp string, not a MongoDB ObjectId)
@@ -209,6 +256,25 @@ void setupSocketListeners(String? currentUserId,BuildContext context) {
   });
   socket!.on('newMedia', (data) {
     customPrint("New Media =================================$data");
+    
+    // Check if this message belongs to the current conversation
+    final messageSenderId = data['senderid']?.toString() ?? '';
+    final messageReceiverId = data['receiverid']?.toString() ?? '';
+    
+    // Only process if this message is for the current conversation
+    // Message should be from current receiver to current sender, or vice versa
+    bool belongsToCurrentConversation = false;
+    if (_currentReceiverId != null && _currentSenderId != null) {
+      belongsToCurrentConversation = 
+          (messageSenderId == _currentReceiverId && messageReceiverId == _currentSenderId) ||
+          (messageSenderId == _currentSenderId && messageReceiverId == _currentReceiverId);
+    }
+    
+    if (!belongsToCurrentConversation) {
+      customPrint('Media message not for current conversation - sender: $messageSenderId, receiver: $messageReceiverId');
+      customPrint('Current conversation - sender: $_currentSenderId, receiver: $_currentReceiverId');
+      return;
+    }
     
     // Initialize chatHistoryResponse if null
     if (chatHistoryResponse == null) {
@@ -356,70 +422,82 @@ Future<void> updateLastMessage(String threadId, String newMessage)async {
     }
   }
 }
-void sendMessage(String receiverId,String senderId) {
-  if (messageController.text.isNotEmpty) {
-    String message = messageController.text;
-    String tempMessageId = DateTime.now().millisecondsSinceEpoch.toString();
-    
-    // Initialize chatHistoryResponse if null (for new chats)
-    if (chatHistoryResponse == null) {
-      chatHistoryResponse = ChatHistoryResponse(chat: []);
-    }
-    
-    // Add optimistic message to UI immediately
-    final optimisticMessage = ChatMessage(
-      id: tempMessageId,
-      senderId: senderId,
-      receiverId: receiverId,
-      message: message,
-      likedBy: [],
-      replyOf: [],
-      read: false,
-      delivered: false,
-      seen: false,
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-      contentURL: '',
-      contentType: '',
-      liked: false,
-    );
-    chatHistoryResponse!.chat.add(optimisticMessage);
-    notifyListeners();
-    WidgetsBinding.instance.addPostFrameCallback((_) => scrollToBottom());
-    
-    messageController.clear();
-    notifyListeners();
-    
-    // Check if socket is connected before sending
-    if (socket == null || !socket!.connected) {
-      customPrint('Socket not connected, message will be sent when socket connects');
-      // Wait a bit and retry (socket should be initialized by the chat screen)
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (socket != null && socket!.connected) {
-          _sendMessageToSocket(receiverId, senderId, message);
-        } else {
-          customPrint('Failed to connect socket, removing optimistic message');
-          chatHistoryResponse!.chat.removeWhere((m) => m.id == tempMessageId);
-          notifyListeners();
-        }
-      });
-    } else {
-      _sendMessageToSocket(receiverId, senderId, message);
-    }
+void sendMessage(String receiverId, String senderId, {bool? attachment, Map<String, dynamic>? attachmentData}) {
+  // Allow sending even if message is empty (for attachments)
+  String message = messageController.text;
+  String tempMessageId = DateTime.now().millisecondsSinceEpoch.toString();
+  
+  customPrint('Sending message - attachment: $attachment, attachmentData: $attachmentData');
+  
+  // Initialize chatHistoryResponse if null (for new chats)
+  if (chatHistoryResponse == null) {
+    chatHistoryResponse = ChatHistoryResponse(chat: []);
+  }
+  
+  // Add optimistic message to UI immediately
+  final optimisticMessage = ChatMessage(
+    id: tempMessageId,
+    senderId: senderId,
+    receiverId: receiverId,
+    message: message,
+    likedBy: [],
+    replyOf: [],
+    read: false,
+    delivered: false,
+    seen: false,
+    createdAt: DateTime.now(),
+    updatedAt: DateTime.now(),
+    contentURL: '',
+    contentType: '',
+    liked: false,
+    attachment: attachment ?? false,
+    attachmentData: attachmentData,
+  );
+  chatHistoryResponse!.chat.add(optimisticMessage);
+  notifyListeners();
+  WidgetsBinding.instance.addPostFrameCallback((_) => scrollToBottom());
+  
+  messageController.clear();
+  notifyListeners();
+  
+  // Check if socket is connected before sending
+  if (socket == null || !socket!.connected) {
+    customPrint('Socket not connected, message will be sent when socket connects');
+    // Wait a bit and retry (socket should be initialized by the chat screen)
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (socket != null && socket!.connected) {
+        _sendMessageToSocket(receiverId, senderId, message, attachment: attachment, attachmentData: attachmentData);
+      } else {
+        customPrint('Failed to connect socket, removing optimistic message');
+        chatHistoryResponse!.chat.removeWhere((m) => m.id == tempMessageId);
+        notifyListeners();
+      }
+    });
+  } else {
+    _sendMessageToSocket(receiverId, senderId, message, attachment: attachment, attachmentData: attachmentData);
   }
 }
 
-void _sendMessageToSocket(String receiverId, String senderId, String message) {
+void _sendMessageToSocket(String receiverId, String senderId, String message, {bool? attachment, Map<String, dynamic>? attachmentData}) {
   if (socket == null || !socket!.connected) {
     customPrint('Cannot send message: socket is null or not connected');
     return;
   }
   
-  socket!.emit('sendMessage', {
+  Map<String, dynamic> messageData = {
     'senderid': senderId,
     'receiverid': receiverId,
     'message': message,
-  });
+  };
+  
+  // Add attachment data if present
+  if (attachment == true && attachmentData != null) {
+    messageData['attachment'] = true;
+    messageData['attachmentData'] = attachmentData;
+    customPrint('Sending attachment message: $messageData');
+  }
+  
+  socket!.emit('sendMessage', messageData);
   socket!.emit('newThread', {
     'receiverid': receiverId
   });
@@ -514,6 +592,7 @@ void deleteMessage(String id,receiverId,String senderId ){
   });
   removeMessageById(id);
 }
+
 
 
 Future<void>markAsUnread(String userid,String otherUserid,BuildContext context)async{

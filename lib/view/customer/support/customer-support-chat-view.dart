@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
@@ -18,6 +16,11 @@ import 'package:sugudeni/utils/global-functions.dart';
 import 'package:sugudeni/utils/sharePreference/save-user-token.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../chat/select-order-modal.dart';
+import '../chat/select-product-modal.dart';
+import '../chat/chat-attachment-card.dart';
+import '../../../models/orders/GetAllOrdersCutomerModel.dart';
+import '../../../repositories/orders/customer-order-repository.dart';
 
 class CustomerSupportChatView extends StatefulWidget {
   const CustomerSupportChatView({super.key});
@@ -32,6 +35,7 @@ class _CustomerSupportChatViewState extends State<CustomerSupportChatView> {
 
   String? currentUserId;
   bool _isInitialized = false;
+  GetCustomerAllOrderResponseModel? _cachedOrders;
 
   @override
   void initState() {
@@ -53,11 +57,16 @@ class _CustomerSupportChatViewState extends State<CustomerSupportChatView> {
         // Connect to socket if not already connected
         chatProvider.connectSocketInInitial(context);
 
-        // Get chat history between current user and admin
-        await chatProvider.getChatHistory(context, adminUserId, currentUserId!);
+        // Get chat history between current user and admin (only once)
+        if (chatProvider.chatHistoryResponse == null) {
+          await chatProvider.getChatHistory(context, adminUserId, currentUserId!);
+        }
 
         // Connect socket for this conversation
         chatProvider.connectSocket(adminUserId, currentUserId!, context);
+        
+        // Pre-load orders data to prevent reloads
+        _loadOrdersData();
 
         setState(() {
           _isInitialized = true;
@@ -235,24 +244,79 @@ class _CustomerSupportChatViewState extends State<CustomerSupportChatView> {
                         ),
                       ),
                       5.width,
-                      messageData.contentType.isEmpty
-                          ? Flexible(
-                              child: Container(
-                                margin: EdgeInsets.symmetric(vertical: 5.h),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(5.sp),
-                                  color: whiteColor,
-                                  border: Border.all(color: primaryColor, width: 1),
-                                ),
-                                child: Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 10.h),
-                                  child: MyText(
-                                    text: messageData.message,
-                                    color: blackColor,
-                                    fontWeight: FontWeight.w500,
-                                    size: 11.sp,
-                                    overflow: TextOverflow.clip,
+                      messageData.attachment == true
+                          ? ChatAttachmentCard(
+                              message: messageData,
+                              isSender: false,
+                              cachedOrders: _cachedOrders,
+                            )
+                          : messageData.contentType.isEmpty
+                              ? Flexible(
+                                  child: Container(
+                                    margin: EdgeInsets.symmetric(vertical: 5.h),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(5.sp),
+                                      color: whiteColor,
+                                      border: Border.all(color: primaryColor, width: 1),
+                                    ),
+                                    child: Padding(
+                                      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 10.h),
+                                      child: MyText(
+                                        text: messageData.message,
+                                        color: blackColor,
+                                        fontWeight: FontWeight.w500,
+                                        size: 11.sp,
+                                        overflow: TextOverflow.clip,
+                                      ),
+                                    ),
                                   ),
+                                )
+                              : Padding(
+                                  padding: const EdgeInsets.only(top: 8.0),
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => _buildImageViewer("${ApiEndpoints.productUrl}/${messageData.contentURL}"),
+                                        ),
+                                      );
+                                    },
+                                    child: MyCachedNetworkImage(
+                                      imageUrl: "${ApiEndpoints.productUrl}/${messageData.contentURL}",
+                                      height: 200.h,
+                                      width: 200.w,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                ),
+                    ],
+                  ),
+                )
+              : Align(
+                  alignment: Alignment.centerRight,
+                  child: messageData.attachment == true
+                      ? ChatAttachmentCard(
+                          message: messageData,
+                          isSender: true,
+                          cachedOrders: _cachedOrders,
+                        )
+                      : messageData.contentType.isEmpty
+                          ? Container(
+                              margin: EdgeInsets.symmetric(vertical: 5.h),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(5.sp),
+                                color: whiteColor,
+                                border: Border.all(color: const Color(0xffD5FF00), width: 1),
+                              ),
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 15.h),
+                                child: MyText(
+                                  text: messageData.message,
+                                  color: blackColor,
+                                  fontWeight: FontWeight.w500,
+                                  size: 11.sp,
+                                  overflow: TextOverflow.clip,
                                 ),
                               ),
                             )
@@ -275,49 +339,6 @@ class _CustomerSupportChatViewState extends State<CustomerSupportChatView> {
                                 ),
                               ),
                             ),
-                    ],
-                  ),
-                )
-              : Align(
-                  alignment: Alignment.centerRight,
-                  child: messageData.contentType.isEmpty
-                      ? Container(
-                          margin: EdgeInsets.symmetric(vertical: 5.h),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(5.sp),
-                            color: whiteColor,
-                            border: Border.all(color: const Color(0xffD5FF00), width: 1),
-                          ),
-                          child: Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 15.h),
-                            child: MyText(
-                              text: messageData.message,
-                              color: blackColor,
-                              fontWeight: FontWeight.w500,
-                              size: 11.sp,
-                              overflow: TextOverflow.clip,
-                            ),
-                          ),
-                        )
-                      : Padding(
-                          padding: const EdgeInsets.only(top: 8.0),
-                          child: GestureDetector(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => _buildImageViewer("${ApiEndpoints.productUrl}/${messageData.contentURL}"),
-                                ),
-                              );
-                            },
-                            child: MyCachedNetworkImage(
-                              imageUrl: "${ApiEndpoints.productUrl}/${messageData.contentURL}",
-                              height: 200.h,
-                              width: 200.w,
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                        ),
                 );
         },
       ),
@@ -350,24 +371,24 @@ class _CustomerSupportChatViewState extends State<CustomerSupportChatView> {
                 ? Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // GestureDetector(
-                      //   onTap: () {
-                      //     provider.toggle();
-                      //   },
-                      //   child: Container(
-                      //     height: 42.h,
-                      //     width: 58.w,
-                      //     decoration: BoxDecoration(
-                      //       color: primaryColor,
-                      //       borderRadius: BorderRadius.circular(10.r),
-                      //     ),
-                      //     child: const Icon(
-                      //       Icons.add,
-                      //       color: whiteColor,
-                      //       size: 20,
-                      //     ),
-                      //   ),
-                      // ),
+                      GestureDetector(
+                        onTap: () {
+                          provider.toggle();
+                        },
+                        child: Container(
+                          height: 42.h,
+                          width: 58.w,
+                          decoration: BoxDecoration(
+                            color: primaryColor,
+                            borderRadius: BorderRadius.circular(10.r),
+                          ),
+                          child: const Icon(
+                            Icons.add,
+                            color: whiteColor,
+                            size: 20,
+                          ),
+                        ),
+                      ),
                       7.width,
                       Flexible(
                         child: TextFormField(
@@ -491,29 +512,41 @@ class _CustomerSupportChatViewState extends State<CustomerSupportChatView> {
                             ],
                           ),
                         ),
-                        Column(
-                          spacing: 10.h,
-                          children: [
-                            Image.asset(AppAssets.productChatImg, scale: 3),
-                            MyText(
-                              text: AppLocalizations.of(context)!.products,
-                              size: 10.sp,
-                              fontWeight: FontWeight.w500,
-                              color: const Color(0xff545454),
-                            ),
-                          ],
+                        GestureDetector(
+                          onTap: () {
+                            provider.toggle(); // Close bottom sheet
+                            _showProductSelectionModal(context);
+                          },
+                          child: Column(
+                            spacing: 10.h,
+                            children: [
+                              Image.asset(AppAssets.productChatImg, scale: 3),
+                              MyText(
+                                text: AppLocalizations.of(context)!.products,
+                                size: 10.sp,
+                                fontWeight: FontWeight.w500,
+                                color: const Color(0xff545454),
+                              ),
+                            ],
+                          ),
                         ),
-                        Column(
-                          spacing: 10.h,
-                          children: [
-                            Image.asset(AppAssets.ordersChatImg, scale: 3),
-                            MyText(
-                              text: AppLocalizations.of(context)!.orders,
-                              size: 10.sp,
-                              fontWeight: FontWeight.w500,
-                              color: const Color(0xff545454),
-                            ),
-                          ],
+                        GestureDetector(
+                          onTap: () {
+                            provider.toggle(); // Close bottom sheet
+                            _showOrderSelectionModal(context);
+                          },
+                          child: Column(
+                            spacing: 10.h,
+                            children: [
+                              Image.asset(AppAssets.ordersChatImg, scale: 3),
+                              MyText(
+                                text: AppLocalizations.of(context)!.orders,
+                                size: 10.sp,
+                                fontWeight: FontWeight.w500,
+                                color: const Color(0xff545454),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
@@ -521,6 +554,78 @@ class _CustomerSupportChatViewState extends State<CustomerSupportChatView> {
                 ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showOrderSelectionModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => SelectOrderModal(
+        onOrderSelected: (order) {
+          final chatProvider = context.read<ChatSocketProvider>();
+          // Ensure message controller is clear for attachment
+          chatProvider.messageController.clear();
+          
+          // Create attachment data
+          Map<String, dynamic> attachmentData = {
+            'attachmentType': 'order',
+            'orderid': order.id,
+          };
+          
+          customPrint('Sending order attachment - orderId: ${order.id}');
+          
+          chatProvider.sendMessage(
+            adminUserId,
+            currentUserId!,
+            attachment: true,
+            attachmentData: attachmentData,
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _loadOrdersData() async {
+    try {
+      _cachedOrders = await CustomerOrderRepository.allCustomersOrders(context);
+      if (mounted) {
+        setState(() {});
+      }
+    } catch (e) {
+      customPrint('Error loading orders: $e');
+    }
+  }
+
+  void _showProductSelectionModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => SelectProductModal(
+        onProductSelected: (orderId, productId) {
+          final chatProvider = context.read<ChatSocketProvider>();
+          // Ensure message controller is clear for attachment
+          chatProvider.messageController.clear();
+          
+          // Create attachment data
+          Map<String, dynamic> attachmentData = {
+            'attachmentType': 'product',
+            'orderid': orderId,
+            'productid': productId,
+          };
+          
+          customPrint('Sending product attachment - orderId: $orderId, productId: $productId');
+          
+          chatProvider.sendMessage(
+            adminUserId,
+            currentUserId!,
+            attachment: true,
+            attachmentData: attachmentData,
+          );
+        },
       ),
     );
   }

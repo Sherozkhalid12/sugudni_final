@@ -1,17 +1,13 @@
-import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:mime/mime.dart';
 import 'package:provider/provider.dart';
-import 'package:socket_io_client/socket_io_client.dart';
 import 'package:sugudeni/api/api-endpoints.dart';
 import 'package:sugudeni/models/messages/ChatHistoryModel.dart';
 import 'package:sugudeni/providers/chatSocketProvider/chat-socket-provider.dart';
 import 'package:sugudeni/providers/customer-chat-add-doc-provider.dart';
-import 'package:sugudeni/repositories/messages/seller-messages-repository.dart';
 import 'package:sugudeni/utils/constants/app-assets.dart';
 import 'package:sugudeni/utils/customWidgets/cached-network-image.dart';
 import 'package:sugudeni/utils/customWidgets/my-text.dart';
@@ -20,14 +16,16 @@ import 'package:sugudeni/utils/extensions/dialog-extension.dart';
 import 'package:sugudeni/utils/extensions/sizebox.dart';
 import 'package:sugudeni/utils/global-functions.dart';
 import 'package:sugudeni/utils/customWidgets/shimmer-widgets.dart';
-import 'package:socket_io_client/socket_io_client.dart' as IO;
-import 'package:sugudeni/utils/sharePreference/save-user-token.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../utils/constants/colors.dart';
-import '../../../utils/routes/routes-name.dart';
 import '../products/seller-my-products-view.dart';
 import '../orders/seller-orders-view.dart';
+import '../../customer/chat/select-order-modal.dart';
+import '../../customer/chat/select-product-modal.dart';
+import '../../customer/chat/chat-attachment-card.dart';
+import '../../../models/orders/GetAllOrdersCutomerModel.dart';
+import '../../../repositories/orders/customer-order-repository.dart';
 
 class SellerMessageDetailView extends StatefulWidget {
   final String receiverName;
@@ -40,6 +38,9 @@ class SellerMessageDetailView extends StatefulWidget {
 }
 
 class _SellerMessageDetailViewState extends State<SellerMessageDetailView> {
+  GetCustomerAllOrderResponseModel? _cachedOrders;
+  bool _ordersLoaded = false;
+
   @override
   void initState() {
     super.initState();
@@ -63,7 +64,95 @@ class _SellerMessageDetailViewState extends State<SellerMessageDetailView> {
       
       // Mark as unread
       chatProvider.markAsUnread(widget.senderId, widget.receiverId, context);
+      
+      // Pre-load orders data for customer side chats
+      _loadOrdersData();
     });
+  }
+
+  Future<void> _loadOrdersData() async {
+    if (_ordersLoaded) return;
+    try {
+      _cachedOrders = await CustomerOrderRepository.allCustomersOrders(context);
+      if (mounted) {
+        setState(() {
+          _ordersLoaded = true;
+        });
+      }
+    } catch (e) {
+      customPrint('Error loading orders: $e');
+    }
+  }
+
+  void _showOrderSelectionModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => SelectOrderModal(
+        onOrderSelected: (order) {
+          final chatProvider = context.read<ChatSocketProvider>();
+          final mediaProvider = context.read<SellerChatAddDocProvider>();
+          
+          // Close bottom sheet
+          mediaProvider.reset();
+          
+          // Ensure message controller is clear for attachment
+          chatProvider.messageController.clear();
+          
+          // Create attachment data
+          Map<String, dynamic> attachmentData = {
+            'attachmentType': 'order',
+            'orderid': order.id,
+          };
+          
+          customPrint('Sending order attachment - orderId: ${order.id}');
+          
+          chatProvider.sendMessage(
+            widget.receiverId,
+            widget.senderId,
+            attachment: true,
+            attachmentData: attachmentData,
+          );
+        },
+      ),
+    );
+  }
+
+  void _showProductSelectionModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => SelectProductModal(
+        onProductSelected: (orderId, productId) {
+          final chatProvider = context.read<ChatSocketProvider>();
+          final mediaProvider = context.read<SellerChatAddDocProvider>();
+          
+          // Close bottom sheet
+          mediaProvider.reset();
+          
+          // Ensure message controller is clear for attachment
+          chatProvider.messageController.clear();
+          
+          // Create attachment data
+          Map<String, dynamic> attachmentData = {
+            'attachmentType': 'product',
+            'orderid': orderId,
+            'productid': productId,
+          };
+          
+          customPrint('Sending product attachment - orderId: $orderId, productId: $productId');
+          
+          chatProvider.sendMessage(
+            widget.receiverId,
+            widget.senderId,
+            attachment: true,
+            attachmentData: attachmentData,
+          );
+        },
+      ),
+    );
   }
 
 
@@ -153,11 +242,53 @@ class _SellerMessageDetailViewState extends State<SellerMessageDetailView> {
                         itemCount: chatProvider.chatHistoryResponse!.chat.length,
                         scrollDirection: Axis.vertical,
                         controller: chatProvider.scrollController,
+                        reverse: true, // Newest messages at bottom
+                        physics: const BouncingScrollPhysics(),
                         itemBuilder: (context,index){
-                          var sortedMessages = chatProvider.chatHistoryResponse!.chat
-                            ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+                          // Sort messages newest first for proper chat flow
+                          var sortedMessages = List<ChatMessage>.from(chatProvider.chatHistoryResponse!.chat)
+                            ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
                           var messageData=sortedMessages[index];
                           bool isSender=messageData.senderId==widget.senderId;
+                          
+                          // Check if message has attachment
+                          if (messageData.attachment == true) {
+                            return isSender == false
+                                ? Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Row(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Container(
+                                          height: 40.h,
+                                          width: 40.w,
+                                          decoration: const BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              color: roundProfileColor
+                                          ),
+                                          child: Center(
+                                            child: MyText(text: firstTwoLetters(widget.receiverName),color: whiteColor,size: 12.sp,fontWeight: FontWeight.w600),
+                                          ),
+                                        ),
+                                        5.width,
+                                        ChatAttachmentCard(
+                                          message: messageData,
+                                          isSender: false,
+                                          cachedOrders: _cachedOrders,
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                                : Align(
+                                    alignment: Alignment.centerRight,
+                                    child: ChatAttachmentCard(
+                                      message: messageData,
+                                      isSender: true,
+                                      cachedOrders: _cachedOrders,
+                                    ),
+                                  );
+                          }
+                          
                           return isSender==false?
                           Align(
                             alignment: Alignment.centerLeft,
@@ -334,65 +465,67 @@ class _SellerMessageDetailViewState extends State<SellerMessageDetailView> {
                               7.width,
                               
                             ],
-                            Flexible(
-                                child: TextFormField(
-                                  controller: chatProvider.messageController,
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.w500,
-                                      fontSize: 10.sp,
-                                      color: const Color(0xff545454)
+                            // Hide text field and send button when bottom sheet is open
+                            if (!provider.isOpenDoc) ...[
+                              Flexible(
+                                  child: TextFormField(
+                                    controller: chatProvider.messageController,
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.w500,
+                                        fontSize: 10.sp,
+                                        color: const Color(0xff545454)
+                                    ),
+                                    decoration: InputDecoration(
+                                      hintText: AppLocalizations.of(context)!.typeyourmessage,
+                                      //suffixIcon: Image.asset(AppAssets.emojiIcon,scale: 2,),
+                                      hintStyle: TextStyle(
+                                          fontWeight: FontWeight.w500,color: const Color(0xff545454)
+                                    ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12.r),
+                                        borderSide: const BorderSide(
+                                          color: primaryColor,
+
+                                        ),
+                                      ),
+                                      enabledBorder:OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12.r),
+                                        borderSide: const BorderSide(
+                                          color: primaryColor,
+
+                                        ),
+                                      ) ,
+                                      focusedBorder:OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12.r),
+                                        borderSide: const BorderSide(
+                                          color: primaryColor,
+                                        ),
+                                      ),
+                                    ),
+                                  )),
+                              7.width,
+                              GestureDetector(
+                                onTap: (){
+                                  if(mediaProvider.image==null){
+                                     chatProvider.sendMessage(widget.receiverId, widget.senderId);
+
+                                  }else{
+                                    chatProvider.sendMedia(widget.receiverId, widget.senderId, context);
+
+                                  }
+
+                                },
+                                child: Container(
+                                  height: 42.h,
+                                  width: 58.w,
+                                  decoration: BoxDecoration(
+                                      color: primaryColor,
+                                      borderRadius: BorderRadius.circular(10.r),
+                                      image: const DecorationImage(image: AssetImage(AppAssets.sendIcon),scale: 3)
                                   ),
-                                  decoration: InputDecoration(
-                                    hintText: AppLocalizations.of(context)!.typeyourmessage,
-                                    //suffixIcon: Image.asset(AppAssets.emojiIcon,scale: 2,),
-                                    hintStyle: TextStyle(
-                                        fontWeight: FontWeight.w500,color: const Color(0xff545454)
-                                    ),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12.r),
-                                      borderSide: const BorderSide(
-                                        color: primaryColor,
-
-                                      ),
-                                    ),
-                                    enabledBorder:OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12.r),
-                                      borderSide: const BorderSide(
-                                        color: primaryColor,
-
-                                      ),
-                                    ) ,
-                                    focusedBorder:OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12.r),
-                                      borderSide: const BorderSide(
-                                        color: primaryColor,
-                                      ),
-                                    ),
-                                  ),
-                                )),
-                            7.width,
-                            provider.isOpenDoc==false?
-                            GestureDetector(
-                              onTap: (){
-                                if(mediaProvider.image==null){
-                                   chatProvider.sendMessage(widget.receiverId, widget.senderId);
-
-                                }else{
-                                  chatProvider.sendMedia(widget.receiverId, widget.senderId, context);
-
-                                }
-
-                              },
-                              child: Container(
-                                height: 42.h,
-                                width: 58.w,
-                                decoration: BoxDecoration(
-                                    color: primaryColor,
-                                    borderRadius: BorderRadius.circular(10.r),
-                                    image: const DecorationImage(image: AssetImage(AppAssets.sendIcon),scale: 3)
                                 ),
                               ),
-                            ):const SizedBox(),
+                            ],
                           ],
                         ),
 
@@ -427,13 +560,21 @@ class _SellerMessageDetailViewState extends State<SellerMessageDetailView> {
                             ),
                             GestureDetector(
                               onTap: () {
-                                mediaProvider.reset(); // Close the options menu
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => SellerMyProductsView(),
-                                  ),
-                                );
+                                // For customer side chats, show product selection modal
+                                // For seller side chats, navigate to products view
+                                if (widget.senderId != widget.receiverId) {
+                                  // Customer side - show modal
+                                  _showProductSelectionModal(context);
+                                } else {
+                                  // Seller side - navigate
+                                  mediaProvider.reset();
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => SellerMyProductsView(),
+                                    ),
+                                  );
+                                }
                               },
                               child: Column(
                                 spacing: 10.h,
@@ -445,13 +586,21 @@ class _SellerMessageDetailViewState extends State<SellerMessageDetailView> {
                             ),
                             GestureDetector(
                               onTap: () {
-                                mediaProvider.reset(); // Close the options menu
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => SellerOrderView(),
-                                  ),
-                                );
+                                // For customer side chats, show order selection modal
+                                // For seller side chats, navigate to orders view
+                                if (widget.senderId != widget.receiverId) {
+                                  // Customer side - show modal
+                                  _showOrderSelectionModal(context);
+                                } else {
+                                  // Seller side - navigate
+                                  mediaProvider.reset();
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => SellerOrderView(),
+                                    ),
+                                  );
+                                }
                               },
                               child: Column(
                                 spacing: 10.h,

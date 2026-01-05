@@ -58,9 +58,6 @@ class CustomerSettingView extends StatelessWidget {
                       context.read<CartProvider>().clearResources();
                       Navigator.pushNamed(context, RoutesNames.customerAddressView);
                     }),
-                    CustomerSettingWidget(title: AppLocalizations.of(context)!.paymentmethod, onPressed: (){
-                      Navigator.pushNamed(context, RoutesNames.customerPaymentMethodsView);
-                    }),
                     CustomerSettingWidget(title: AppLocalizations.of(context)!.termsandcondition, onPressed: (){
                       Navigator.pushNamed(context, RoutesNames.customerTermAndConditionView);
                     }),

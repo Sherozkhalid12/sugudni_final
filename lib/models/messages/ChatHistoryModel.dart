@@ -33,6 +33,8 @@ class ChatMessage {
   final String contentURL;
   final String contentType;
   final bool liked;
+  final bool? attachment;
+  final Map<String, dynamic>? attachmentData;
 
   ChatMessage({
     required this.id,
@@ -49,6 +51,8 @@ class ChatMessage {
     required this.contentURL,
     required this.contentType,
     required this.liked,
+    this.attachment,
+    this.attachmentData,
   });
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) {
@@ -56,17 +60,31 @@ class ChatMessage {
       id: json['_id'] as String,
       senderId: json['senderid'] as String,
       receiverId: json['receiverid'] as String,
-      message: json['message'] as String,
-      likedBy: json['likedBy'] as List<dynamic>,
-      replyOf: json['replyof'] as List<dynamic>,
-      read: json['read'] as bool,
-      delivered: json['delivered'] as bool,
-      seen: json['seen'] as bool,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
-      contentURL: json['media']??'',
-      contentType: json['contentType'] ?? '',
-      liked: json['liked'] as bool,
+      message: json['message'] as String? ?? '',
+      likedBy: json['likedBy'] as List<dynamic>? ?? [],
+      replyOf: json['replyof'] as List<dynamic>? ?? [],
+      read: json['read'] as bool? ?? false,
+      delivered: json['delivered'] as bool? ?? false,
+      seen: json['seen'] as bool? ?? false,
+      createdAt: json['createdAt'] != null 
+          ? (json['createdAt'] is String 
+              ? DateTime.parse(json['createdAt'] as String)
+              : DateTime.parse(json['createdAt'].toString()))
+          : DateTime.now(),
+      updatedAt: json['updatedAt'] != null
+          ? (json['updatedAt'] is String
+              ? DateTime.parse(json['updatedAt'] as String)
+              : DateTime.parse(json['updatedAt'].toString()))
+          : DateTime.now(),
+      contentURL: json['media'] as String? ?? '',
+      contentType: json['contentType'] as String? ?? '',
+      liked: json['liked'] as bool? ?? false,
+      attachment: json['attachment'] as bool? ?? false,
+      attachmentData: json['attachmentData'] != null
+          ? (json['attachmentData'] is Map
+              ? Map<String, dynamic>.from(json['attachmentData'] as Map)
+              : null)
+          : null,
     );
   }
 
@@ -86,6 +104,8 @@ class ChatMessage {
       'media': contentURL,
       'contentType': contentType,
       'liked': liked,
+      'attachment': attachment ?? false,
+      'attachmentData': attachmentData,
     };
   }
 }

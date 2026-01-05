@@ -681,20 +681,18 @@ class _WebViewScreenState extends State<WebViewScreen> {
           Navigator.of(context).pop();
         }
 
-        // Navigate to success page
+        // Navigate directly to home screen after successful payment
+        // Skip the intermediate payment confirmation screen
         Future.delayed(const Duration(milliseconds: 300), () {
           if (!mounted) return;
           try {
             Navigator.pushNamedAndRemoveUntil(
               context,
-              RoutesNames.customerPayAtYourAddressView,
-              (route) =>
-                  route.settings.name == RoutesNames.customerBottomNav ||
-                  route.settings.name ==
-                      RoutesNames.customerPayAtYourAddressView,
+              RoutesNames.customerBottomNav,
+              (route) => false, // Clear all routes and go to bottom nav
             );
           } catch (e) {
-            global.customPrint('Error navigating to success page: $e');
+            global.customPrint('Error navigating to home screen: $e');
           }
         });
       } catch (e) {
