@@ -148,10 +148,6 @@ class SocialProvider extends ChangeNotifier{
     final roleProvider=Provider.of<SelectRoleProvider>(context,listen: false);
 
     try {
-      // Generate nonce
-      final rawNonce = generateNonce();
-      final nonce = sha256ofString(rawNonce);
-
       // Request Apple Sign-In credentials
       final appleCredential = await SignInWithApple.getAppleIDCredential(
         scopes: [
@@ -180,7 +176,7 @@ class SocialProvider extends ChangeNotifier{
         if (userCredential.additionalUserInfo?.isNewUser ?? false) {
           DocumentSnapshot data=await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).get();
           if(data.exists){
-            String role=data['role'];
+            String role=data['role'] as String? ?? 'user';
             var model=AppleLoginModel(
                firstname: '',
                 lastname: '',
@@ -189,15 +185,32 @@ class SocialProvider extends ChangeNotifier{
                 email: userCredential.user!.email!,
                 role: role);
             await SocialAuthRepository.loginWithApple(model, context).then((v)async{
-              await saveUserId(v.user.id);
-              await saveSessionToken(v.token);
-              await saveUserType(role);
+              if (v != null && v.user?.id != null && v.token != null) {
+                await saveUserId(v.user.id);
+                await saveSessionToken(v.token);
+                await saveUserType(role);
 
-              // Reset bottom navigation to home tab for customers
-            if (role == UserRoles.customer) {
-              Provider.of<BottomNavigationProvider>(context, listen: false).setIndex(0);
-            }
-            navigateBasedOnRole(role, context);
+                // Reset bottom navigation to home tab for customers
+                if (role == UserRoles.customer) {
+                  Provider.of<BottomNavigationProvider>(context, listen: false).setIndex(0);
+                }
+                navigateBasedOnRole(role, context);
+              } else {
+                print("Invalid API response: $v");
+                showSnackbar(context, "Login failed: Invalid server response",
+                    color: redColor);
+              }
+            }).catchError((e) {
+              print("Error in API call: $e");
+              String errorMessage = e.toString();
+              if (errorMessage.toLowerCase().contains('email already in use') || 
+                  errorMessage.toLowerCase().contains('email already')) {
+                showSnackbar(context, 
+                    "This email is already registered. Please try signing in instead.", 
+                    color: redColor);
+              } else {
+                showSnackbar(context, "Login failed: $e", color: redColor);
+              }
             });
           }
           else{
@@ -216,22 +229,31 @@ class SocialProvider extends ChangeNotifier{
                   email: userCredential.user!.email!,
                   role: roleProvider.selectedRole);
               await SocialAuthRepository.loginWithApple(model, context).then((v)async{
-                await saveUserId(v.user.id);
-                await saveSessionToken(v.token);
-                await saveUserType(roleProvider.selectedRole);
+                if (v != null && v.user?.id != null && v.token != null) {
+                  await saveUserId(v.user.id);
+                  await saveSessionToken(v.token);
+                  await saveUserType(roleProvider.selectedRole);
 
-                // Reset bottom navigation to home tab for customers
-              if (roleProvider.selectedRole == UserRoles.customer) {
-                Provider.of<BottomNavigationProvider>(context, listen: false).setIndex(0);
-              }
-              navigateBasedOnRole(roleProvider.selectedRole, context);
+                  // Reset bottom navigation to home tab for customers
+                  if (roleProvider.selectedRole == UserRoles.customer) {
+                    Provider.of<BottomNavigationProvider>(context, listen: false).setIndex(0);
+                  }
+                  navigateBasedOnRole(roleProvider.selectedRole, context);
+                } else {
+                  print("Invalid API response: $v");
+                  showSnackbar(context, "Login failed: Invalid server response",
+                      color: redColor);
+                }
+              }).catchError((e) {
+                print("Error in API call: $e");
+                showSnackbar(context, "Login failed: $e", color: redColor);
               });
             });
           }
         } else {
           DocumentSnapshot data=await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).get();
           if(data.exists){
-            String role=data['role'];
+            String role=data['role'] as String? ?? 'user';
             var model=AppleLoginModel(
                 firstname: '',
                 lastname: '',
@@ -240,16 +262,82 @@ class SocialProvider extends ChangeNotifier{
                 email: userCredential.user!.email!,
                 role: role);
             await SocialAuthRepository.loginWithApple(model, context).then((v)async{
-              await saveUserId(v.user.id);
-              await saveSessionToken(v.token);
-              await saveUserType(role);
-              // Reset bottom navigation to home tab for customers
-            if (role == UserRoles.customer) {
-              Provider.of<BottomNavigationProvider>(context, listen: false).setIndex(0);
-            }
-            navigateBasedOnRole(role, context);
-            });}
-          print('Existing Apple user signeasdasdd in!');
+              if (v != null && v.user?.id != null && v.token != null) {
+                await saveUserId(v.user.id);
+                await saveSessionToken(v.token);
+                await saveUserType(role);
+                // Reset bottom navigation to home tab for customers
+                if (role == UserRoles.customer) {
+                  Provider.of<BottomNavigationProvider>(context, listen: false).setIndex(0);
+                }
+                navigateBasedOnRole(role, context);
+              } else {
+                print("Invalid API response: $v");
+                showSnackbar(context, "Login failed: Invalid server response",
+                    color: redColor);
+              }
+            }).catchError((e) {
+              print("Error in API call: $e");
+              String errorMessage = e.toString();
+              if (errorMessage.toLowerCase().contains('email already in use') || 
+                  errorMessage.toLowerCase().contains('email already')) {
+                // Email is registered with a different account/provider
+                showSnackbar(context, 
+                    "This email is already registered. Please try signing in instead.", 
+                    color: redColor);
+              } else {
+                showSnackbar(context, "Login failed: $e", color: redColor);
+              }
+            });
+            print('Existing Apple user signed in!');
+          } else {
+            // User doesn't exist in Firestore but is on sign-up screen - create account
+            await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set({
+              "firstname": '',
+              "lastname": '',
+              "name": appleCredential.givenName ?? '',
+              "appleId": userCredential.user!.uid,
+              "role": roleProvider.selectedRole,
+            }).then((v)async{
+              var model=AppleLoginModel(
+                  firstname: '',
+                  lastname: '',
+                  name: appleCredential.givenName ?? '',
+                  appleId:userCredential.user!.uid ,
+                  email: userCredential.user!.email!,
+                  role: roleProvider.selectedRole);
+              await SocialAuthRepository.loginWithApple(model, context).then((v)async{
+                if (v != null && v.user?.id != null && v.token != null) {
+                  await saveUserId(v.user.id);
+                  await saveSessionToken(v.token);
+                  await saveUserType(roleProvider.selectedRole);
+
+                  // Reset bottom navigation to home tab for customers
+                  if (roleProvider.selectedRole == UserRoles.customer) {
+                    Provider.of<BottomNavigationProvider>(context, listen: false).setIndex(0);
+                  }
+                  navigateBasedOnRole(roleProvider.selectedRole, context);
+                } else {
+                  print("Invalid API response: $v");
+                  showSnackbar(context, "Sign up failed: Invalid server response",
+                      color: redColor);
+                }
+              }).catchError((e) {
+                print("Error in API call: $e");
+                String errorMessage = e.toString();
+                if (errorMessage.toLowerCase().contains('email already in use') || 
+                    errorMessage.toLowerCase().contains('email already')) {
+                  // Email is already registered - suggest login instead
+                  showSnackbar(context, 
+                      "This email is already registered. Please try signing in instead.", 
+                      color: redColor);
+                } else {
+                  showSnackbar(context, "Sign up failed: $e", color: redColor);
+                }
+              });
+            });
+            print('Creating new account for Apple user.');
+          }
         }
 
         // Navigate to main screen
@@ -267,10 +355,6 @@ class SocialProvider extends ChangeNotifier{
     final roleProvider = Provider.of<SelectRoleProvider>(context, listen: false);
 
     try {
-      // Generate nonce
-      final rawNonce = generateNonce();
-      final nonce = sha256ofString(rawNonce);
-
       // Request Apple Sign-In credentials
       final appleCredential = await SignInWithApple.getAppleIDCredential(
         scopes: [

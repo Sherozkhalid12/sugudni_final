@@ -404,6 +404,12 @@ abstract class AppLocalizations {
   /// **'Merchandise Subtotal'**
   String get merchandisesubtotal;
 
+  /// No description provided for @item.
+  ///
+  /// In en, this message translates to:
+  /// **'Item'**
+  String get item;
+
   /// No description provided for @items.
   ///
   /// In en, this message translates to:

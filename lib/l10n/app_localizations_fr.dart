@@ -169,6 +169,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get merchandisesubtotal => 'Merchandise Subtotal';
 
   @override
+  String get item => 'Article';
+
+  @override
   String get items => 'articles';
 
   @override

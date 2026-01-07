@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:provider/provider.dart';
 import 'package:sugudeni/api/api-endpoints.dart';
 import 'package:sugudeni/repositories/products/product-repository.dart';
-import 'package:sugudeni/utils/constants/app-assets.dart';
-
-import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-
 import 'package:sugudeni/utils/constants/app-assets.dart';
 import 'package:sugudeni/utils/constants/colors.dart';
 import 'package:sugudeni/utils/customWidgets/cached-network-image.dart';
@@ -17,6 +14,7 @@ import 'package:sugudeni/utils/extensions/sizebox.dart';
 import 'package:sugudeni/utils/product-status.dart';
 import 'package:sugudeni/utils/routes/routes-name.dart';
 import 'package:sugudeni/view/customer/products/customer-all-products-view.dart';
+import 'package:sugudeni/providers/products/customer/all-customer-products.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../utils/global-functions.dart';
@@ -87,6 +85,10 @@ class ShopNowStylishGrid extends StatelessWidget {
                     children: [
                       GestureDetector(
                         onTap: (){
+                          // Clear search before navigating
+                          final productProvider = Provider.of<CustomerFetchProductProvider>(context, listen: false);
+                          productProvider.clearValues();
+                          productProvider.clearResources();
                           Navigator.push(context, MaterialPageRoute(builder: (context)=>const CustomerAllProductsView()));
                         },
                         child: Container(

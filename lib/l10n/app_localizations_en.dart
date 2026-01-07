@@ -166,6 +166,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get merchandisesubtotal => 'Merchandise Subtotal';
 
   @override
+  String get item => 'Item';
+
+  @override
   String get items => 'items';
 
   @override

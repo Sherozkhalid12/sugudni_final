@@ -37,6 +37,11 @@ class _CustomerAllProductsViewState extends State<CustomerAllProductsView> {
     super.initState();
     productProvider = Provider.of<CustomerFetchProductProvider>(context, listen: false);
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Clear search if not coming from search
+      if (widget.isComeFromSearch != true) {
+        productProvider.clearValues();
+        productProvider.clearResources();
+      }
       widget.isComeFromSearch==true?  _focusNode.requestFocus():null;
       // Defer fetchActiveProducts to avoid calling setState during build
       productProvider.fetchActiveProducts(context);
