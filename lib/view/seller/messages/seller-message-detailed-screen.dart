@@ -147,31 +147,10 @@ class _SellerMessageDetailViewState extends State<SellerMessageDetailView> {
           chatProvider.messageController.clear();
           
           // Create attachment data - for product, productid is the actual product id, orderid is empty string
-          // Include full product object for optimistic display
           Map<String, dynamic> attachmentData = {
             'attachmentType': 'product',
             'orderid': '', // Empty string when sending product
             'productid': productId,
-            'product': {
-              '_id': product.id, // Use _id to match Product.fromJson expectations
-              'title': product.title,
-              'imgCover': product.imgCover,
-              'price': product.price,
-              'priceAfterDiscount': product.priceAfterDiscount,
-              'description': product.description,
-              'quantity': product.quantity,
-              'sold': product.sold,
-              'status': product.status,
-              'sku': product.sku,
-              'supplier_name': product.supplierName, // Use snake_case to match Product.fromJson
-              'brand': product.brand,
-              'weight': product.weight,
-              'color': product.color,
-              'size': product.size,
-              'images': product.images,
-              'createdAt': product.createdAt.toIso8601String(),
-              'updatedAt': product.updatedAt.toIso8601String(),
-            },
           };
           
           customPrint('Sending product attachment - productId: $productId');
@@ -565,88 +544,32 @@ class _SellerMessageDetailViewState extends State<SellerMessageDetailView> {
 
                         // Hide media options for support chat
                         (!isSupportChat && provider.isOpenDoc)
-                        ? Column(
+                        ? Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
-                            // Cancel button at the top
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: GestureDetector(
-                                onTap: (){
-                                  provider.toggle();
-                                  // Clear any selected image when canceling
-                                  provider.reset();
-                                },
-                                child: Padding(
-                                  padding: EdgeInsets.only(bottom: 10.h),
-                                  child: Image.asset(AppAssets.cancelIcon, scale: 1.3),
-                                ),
+                            GestureDetector(
+                              onTap: (){
+                                provider.pickImage(ImageSource.camera);
+                              },
+                              child: Column(
+                                spacing: 10.h,
+                                children: [
+                                  Image.asset(AppAssets.cameraImg,scale: 3,),
+                                  MyText(text: AppLocalizations.of(context)!.camera,size: 10.sp,fontWeight: FontWeight.w500,color: const Color(0xff545454),)
+                                ],
                               ),
                             ),
-                            // Bottom sheet options
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                GestureDetector(
-                                  onTap: (){
-                                    provider.pickImage(ImageSource.camera);
-                                  },
-                                  child: Column(
-                                    spacing: 10.h,
-                                    children: [
-                                      Image.asset(AppAssets.cameraImg,scale: 3,),
-                                      MyText(text: AppLocalizations.of(context)!.camera,size: 10.sp,fontWeight: FontWeight.w500,color: const Color(0xff545454),)
-                                    ],
-                                  ),
-                                ),
-                                GestureDetector(
-                                  onTap: (){
-                                    provider.pickImage(ImageSource.gallery);
-                                  },
-                                  child: Column(
-                                    spacing: 10.h,
-                                    children: [
-                                      Image.asset(AppAssets.photosImg,scale: 3,),
-                                      MyText(text: AppLocalizations.of(context)!.photos,size: 10.sp,fontWeight: FontWeight.w500,color: const Color(0xff545454),)
-                                    ],
-                                  ),
-                                ),
-                                GestureDetector(
-                                  onTap: (){
-                                    provider.toggle(); // Close bottom sheet
-                                    _showProductSelectionModal(context);
-                                  },
-                                  child: Column(
-                                    spacing: 10.h,
-                                    children: [
-                                      Image.asset(AppAssets.productChatImg, scale: 3),
-                                      MyText(
-                                        text: AppLocalizations.of(context)!.products,
-                                        size: 10.sp,
-                                        fontWeight: FontWeight.w500,
-                                        color: const Color(0xff545454),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                GestureDetector(
-                                  onTap: (){
-                                    provider.toggle(); // Close bottom sheet
-                                    _showOrderSelectionModal(context);
-                                  },
-                                  child: Column(
-                                    spacing: 10.h,
-                                    children: [
-                                      Image.asset(AppAssets.ordersChatImg, scale: 3),
-                                      MyText(
-                                        text: AppLocalizations.of(context)!.orders,
-                                        size: 10.sp,
-                                        fontWeight: FontWeight.w500,
-                                        color: const Color(0xff545454),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
+                            GestureDetector(
+                              onTap: (){
+                                provider.pickImage(ImageSource.gallery);
+                              },
+                              child: Column(
+                                spacing: 10.h,
+                                children: [
+                                  Image.asset(AppAssets.photosImg,scale: 3,),
+                                  MyText(text: AppLocalizations.of(context)!.photos,size: 10.sp,fontWeight: FontWeight.w500,color: const Color(0xff545454),)
+                                ],
+                              ),
                             ),
                           ],
                         )
