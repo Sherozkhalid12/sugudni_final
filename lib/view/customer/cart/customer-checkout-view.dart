@@ -228,7 +228,7 @@ class _CustomerCheckOutViewState extends State<CustomerCheckOutView> {
                       return Row(
                         children: [
                           MyText(text: AppLocalizations.of(context)!.merchandisesubtotal,size: 12.sp,fontWeight: FontWeight.w600,),
-                          MyText(text: " ($selectedItemsCount ${selectedItemsCount == 1 ? AppLocalizations.of(context)!.item : AppLocalizations.of(context)!.items})",size: 10.sp,fontWeight: FontWeight.w600,color: textSecondaryColor,),
+                          MyText(text: " ($selectedItemsCount ${selectedItemsCount == 1 ? 'item' : AppLocalizations.of(context)!.items})",size: 10.sp,fontWeight: FontWeight.w600,color: textSecondaryColor,),
                           const Spacer(),
                           FindCurrency(
                             usdAmount: selectedItemsSubtotal,

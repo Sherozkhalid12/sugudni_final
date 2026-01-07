@@ -26,10 +26,10 @@ String profilePicture='';
 final nameController=TextEditingController();
 final emailController=TextEditingController();
 final phoneController=TextEditingController();
-  void pickCustomerImage() async {
+  void pickCustomerImage(ImageSource source) async {
     final ImagePicker picker = ImagePicker();
     final XFile? pickedFile =
-    await picker.pickImage(source: ImageSource.gallery);
+    await picker.pickImage(source: source);
     if (pickedFile != null) {
       isChangePicture=true;
       customerProfilePic = File(pickedFile.path);

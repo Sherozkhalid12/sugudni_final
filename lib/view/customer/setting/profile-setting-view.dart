@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:sugudeni/api/api-endpoints.dart';
 import 'package:sugudeni/models/user/UpdateCustomerModel.dart';
@@ -29,10 +30,7 @@ class _CustomerProfileSettingViewState extends State<CustomerProfileSettingView>
   final nameController=TextEditingController();
   final emailController=TextEditingController();
   final phoneController=TextEditingController();
-  final passwordController=TextEditingController();
   String profilePicture='';
-
-  bool _showPassword = false;
   void fetchData()async{
     customPrint("Init ===============================================");
     var data=await UserRepository.getCustomerData(context);
@@ -143,7 +141,7 @@ class _CustomerProfileSettingViewState extends State<CustomerProfileSettingView>
                           right: 5,
                           child: GestureDetector(
                             onTap: (){
-                              provider.pickCustomerImage();
+                              _showImagePickerBottomSheet(context);
                             },
                             child: Container(
                               height: 30.h,
@@ -201,26 +199,6 @@ class _CustomerProfileSettingViewState extends State<CustomerProfileSettingView>
                     prefixImgUrl: AppAssets.callIcon,
               
                   ),
-                  10.height,
-                  CustomTextFiled(
-                    key: ValueKey(_showPassword),
-                    controller: passwordController,
-                    borderRadius: 15.r,
-                    isShowPrefixIcon: true,
-                    isBorder: true,
-                    isPassword: true,
-                    isObscure: !_showPassword,
-                    passwordFunction: () {
-                      setState(() {
-                        _showPassword = !_showPassword;
-                      });
-                      return null;
-                    },
-                    isFilled: true,
-                    hintText: AppLocalizations.of(context)!.enterpassword,
-                    isShowPrefixImage: true,
-                    prefixImgUrl: AppAssets.passwordIcon,
-                  ),
                   150.height,
                   RoundButton(
                       isLoad: true,
@@ -229,9 +207,6 @@ class _CustomerProfileSettingViewState extends State<CustomerProfileSettingView>
                          name: nameController.text.trim(),
                          email: emailController.text.trim(),
                          phone: phoneController.text.trim(),
-                       password: passwordController.text.isNotEmpty == true ? passwordController.text.trim(): null, // Only include password if not empty
-              
-              
                      );
               
               
@@ -246,6 +221,86 @@ class _CustomerProfileSettingViewState extends State<CustomerProfileSettingView>
           ),
         ),
       ),
+    );
+  }
+
+  void _showImagePickerBottomSheet(BuildContext context) {
+    final provider = Provider.of<UserProfileProvider>(context, listen: false);
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return Container(
+          decoration: BoxDecoration(
+            color: whiteColor,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(20.r),
+              topRight: Radius.circular(20.r),
+            ),
+          ),
+          padding: EdgeInsets.symmetric(vertical: 20.h, horizontal: 20.w),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Cancel button
+              Align(
+                alignment: Alignment.centerRight,
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.pop(context);
+                  },
+                  child: Padding(
+                    padding: EdgeInsets.only(bottom: 10.h),
+                    child: Icon(Icons.close, size: 24.sp),
+                  ),
+                ),
+              ),
+              // Options
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.pop(context);
+                      provider.pickCustomerImage(ImageSource.camera);
+                    },
+                    child: Column(
+                      spacing: 10.h,
+                      children: [
+                        Image.asset(AppAssets.cameraImg, scale: 3),
+                        MyText(
+                          text: AppLocalizations.of(context)!.camera,
+                          size: 10.sp,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xff545454),
+                        ),
+                      ],
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.pop(context);
+                      provider.pickCustomerImage(ImageSource.gallery);
+                    },
+                    child: Column(
+                      spacing: 10.h,
+                      children: [
+                        Image.asset(AppAssets.photosImg, scale: 3),
+                        MyText(
+                          text: AppLocalizations.of(context)!.photos,
+                          size: 10.sp,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xff545454),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

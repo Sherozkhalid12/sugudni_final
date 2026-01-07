@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sugudeni/models/cart/AddToCartModel.dart';
 import 'package:sugudeni/models/cart/GetCartResponse.dart';
 import 'package:sugudeni/models/cart/UpdateCartQuantityModel.dart';
 import 'package:sugudeni/models/deliveryslots/GetAllDeliverySlotsModel.dart';
@@ -69,6 +70,53 @@ import '../../utils/global-functions.dart';
     int getSelectedItemsCount() {
       return selectedIndex.length;
     }
+    
+    // Check if a product already exists in cart and return its cart item ID
+    String? getCartItemIdForProduct(String productId) {
+      if (cartResponse == null || cartResponse!.cart.cartItem.isEmpty) {
+        return null;
+      }
+      
+      for (var cartItem in cartResponse!.cart.cartItem) {
+        if (cartItem.productId.id == productId) {
+          return cartItem.id;
+        }
+      }
+      return null;
+    }
+    
+    // Add product to cart or increment quantity if already exists
+    Future<void> addOrIncrementProduct({
+      required String productId,
+      required String sellerId,
+      required double price,
+      required double totalProductDiscount,
+      required BuildContext context,
+    }) async {
+      // First, refresh cart data to get latest state
+      await getCartData(context);
+      
+      // Check if product already exists in cart
+      final existingCartItemId = getCartItemIdForProduct(productId);
+      
+      if (existingCartItemId != null) {
+        // Product exists, increment quantity
+        await incrementQuantity(existingCartItemId, context);
+      } else {
+        // Product doesn't exist, add it to cart
+        final model = AddToCartModel(
+          sellerId: sellerId,
+          productId: productId,
+          quantity: 1,
+          price: price,
+          totalProductDiscount: totalProductDiscount,
+        );
+        
+        await CartRepository.addProductToCart(model, context);
+        // Refresh cart data after adding
+        await getCartData(context);
+      }
+    }
 
     // Get total cart items count (sum of all quantities)
     int getTotalCartItemsCount() {
@@ -119,7 +167,7 @@ import '../../utils/global-functions.dart';
         notifyListeners();
       }
     }
-    void incrementQuantity(String cartItemId,BuildContext context) async{
+    Future<void> incrementQuantity(String cartItemId,BuildContext context) async{
       if (cartResponse != null) {
         Cart cart = cartResponse!.cart;
         for(var i in cart.cartItem){

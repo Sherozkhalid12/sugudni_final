@@ -928,83 +928,65 @@ class _CustomerProductDetailPageState extends State<CustomerProductDetailPage> {
                               return;
                             }
 
-                            // Check if product is already in cart
-                            final cartProvider = Provider.of<CartProvider>(context, listen: false);
-                            bool isAlreadyInCart = false;
-
-                            if (cartProvider.cartResponse != null) {
-                              isAlreadyInCart = cartProvider.cartResponse!.cart.cartItem
-                                  .any((cartItem) => cartItem.productId.id == product.id);
-                            }
-
-                            if (isAlreadyInCart) {
-                              // Product already in cart, just navigate to cart
-                              Navigator.push(context, MaterialPageRoute(builder: (context)=>const CustomerCartView()));
-                            } else {
-                              // Add product to cart first, then navigate
-                              var model=AddToCartModel(
-                                  sellerId: product.sellerId!.id,
-                                  productId: product.id,
-                                  quantity: 1,
-                                  price: product.price.toDouble(),
-                                  totalProductDiscount: product.priceAfterDiscount.toDouble());
-
-                              // Show professional loading overlay
-                              showDialog(
-                                context: context,
-                                barrierDismissible: false,
-                                builder: (BuildContext context) {
-                                  return Dialog(
-                                    backgroundColor: Colors.transparent,
-                                    elevation: 0,
-                                    child: Container(
-                                      padding: EdgeInsets.all(20.sp),
-                                      decoration: BoxDecoration(
-                                        color: whiteColor,
-                                        borderRadius: BorderRadius.circular(12.r),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black.withOpacity(0.1),
-                                            blurRadius: 10,
-                                            offset: const Offset(0, 4),
-                                          ),
-                                        ],
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          SizedBox(
-                                            width: 20.sp,
-                                            height: 20.sp,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
-                                            ),
-                                          ),
-                                          12.width,
-                                          MyText(
-                                            text: AppLocalizations.of(context)!.pleasewait,
-                                            size: 12.sp,
-                                            color: textPrimaryColor,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ],
-                                      ),
+                            // Show professional loading overlay
+                            showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (BuildContext context) {
+                                return Dialog(
+                                  backgroundColor: Colors.transparent,
+                                  elevation: 0,
+                                  child: Container(
+                                    padding: EdgeInsets.all(20.sp),
+                                    decoration: BoxDecoration(
+                                      color: whiteColor,
+                                      borderRadius: BorderRadius.circular(12.r),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.1),
+                                          blurRadius: 10,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ],
                                     ),
-                                  );
-                                },
-                              );
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        SizedBox(
+                                          width: 20.sp,
+                                          height: 20.sp,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+                                          ),
+                                        ),
+                                        12.width,
+                                        MyText(
+                                          text: AppLocalizations.of(context)!.pleasewait,
+                                          size: 12.sp,
+                                          color: textPrimaryColor,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            );
 
-                              await CartRepository.addProductToCart(model, context).then((v){
-                                Navigator.pop(context);
-                                // Refresh cart data to update badge count
-                                final cartProvider = Provider.of<CartProvider>(context, listen: false);
-                                cartProvider.getCartData(context);
-                                Navigator.push(context, MaterialPageRoute(builder: (context)=>const CustomerCartView()));
-                              }).onError((err,e){
-                                Navigator.pop(context);
-                              });
-                            }
+                            final cartProvider = Provider.of<CartProvider>(context, listen: false);
+                            await cartProvider.addOrIncrementProduct(
+                              productId: product.id,
+                              sellerId: product.sellerId!.id,
+                              price: product.price.toDouble(),
+                              totalProductDiscount: product.priceAfterDiscount.toDouble(),
+                              context: context,
+                            ).then((v){
+                              Navigator.pop(context);
+                              Navigator.push(context, MaterialPageRoute(builder: (context)=>const CustomerCartView()));
+                            }).onError((err,e){
+                              Navigator.pop(context);
+                            });
                           }                      ),
                       RoundButton(
                           width: 108.w,
@@ -1020,12 +1002,6 @@ class _CustomerProductDetailPageState extends State<CustomerProductDetailPage> {
                               showSnackbar(context, AppLocalizations.of(context)!.pleaselogintouseacount,color: redColor);
                               return;
                             }
-                            var model=AddToCartModel(
-                                sellerId: product.sellerId!.id,
-                                productId: product.id,
-                                quantity: 1,
-                                price: product.price.toDouble(),
-                                totalProductDiscount: product.priceAfterDiscount.toDouble());
                             // Show professional loading overlay
                             showDialog(
                               context: context,
@@ -1071,11 +1047,16 @@ class _CustomerProductDetailPageState extends State<CustomerProductDetailPage> {
                                 );
                               },
                             );
-                            await CartRepository.addProductToCart(model, context).then((v){
+                            
+                            final cartProvider = Provider.of<CartProvider>(context, listen: false);
+                            await cartProvider.addOrIncrementProduct(
+                              productId: product.id,
+                              sellerId: product.sellerId!.id,
+                              price: product.price.toDouble(),
+                              totalProductDiscount: product.priceAfterDiscount.toDouble(),
+                              context: context,
+                            ).then((v){
                               Navigator.pop(context);
-                              // Refresh cart data to update badge count
-                              final cartProvider = Provider.of<CartProvider>(context, listen: false);
-                              cartProvider.getCartData(context);
                               showSnackbar(context, AppLocalizations.of(context)!.producthasaddedtocartsuccessfully,color: greenColor);
                             }).onError((err,e){
                               Navigator.pop(context);
