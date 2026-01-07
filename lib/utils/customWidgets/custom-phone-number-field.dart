@@ -29,6 +29,7 @@ class CustomPhoneNumberField extends StatelessWidget {
   IconData? beforePasswordIcon;
   IconData? afterPasswordIcon;
   bool? isObscure;
+  int? maxLength;
   CustomPhoneNumberField(
       {super.key,
         this.hintText,
@@ -52,7 +53,8 @@ class CustomPhoneNumberField extends StatelessWidget {
         this.beforePasswordIcon,
         this.isObscure,
         this.afterPasswordIcon,
-        this.childWidget
+        this.childWidget,
+        this.maxLength
       });
 
   @override
@@ -66,6 +68,7 @@ class CustomPhoneNumberField extends StatelessWidget {
         onChanged: onChange,
         keyboardType: keyboardType,
         obscureText: isObscure ?? false,
+        maxLength: maxLength,
         style: TextStyle(
             fontWeight: fontWeight??FontWeight.w500,
             fontSize:hintTextSize?? 14.sp,
@@ -91,6 +94,7 @@ class CustomPhoneNumberField extends StatelessWidget {
               borderSide: const BorderSide(color: Colors.red),
               borderRadius: BorderRadius.circular(borderRadius??13.r))
               : InputBorder.none,
+          counterText: maxLength != null ? '' : null,
           // focusedBorder: OutlineInputBorder(
           //     borderSide: const BorderSide(color: primaryColor),
           //     borderRadius: BorderRadius.circular(borderRadius!)),

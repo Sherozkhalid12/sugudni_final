@@ -37,6 +37,7 @@ class CustomTextFiled extends StatelessWidget {
   final TextAlign? textAlign;
   final int? maxLine;
   final List<TextInputFormatter>? inputFormatters;
+  final int? maxLength;
 
   const CustomTextFiled({
     super.key,
@@ -71,6 +72,7 @@ class CustomTextFiled extends StatelessWidget {
     this.maxLine,
     this.onSubmit,
     this.isEnable,
+    this.maxLength,
   });
 
   @override
@@ -91,6 +93,7 @@ class CustomTextFiled extends StatelessWidget {
       keyboardType: keyboardType,
       obscureText: isObscure ?? false,
       maxLines: maxLine ?? 1,
+      maxLength: maxLength,
       inputFormatters: inputFormatters,
       decoration: InputDecoration(
         // Password visibility toggle using Flutter Icons
@@ -146,6 +149,7 @@ class CustomTextFiled extends StatelessWidget {
                 borderSide: const BorderSide(color: textFieldColor),
                 borderRadius: BorderRadius.circular(borderRadius ?? 13.31.r))
             : InputBorder.none,
+        counterText: maxLength != null ? '' : null,
       ),
     );
   }

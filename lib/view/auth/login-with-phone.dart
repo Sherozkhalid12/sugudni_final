@@ -62,7 +62,7 @@ class LoginWithPhoneView extends StatelessWidget {
                         onChanged: (CountryCode countryCode) {
                           signUpProvider.changeCountryCode(countryCode.dialCode!);
                           customPrint("Country code ===========${signUpProvider.countryCode}");
-                          String message = "${signUpProvider.countryCode}${signUpProvider.phoneController.text.toString()}";
+                          String message = formatPhoneNumber(signUpProvider.countryCode, signUpProvider.phoneController.text.toString());
                           customPrint("Phone number ===========$message");
 
 
@@ -87,16 +87,20 @@ class LoginWithPhoneView extends StatelessWidget {
                       ),
 
                       Flexible(
-                        child: CustomTextFiled(
-                          controller: signUpProvider.phoneController,
-                          borderRadius: 15.r,
-                          isBorder: true,
-                          isShowPrefixIcon: false,
-                          isFilled: true,
-                          hintText:AppLocalizations.of(context)!.yourphonenumber,
-                          isShowPrefixImage: false,
-                          keyboardType: TextInputType.number,
-
+                        child: Consumer<AuthProvider>(
+                          builder: (context, provider, child) {
+                            return CustomTextFiled(
+                              controller: provider.phoneController,
+                              borderRadius: 15.r,
+                              isBorder: true,
+                              isShowPrefixIcon: false,
+                              isFilled: true,
+                              hintText: AppLocalizations.of(context)!.yourphonenumber,
+                              isShowPrefixImage: false,
+                              keyboardType: TextInputType.number,
+                              maxLength: getPhoneNumberMaxLength(provider.countryCode),
+                            );
+                          },
                         ),
                       ),
                     ],

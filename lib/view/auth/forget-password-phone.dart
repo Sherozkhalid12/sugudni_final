@@ -16,6 +16,7 @@ import '../../utils/customWidgets/custom-phone-number-field.dart';
 import '../../utils/customWidgets/my-text.dart';
 
 import '../../utils/customWidgets/text-field.dart';
+import '../../utils/global-functions.dart';
 
 class ForgetPasswordPhoneView extends StatelessWidget {
   const ForgetPasswordPhoneView({super.key});
@@ -80,16 +81,20 @@ class ForgetPasswordPhoneView extends StatelessWidget {
                     ),
 
                     Flexible(
-                      child: CustomTextFiled(
-                        controller: resetPasswordProvider.phoneController,
-                        borderRadius: 15.r,
-                        isBorder: true,
-                        isShowPrefixIcon: false,
-                        isFilled: true,
-                        hintText:AppLocalizations.of(context)!.yourphonenumber,
-                        isShowPrefixImage: false,
-                        keyboardType: TextInputType.number,
-
+                      child: Consumer<ResetPasswordProvider>(
+                        builder: (context, provider, child) {
+                          return CustomTextFiled(
+                            controller: provider.phoneController,
+                            borderRadius: 15.r,
+                            isBorder: true,
+                            isShowPrefixIcon: false,
+                            isFilled: true,
+                            hintText: AppLocalizations.of(context)!.yourphonenumber,
+                            isShowPrefixImage: false,
+                            keyboardType: TextInputType.number,
+                            maxLength: getPhoneNumberMaxLength(provider.dialCode),
+                          );
+                        },
                       ),
                     ),
                   ],

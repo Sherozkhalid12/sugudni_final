@@ -98,43 +98,47 @@ class DriverSignUpView extends StatelessWidget {
                 15.height,
                 testWidget(title: AppLocalizations.of(context)!.enterphonenumber),
                 5.height,
-                CustomPhoneNumberField(
-                  isFilled: true,
-                  controller: driverSignUpProvider.phoneNumberController,
-
-                  childWidget:  Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      CountryCodePicker(
-                        onChanged: (CountryCode countryCode) {
-            
-                        },
-                        padding: EdgeInsets.zero,
-                        flagDecoration: const BoxDecoration(
-                          shape: BoxShape.rectangle,
-                        ),
-                        flagWidth: 23.w,
-                        initialSelection: 'PRT',
-                        favorite: const ['+351',''],
-                        showCountryOnly: false,
-                        showOnlyCountryWhenClosed: false,
-                        alignLeft: false,
-            
-                        textStyle: TextStyle(
-                            fontSize: 14.sp,
-                            color: blackColor,
-                            fontWeight: FontWeight.w500
-                        ),
-                        dialogBackgroundColor: whiteColor,
+                Consumer<DriverSignUpProvider>(
+                  builder: (context, provider, child) {
+                    return CustomPhoneNumberField(
+                      isFilled: true,
+                      controller: provider.phoneNumberController,
+                      maxLength: getPhoneNumberMaxLength(provider.countryCode),
+                      childWidget:  Row(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CountryCodePicker(
+                            onChanged: (CountryCode countryCode) {
+                              provider.changeCountryCode(countryCode.dialCode!);
+                            },
+                            padding: EdgeInsets.zero,
+                            flagDecoration: const BoxDecoration(
+                              shape: BoxShape.rectangle,
+                            ),
+                            flagWidth: 23.w,
+                            initialSelection: 'PRT',
+                            favorite: const ['+351',''],
+                            showCountryOnly: false,
+                            showOnlyCountryWhenClosed: false,
+                            alignLeft: false,
+                
+                            textStyle: TextStyle(
+                                fontSize: 14.sp,
+                                color: blackColor,
+                                fontWeight: FontWeight.w500
+                            ),
+                            dialogBackgroundColor: whiteColor,
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                  hintText:AppLocalizations.of(context)!.yourphonenumber,
-                  keyboardType: TextInputType.number,
-                  hintColor: blackColor,
-                  hintTextSize: 14.sp,
+                      hintText:AppLocalizations.of(context)!.yourphonenumber,
+                      keyboardType: TextInputType.number,
+                      hintColor: blackColor,
+                      hintTextSize: 14.sp,
+                    );
+                  },
                 ),
                 // 15.height,
                 // Row(

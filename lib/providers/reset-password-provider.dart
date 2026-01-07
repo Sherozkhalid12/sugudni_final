@@ -196,7 +196,7 @@ class ResetPasswordProvider extends ChangeNotifier{
       showSnackbar(context, AppLocalizations.of(context)!.pleaseenteryourphonenumber,color: redColor);
       return;
     }
-    String phone="$_dialCode${phoneController.text.toString()}";
+    String phone=formatPhoneNumber(_dialCode, phoneController.text.toString());
     var model=ResetPasswordModel(
       phone: phone,
       otpChannel: otpPreference
@@ -254,7 +254,7 @@ class ResetPasswordProvider extends ChangeNotifier{
       showSnackbar(context,  AppLocalizations.of(context)!.passworddoesnotmatch,color: redColor);
       return;
     }
-    String phone="$_dialCode${phoneController.text.isEmpty?'321':phoneController.text.toString()}";
+    String phone=formatPhoneNumber(_dialCode, phoneController.text.isEmpty?'321':phoneController.text.toString());
     var model=usingEmail==true?
     ResetPasswordModel(
         email: emailController.text.trim().toString(),

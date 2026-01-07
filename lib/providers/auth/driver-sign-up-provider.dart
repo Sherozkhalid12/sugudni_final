@@ -32,6 +32,8 @@ class DriverSignUpProvider extends ChangeNotifier{
   bool term=false;
   bool isUpdate=false;
   bool _isPickingImage = false;
+  
+  String countryCode = '+351'; // Default to Portugal
 
   final firstNameController=TextEditingController();
   final lastNameController=TextEditingController();
@@ -39,6 +41,11 @@ class DriverSignUpProvider extends ChangeNotifier{
   final licenseNumberController=TextEditingController();
   final bikeRegistrationNumberController=TextEditingController();
   final otpController=TextEditingController();
+  
+  void changeCountryCode(String code) {
+    countryCode = code;
+    notifyListeners();
+  }
   Future<void> updateDriver(BuildContext context) async {
     final loadingProvider = Provider.of<LoadingProvider>(context, listen: false);
 

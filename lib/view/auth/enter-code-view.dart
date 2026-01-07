@@ -20,7 +20,7 @@ class EnterCodeView extends StatelessWidget {
   Widget build(BuildContext context) {
     final resetPasswordProvider=Provider.of<ResetPasswordProvider>(context,listen: false);
     final otpController=TextEditingController();
-    String phone="${resetPasswordProvider.dialCode}${resetPasswordProvider.phoneController.text.toString()}";
+    String phone=formatPhoneNumber(resetPasswordProvider.dialCode, resetPasswordProvider.phoneController.text.toString());
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -81,7 +81,7 @@ class EnterCodeView extends StatelessWidget {
                     showSnackbar(context, AppLocalizations.of(context)!.pleaseenterotp,color: redColor);
                     return;
                   }
-                  String phone="${resetPasswordProvider.dialCode}${resetPasswordProvider.phoneController.text.toString()}";
+                  String phone=formatPhoneNumber(resetPasswordProvider.dialCode, resetPasswordProvider.phoneController.text.toString());
 
                   var model=ResetPasswordModel(
                       phone: phone,

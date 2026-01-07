@@ -195,6 +195,9 @@ class _SignUpViewState extends State<SignUpView> {
                           CountryCodePicker(
                             onChanged: (CountryCode countryCode) {
                               signUpProvider.changeCountryCode(countryCode.dialCode!);
+                              customPrint("SignUp - Country code ===========${signUpProvider.countryCode}");
+                              String formattedPhone = formatPhoneNumber(signUpProvider.countryCode, signUpProvider.signUpPhoneController.text.toString());
+                              customPrint("SignUp - Formatted phone number ===========$formattedPhone");
                             },
                             padding: EdgeInsets.zero,
                             flagWidth: 23.w,
@@ -206,15 +209,20 @@ class _SignUpViewState extends State<SignUpView> {
                             ),
                           ),
                           Flexible(
-                            child: CustomTextFiled(
-                              controller: signUpProvider.signUpPhoneController,
-                              borderRadius: 15.r,
-                              isBorder: true,
-                              isShowPrefixIcon: false,
-                              isFilled: true,
-                              hintText: AppLocalizations.of(context)!.yourphonenumber,
-                              isShowPrefixImage: false,
-                              keyboardType: TextInputType.number,
+                            child: Consumer<AuthProvider>(
+                              builder: (context, provider, child) {
+                                return CustomTextFiled(
+                                  controller: provider.signUpPhoneController,
+                                  borderRadius: 15.r,
+                                  isBorder: true,
+                                  isShowPrefixIcon: false,
+                                  isFilled: true,
+                                  hintText: AppLocalizations.of(context)!.yourphonenumber,
+                                  isShowPrefixImage: false,
+                                  keyboardType: TextInputType.number,
+                                  maxLength: getPhoneNumberMaxLength(provider.countryCode),
+                                );
+                              },
                             ),
                           ),
                         ],

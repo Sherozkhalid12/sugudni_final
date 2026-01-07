@@ -91,7 +91,7 @@ class AuthProvider extends ChangeNotifier {
       var model = SignUpModel(
         name: nameController.text.trim(),
         email: isEmail ? signUpEmailController.text.trim() : null,
-        phone: !isEmail ? "$countryCode${signUpPhoneController.text.trim()}" : null,
+        phone: !isEmail ? formatPhoneNumber(countryCode, signUpPhoneController.text.trim()) : null,
         password: signUpPasswordController.text.trim(),
         otpChannel: !isEmail ? otpPreference : null,
         role: roleProvider.selectedRole,
@@ -318,7 +318,7 @@ class AuthProvider extends ChangeNotifier {
         model = VerifySignUpOtpModel(email: email, phone: null, otp: otp);
       } else {
         // When using phone, explicitly set phone and leave email as null
-        String phone = "$countryCode${signUpPhoneController.text.trim()}";
+        String phone = formatPhoneNumber(countryCode, signUpPhoneController.text.trim());
         customPrint("VerifySignUpOtp - Using PHONE: $phone");
         model = VerifySignUpOtpModel(email: null, phone: phone, otp: otp);
       }
@@ -435,7 +435,7 @@ class AuthProvider extends ChangeNotifier {
         model = VerifySignInOtpModel(email: email, otp: otp);
       } else {
         // When isEmail is false, use phone
-        String phoneNumber = "$countryCode${phoneController.text.trim()}";
+        String phoneNumber = formatPhoneNumber(countryCode, phoneController.text.trim());
         
         // Validate phone is not empty
         if (phoneController.text.trim().isEmpty) {
@@ -596,7 +596,7 @@ class AuthProvider extends ChangeNotifier {
       return;
     }
     try {
-      String phoneNumber = "$countryCode${phoneController.text.trim()}";
+      String phoneNumber = formatPhoneNumber(countryCode, phoneController.text.trim());
       loadingProvider.setLoading(true);
       var model = SignInWithPhoneModel(phone: phoneNumber);
       await AuthRepository.signInUserWithPhoneNumber(model, context).then((v) async {

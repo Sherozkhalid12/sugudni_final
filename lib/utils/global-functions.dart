@@ -385,3 +385,169 @@ Future<void> openGoogleMapsDirections({
     customPrint('Error launching Google Maps: $e');
   }
 }
+
+/// Formats a phone number by removing leading zeros after the country code.
+/// This function handles phone numbers that may have leading zeros (e.g., 03213825152)
+/// and removes them to create a properly formatted international number.
+/// 
+/// Example:
+/// - formatPhoneNumber('+92', '03213825152') returns '+923213825152'
+/// - formatPhoneNumber('+92', '3213825152') returns '+923213825152'
+/// - formatPhoneNumber('+33', '0123456789') returns '+33123456789'
+/// 
+/// [countryCode] The country code with + prefix (e.g., '+92', '+33')
+/// [phoneNumber] The phone number which may contain leading zeros
+/// Returns the formatted phone number with country code and leading zeros removed
+String formatPhoneNumber(String countryCode, String phoneNumber) {
+  // Trim the phone number to remove any whitespace
+  String trimmedPhone = phoneNumber.trim();
+  
+  // Remove all leading zeros from the phone number
+  String formattedPhone = trimmedPhone.replaceFirst(RegExp(r'^0+'), '');
+  
+  // If the phone number becomes empty after removing zeros, return empty string
+  if (formattedPhone.isEmpty) {
+    return '';
+  }
+  
+  // Combine country code with formatted phone number
+  return '$countryCode$formattedPhone';
+}
+
+/// Returns the maximum length for a phone number based on the country code.
+/// This excludes the country code itself - only the local phone number digits.
+/// 
+/// Example:
+/// - getPhoneNumberMaxLength('+92') returns 10 (for Pakistan)
+/// - getPhoneNumberMaxLength('+1') returns 10 (for USA/Canada)
+/// - getPhoneNumberMaxLength('+33') returns 9 (for France)
+/// 
+/// [countryCode] The country code with + prefix (e.g., '+92', '+33')
+/// Returns the maximum length for the phone number (default: 15 if country not found)
+int getPhoneNumberMaxLength(String countryCode) {
+  // Map of country codes to their phone number lengths (excluding country code)
+  final Map<String, int> phoneNumberLengths = {
+    // North America
+    '+1': 10,   // USA, Canada
+    '+52': 10,  // Mexico
+    
+    // Europe
+    '+33': 9,   // France
+    '+44': 10,  // UK
+    '+49': 11,  // Germany
+    '+39': 10,  // Italy
+    '+34': 9,   // Spain
+    '+31': 9,   // Netherlands
+    '+32': 9,   // Belgium
+    '+41': 9,   // Switzerland
+    '+43': 10,  // Austria
+    '+46': 9,   // Sweden
+    '+47': 8,   // Norway
+    '+45': 8,   // Denmark
+    '+358': 9,  // Finland
+    '+351': 9,  // Portugal
+    '+30': 10,  // Greece
+    '+48': 9,   // Poland
+    '+40': 9,   // Romania
+    '+36': 9,   // Hungary
+    '+420': 9,  // Czech Republic
+    '+353': 9,  // Ireland
+    
+    // Asia
+    '+92': 10,  // Pakistan
+    '+91': 10,  // India
+    '+86': 11,  // China
+    '+81': 10,  // Japan
+    '+82': 10,  // South Korea
+    '+65': 8,   // Singapore
+    '+60': 9,   // Malaysia
+    '+66': 9,   // Thailand
+    '+62': 10,  // Indonesia
+    '+63': 10,  // Philippines
+    '+84': 10,  // Vietnam
+    '+880': 10, // Bangladesh
+    '+94': 9,   // Sri Lanka
+    '+95': 9,   // Myanmar
+    '+855': 9,  // Cambodia
+    '+856': 9,  // Laos
+    '+961': 8,  // Lebanon
+    '+962': 9,  // Jordan
+    '+964': 10, // Iraq
+    '+965': 8,  // Kuwait
+    '+966': 9,  // Saudi Arabia
+    '+967': 9,  // Yemen
+    '+968': 8,  // Oman
+    '+970': 9,  // Palestine
+    '+971': 9,  // UAE
+    '+972': 9,  // Israel
+    '+973': 8,  // Bahrain
+    '+974': 8,  // Qatar
+    '+976': 8,  // Mongolia
+    '+977': 10, // Nepal
+    '+98': 10,  // Iran
+    '+992': 9,  // Tajikistan
+    '+993': 8,  // Turkmenistan
+    '+994': 9,  // Azerbaijan
+    '+995': 9,  // Georgia
+    '+996': 9,  // Kyrgyzstan
+    '+998': 9,  // Uzbekistan
+    
+    // Middle East
+    '+20': 10,  // Egypt
+    '+212': 9,  // Morocco
+    '+213': 9,  // Algeria
+    '+216': 8,  // Tunisia
+    '+218': 9,  // Libya
+    '+249': 9,  // Sudan
+    '+251': 9,  // Ethiopia
+    '+254': 9,  // Kenya
+    '+255': 9,  // Tanzania
+    '+256': 9,  // Uganda
+    '+27': 9,   // South Africa
+    
+    // Oceania
+    '+61': 9,   // Australia
+    '+64': 9,   // New Zealand
+    
+    // South America
+    '+55': 11,  // Brazil
+    '+54': 10,  // Argentina
+    '+56': 9,   // Chile
+    '+57': 10,  // Colombia
+    '+51': 9,   // Peru
+    '+58': 10,  // Venezuela
+    '+593': 9,  // Ecuador
+    '+595': 9,  // Paraguay
+    '+598': 8,  // Uruguay
+    '+591': 8,  // Bolivia
+    
+    // Central America & Caribbean
+    '+506': 8,  // Costa Rica
+    '+507': 8,  // Panama
+    '+502': 8,  // Guatemala
+    '+503': 8,  // El Salvador
+    '+504': 8,  // Honduras
+    '+505': 8,  // Nicaragua
+    '+501': 7,  // Belize
+    '+509': 8,  // Haiti
+    '+1-242': 7, // Bahamas
+    '+1-246': 7, // Barbados
+    '+1-284': 7, // British Virgin Islands
+    '+1-340': 7, // US Virgin Islands
+    '+1-441': 7, // Bermuda
+    '+1-649': 7, // Turks and Caicos
+    '+1-670': 7, // Northern Mariana Islands
+    '+1-671': 7, // Guam
+    '+1-758': 7, // Saint Lucia
+    '+1-767': 7, // Dominica
+    '+1-784': 7, // Saint Vincent
+    '+1-849': 7, // Dominican Republic
+    '+1-868': 7, // Trinidad and Tobago
+    '+1-869': 7, // Saint Kitts
+    '+1-876': 7, // Jamaica
+    '+1-939': 7, // Puerto Rico
+  };
+  
+  // Return the length for the country code, or default to 15 (ITU-T E.164 max)
+  return phoneNumberLengths[countryCode] ?? 15;
+}
