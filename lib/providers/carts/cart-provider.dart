@@ -44,8 +44,21 @@ import '../../utils/global-functions.dart';
       double subtotal = 0.0;
       for (var cartItem in cartResponse!.cart.cartItem) {
         if (selectedIndex.contains(cartItem.id)) {
-          // Use the appropriate price based on discount
-          double itemPrice = cartItem.priceAfterDiscount > 0 ? cartItem.priceAfterDiscount : cartItem.price;
+          // Calculate correct price handling negative discount amounts
+          double itemPrice;
+          if (cartItem.totalProductDiscount == 0) {
+            itemPrice = cartItem.price;
+          } else if (cartItem.priceAfterDiscount < 0) {
+            // If priceAfterDiscount is negative, it's the discount amount
+            // Calculate: price + priceAfterDiscount (e.g., 100 + (-5) = 95)
+            itemPrice = cartItem.price + cartItem.priceAfterDiscount;
+          } else if (cartItem.priceAfterDiscount > cartItem.price) {
+            // Invalid case, use original price
+            itemPrice = cartItem.price;
+          } else {
+            // Valid positive discounted price
+            itemPrice = cartItem.priceAfterDiscount;
+          }
           subtotal += itemPrice * cartItem.quantity;
         }
       }

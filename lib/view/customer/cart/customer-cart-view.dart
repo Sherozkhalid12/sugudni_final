@@ -431,6 +431,30 @@ class CartItemWidget extends StatelessWidget {
 
   const CartItemWidget({super.key, this.title, this.price, this.priceAfterDiscount, this.quantity, this.incrementPressed, this.decrementPressed, required this.onChange, this.isSelected, this.img, this.isBulk=false, this.salesDiscount, this.totalProductDiscount});
 
+  /// Calculate the correct item price to display
+  /// Handles cases where priceAfterDiscount might be negative (discount amount)
+  double _calculateCorrectItemPrice(double price, double priceAfterDiscount, double totalProductDiscount) {
+    // If no discount, return original price
+    if (totalProductDiscount == 0) {
+      return price;
+    }
+    
+    // If priceAfterDiscount is negative, it represents the discount amount
+    // So we need to add it to price (e.g., 100 + (-5) = 95)
+    if (priceAfterDiscount < 0) {
+      return price + priceAfterDiscount;
+    }
+    
+    // If priceAfterDiscount is positive but greater than price, something is wrong
+    // Return price as fallback
+    if (priceAfterDiscount > price) {
+      return price;
+    }
+    
+    // If priceAfterDiscount is positive and less than or equal to price, use it
+    return priceAfterDiscount;
+  }
+
   @override
   Widget build(BuildContext context) {
     return  Padding(
@@ -484,7 +508,7 @@ class CartItemWidget extends StatelessWidget {
                   //   fontWeight: FontWeight.w600,
                   // ),
                   // 3.height,
-                  totalProductDiscount==0? FindCurrency(usdAmount: price??1.0):FindCurrency(usdAmount: priceAfterDiscount??1.0),
+                  totalProductDiscount==0? FindCurrency(usdAmount: price??1.0):FindCurrency(usdAmount: _calculateCorrectItemPrice(price ?? 0, priceAfterDiscount ?? 0, totalProductDiscount ?? 0)),
 
                  // MyText(text: "\$ ${priceAfterDiscount==0? price:priceAfterDiscount?? 76.25}",size: 10.sp, fontWeight: FontWeight.w500,color: appRedColor,),
 

@@ -41,7 +41,7 @@ class _CustomerPayAtYourAddressState extends State<CustomerPayAtYourAddress> {
     // Get order details from cart or stored values
     final cart = cartProvider.cartResponse?.cart;
     final totalAmount = cart != null 
-        ? (cart.discount == 0 ? cart.totalPrice : cart.totalPriceAfterDiscount)
+        ? calculateCorrectCartPrice(cart.totalPrice, cart.totalPriceAfterDiscount, cart.discount)
         : cartProvider.lastOrderTotal ?? 0.0;
     final sellerId = cart != null && cart.cartItem.isNotEmpty
         ? cart.cartItem.first.productId.sellerId.id

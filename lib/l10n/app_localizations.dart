@@ -503,7 +503,7 @@ abstract class AppLocalizations {
   /// No description provided for @checkoutcreatedsuccessfully.
   ///
   /// In en, this message translates to:
-  /// **'Checkout created successfully'**
+  /// **'Order is placed successfully'**
   String get checkoutcreatedsuccessfully;
 
   /// No description provided for @emptycard.

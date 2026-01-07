@@ -25,6 +25,8 @@ class CustomerCheckOutView extends StatefulWidget {
 
 class _CustomerCheckOutViewState extends State<CustomerCheckOutView> {
   bool isActivate=true;
+  
+  
   @override
   Widget build(BuildContext context) {
     final cartProvider=Provider.of<CartProvider>(context,listen: false);
@@ -217,28 +219,46 @@ class _CustomerCheckOutViewState extends State<CustomerCheckOutView> {
                 spacing: 5.h,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      MyText(text: AppLocalizations.of(context)!.merchandisesubtotal,size: 12.sp,fontWeight: FontWeight.w600,),
-                      MyText(text: cartProvider.cartResponse != null ? " (${cartProvider.cartResponse!.cart.cartItem.length} ${AppLocalizations.of(context)!.items})" : " (0 items)",size: 10.sp,fontWeight: FontWeight.w600,color: textSecondaryColor,),
-                      const Spacer(),
-                      cartProvider.cartResponse != null
-                          ? FindCurrency(usdAmount:cartProvider.cartResponse!.cart.discount==0? cartProvider.cartResponse!.cart.totalPrice:cartProvider.cartResponse!.cart.totalPriceAfterDiscount,size: 12.sp,fontWeight: FontWeight.w600,color: blackColor,)
-                          : const MyText(text: "\$0.00", size: 12, fontWeight: FontWeight.w600, color: Colors.black),
-                      //MyText(text: "\$. ${cartProvider.cartResponse!.cart.totalPrice}",size: 12.sp,fontWeight: FontWeight.w600,),
-
-
-                    ],
+                  Consumer<CartProvider>(
+                    builder: (context, provider, child) {
+                      // Calculate subtotal for selected items only
+                      final selectedItemsCount = provider.getSelectedItemsCount();
+                      final selectedItemsSubtotal = provider.getSelectedItemsSubtotal();
+                      
+                      return Row(
+                        children: [
+                          MyText(text: AppLocalizations.of(context)!.merchandisesubtotal,size: 12.sp,fontWeight: FontWeight.w600,),
+                          MyText(text: " ($selectedItemsCount ${selectedItemsCount == 1 ? AppLocalizations.of(context)!.item : AppLocalizations.of(context)!.items})",size: 10.sp,fontWeight: FontWeight.w600,color: textSecondaryColor,),
+                          const Spacer(),
+                          FindCurrency(
+                            usdAmount: selectedItemsSubtotal,
+                            size: 12.sp,
+                            fontWeight: FontWeight.w600,
+                            color: blackColor,
+                          ),
+                        ],
+                      );
+                    },
                   ),
-                  // Row(
-                  //   children: [
-                  //     MyText(text: "Shipping Fee Subtotal",size: 12.sp,fontWeight: FontWeight.w600,),
-                  //     const Spacer(),
-                  //     MyText(text: "\$. 0",size: 12.sp,fontWeight: FontWeight.w600,),
-                  //
-                  //
-                  //   ],
-                  // ),
+                  Consumer<CartProvider>(
+                    builder: (context, provider, child) {
+                      // Show shipping fee (currently 0, can be updated later)
+                      final shippingFee = 0.0;
+                      
+                      return Row(
+                        children: [
+                          MyText(text: "${AppLocalizations.of(context)!.shippingfee} : ",size: 12.sp,fontWeight: FontWeight.w600,),
+                          const Spacer(),
+                          FindCurrency(
+                            usdAmount: shippingFee,
+                            size: 12.sp,
+                            fontWeight: FontWeight.w600,
+                            color: blackColor,
+                          ),
+                        ],
+                      );
+                    },
+                  ),
                   // Row(
                   //   children: [ Image.asset(AppAssets.voucherIcon,scale: 3,),
                   //     3.width,
@@ -319,20 +339,29 @@ class _CustomerCheckOutViewState extends State<CustomerCheckOutView> {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Row(
-                        children: [
-                          MyText(text: "${AppLocalizations.of(context)!.total} : ",size: 12.sp,fontWeight: FontWeight.w600),
-                          cartProvider.cartResponse != null
-                              ? FindCurrency(usdAmount: cartProvider.cartResponse!.cart.discount==0? cartProvider.cartResponse!.cart.totalPrice:cartProvider.cartResponse!.cart.totalPriceAfterDiscount,size: 12.sp,fontWeight: FontWeight.w600,color: primaryColor)
-                              : const MyText(text: "\$0.00", size: 12, fontWeight: FontWeight.w600, color: Colors.red),
-                          // MyText(text: "\$ ${cartProvider.cartResponse!.cart.totalPrice}",size: 12.sp,fontWeight: FontWeight.w600,color: primaryColor,),
-
-                        ],
+                      Consumer<CartProvider>(
+                        builder: (context, provider, child) {
+                          // Calculate total for selected items only (subtotal + shipping)
+                          final selectedItemsSubtotal = provider.getSelectedItemsSubtotal();
+                          final shippingFee = 0.0; // Shipping fee (can be updated later if needed)
+                          final totalAmount = selectedItemsSubtotal + shippingFee;
+                          
+                          return Row(
+                            children: [
+                              MyText(text: "${AppLocalizations.of(context)!.total} : ",size: 12.sp,fontWeight: FontWeight.w600),
+                              FindCurrency(
+                                usdAmount: totalAmount,
+                                size: 12.sp,
+                                fontWeight: FontWeight.w600,
+                                color: primaryColor,
+                              ),
+                            ],
+                          );
+                        },
                       ),
                       Row(
                         children: [
                           MyText(text: AppLocalizations.of(context)!.vatincluded,size: 9.sp,fontWeight: FontWeight.w600),
-
                         ],
                       ),
 

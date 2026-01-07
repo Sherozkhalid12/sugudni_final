@@ -222,7 +222,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get confirmpayment => 'Confirmer le paiement';
 
   @override
-  String get checkoutcreatedsuccessfully => 'Paiement créé avec succès';
+  String get checkoutcreatedsuccessfully => 'Commande passée avec succès';
 
   @override
   String get emptycard => 'Panier vide';

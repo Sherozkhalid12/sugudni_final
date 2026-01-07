@@ -250,6 +250,36 @@ String calculateDiscountPercentage(double previousPrice, double discountedPrice)
   double discount = ((previousPrice - discountedPrice) / previousPrice) * 100;
   return "${discount.toStringAsFixed(2)}%";
 }
+
+/// Calculate the correct price to display in checkout/payment screens
+/// Handles cases where totalPriceAfterDiscount might be negative (discount amount)
+/// or positive (actual discounted price)
+/// 
+/// Example: If product is $100 with 5% discount:
+/// - totalPrice = 100
+/// - totalPriceAfterDiscount might be -5 (discount amount) or 95 (discounted price)
+/// - This function returns 95 in both cases
+double calculateCorrectCartPrice(double totalPrice, double totalPriceAfterDiscount, double discount) {
+  // If no discount, return original price
+  if (discount == 0) {
+    return totalPrice;
+  }
+  
+  // If totalPriceAfterDiscount is negative, it represents the discount amount
+  // So we need to add it to totalPrice (e.g., 100 + (-5) = 95)
+  if (totalPriceAfterDiscount < 0) {
+    return totalPrice + totalPriceAfterDiscount;
+  }
+  
+  // If totalPriceAfterDiscount is positive but greater than totalPrice, something is wrong
+  // Return totalPrice as fallback
+  if (totalPriceAfterDiscount > totalPrice) {
+    return totalPrice;
+  }
+  
+  // If totalPriceAfterDiscount is positive and less than or equal to totalPrice, use it
+  return totalPriceAfterDiscount;
+}
 void showToast(String? msg,Color? bgColor){
   Fluttertoast.showToast(msg: msg?? "Invalid",backgroundColor:bgColor??blackColor);
 }

@@ -219,7 +219,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get confirmpayment => 'Confirm Payment';
 
   @override
-  String get checkoutcreatedsuccessfully => 'Checkout created successfully';
+  String get checkoutcreatedsuccessfully => 'Order is placed successfully';
 
   @override
   String get emptycard => 'Empty cart';
