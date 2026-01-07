@@ -57,6 +57,26 @@ class SellerMessagesRepository{
     customPrint("Status code:================$statusCode");
     customPrint("Raw response body: ${response.body}");
     
+    // Log attachment messages in raw response for debugging
+    if (body is Map && body['chat'] is List) {
+      final chatList = body['chat'] as List;
+      final attachmentMessages = chatList.where((msg) => msg is Map && (msg['attachment'] == true || msg['attachment'] == 'true')).toList();
+      customPrint('Raw API response - total messages: ${chatList.length}, attachment messages: ${attachmentMessages.length}');
+      for (var msg in attachmentMessages) {
+        if (msg is Map) {
+          customPrint('  Attachment message - id: ${msg['_id']}, hasAttachmentData: ${msg.containsKey('attachmentData')}');
+          if (msg.containsKey('attachmentData')) {
+            customPrint('    attachmentData type: ${msg['attachmentData'].runtimeType}');
+            if (msg['attachmentData'] is Map) {
+              customPrint('    attachmentData keys: ${(msg['attachmentData'] as Map).keys.toList()}');
+            }
+          } else {
+            customPrint('    ✗✗✗ CRITICAL: attachmentData key is missing from API response! ✗✗✗');
+          }
+        }
+      }
+    }
+    
     if(response.statusCode==200||response.statusCode==201){
       final chatHistory = _handleResponse(response, (data) => ChatHistoryResponse.fromJson(body));
       return chatHistory;

@@ -2,19 +2,135 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'package:sugudeni/providers/customer-chat-add-doc-provider.dart';
+import 'package:sugudeni/providers/chatSocketProvider/chat-socket-provider.dart';
 import 'package:sugudeni/utils/constants/app-assets.dart';
 import 'package:sugudeni/utils/customWidgets/my-text.dart';
 import 'package:sugudeni/utils/customWidgets/symetric-padding.dart';
 import 'package:sugudeni/utils/extensions/sizebox.dart';
 import 'package:sugudeni/utils/global-functions.dart';
 import 'package:sugudeni/utils/routes/routes-name.dart';
-import 'package:sugudeni/view/customer/products/customer-all-products-view.dart';
-import 'package:sugudeni/view/customer/account/customer-to-receive-order-view.dart';
+import 'package:sugudeni/utils/sharePreference/save-user-token.dart';
+import 'package:sugudeni/view/customer/chat/select-order-modal.dart';
+import 'package:sugudeni/view/customer/chat/select-product-modal.dart';
+import 'package:sugudeni/view/customer/chat/chat-attachment-preview.dart';
+import 'package:sugudeni/repositories/orders/customer-order-repository.dart';
+import 'package:sugudeni/models/orders/GetAllOrdersCutomerModel.dart';
 
 import '../../../utils/constants/colors.dart';
 
-class ChatWithOwnerView extends StatelessWidget {
+class ChatWithOwnerView extends StatefulWidget {
   const ChatWithOwnerView({super.key});
+
+  @override
+  State<ChatWithOwnerView> createState() => _ChatWithOwnerViewState();
+}
+
+class _ChatWithOwnerViewState extends State<ChatWithOwnerView> {
+  GetCustomerAllOrderResponseModel? _cachedOrders;
+  bool _ordersLoaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadOrdersData();
+  }
+
+  Future<void> _loadOrdersData() async {
+    try {
+      _cachedOrders = await CustomerOrderRepository.allCustomersOrders(context);
+      if (mounted) {
+        setState(() {
+          _ordersLoaded = true;
+        });
+      }
+    } catch (e) {
+      customPrint('Error loading orders: $e');
+    }
+  }
+
+  void _showOrderSelectionModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (modalContext) => SelectOrderModal(
+        onOrderSelected: (order) {
+          Navigator.of(modalContext).pop();
+          final chatProvider = context.read<ChatSocketProvider>();
+          
+          Map<String, dynamic> attachmentData = {
+            'attachmentType': 'order',
+            'orderid': order.toJson(),
+            'productid': '',
+          };
+          
+          customPrint('Order selected - orderId: ${order.id}');
+          chatProvider.setPendingAttachment(attachmentData);
+          
+          final provider = context.read<SellerChatAddDocProvider>();
+          if (provider.isOpenDoc) {
+            provider.toggle();
+          }
+          provider.reset();
+        },
+      ),
+    );
+  }
+
+  void _showProductSelectionModal(BuildContext context) {
+    if (!_ordersLoaded || _cachedOrders == null) {
+      // Load orders if not loaded
+      _loadOrdersData().then((_) {
+        if (mounted && _cachedOrders != null) {
+          _showProductSelectionModal(context);
+        }
+      });
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (modalContext) => SelectProductModal(
+        onProductSelected: (orderId, productId, product, order) {
+          Navigator.of(modalContext).pop();
+          final chatProvider = context.read<ChatSocketProvider>();
+          
+          Map<String, dynamic> attachmentData = {
+            'attachmentType': 'product',
+            'orderid': order.toJson(),
+            'productid': {
+              '_id': product.id,
+              'title': product.title,
+              'imgCover': product.imgCover,
+              'price': product.price,
+              'description': product.description ?? '',
+              'weight': product.weight,
+              'color': product.color,
+              'size': product.size,
+              'images': product.images,
+              'quantity': product.quantity,
+              'sold': product.sold,
+              'status': product.status,
+              'category': product.category != null ? product.category!.toJson() : null,
+              'sellerid': product.sellerId.toJson(),
+              'sellerId': product.sellerId.toJson(),
+            },
+          };
+          
+          customPrint('Product selected - orderId: $orderId, productId: $productId');
+          chatProvider.setPendingAttachment(attachmentData);
+          
+          final provider = context.read<SellerChatAddDocProvider>();
+          if (provider.isOpenDoc) {
+            provider.toggle();
+          }
+          provider.reset();
+        },
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -186,51 +302,92 @@ class ChatWithOwnerView extends StatelessWidget {
                         ),
                         7.width,
                         Flexible(
-                            child: TextFormField(
-                              style: TextStyle(
-                                  fontWeight: FontWeight.w500,
-                                  fontSize: 10.sp,
-                                  color: const Color(0xff545454)
-                              ),
-                              decoration: InputDecoration(
-                                hintText: "Type your message",
-                                suffixIcon: Image.asset(AppAssets.emojiIcon,scale: 2,),
-                                hintStyle: TextStyle(
-                                    fontWeight: FontWeight.w500,
-                                    fontSize: 10.sp,
-                                    color: const Color(0xff545454)
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12.r),
-                                  borderSide: const BorderSide(
-                                    color: primaryColor,
+                            child: Consumer<ChatSocketProvider>(
+                              builder: (context, chatProvider, child) {
+                                return Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    // Show preview of pending attachment
+                                    const ChatAttachmentPreview(),
+                                    TextFormField(
+                                      controller: chatProvider.messageController,
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.w500,
+                                          fontSize: 10.sp,
+                                          color: const Color(0xff545454)
+                                      ),
+                                      decoration: InputDecoration(
+                                        hintText: "Type your message",
+                                        suffixIcon: Image.asset(AppAssets.emojiIcon,scale: 2,),
+                                        hintStyle: TextStyle(
+                                            fontWeight: FontWeight.w500,
+                                            fontSize: 10.sp,
+                                            color: const Color(0xff545454)
+                                        ),
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(12.r),
+                                          borderSide: const BorderSide(
+                                            color: primaryColor,
 
-                                  ),
-                                ),
-                                enabledBorder:OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12.r),
-                                  borderSide: const BorderSide(
-                                    color: primaryColor,
+                                          ),
+                                        ),
+                                        enabledBorder:OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(12.r),
+                                          borderSide: const BorderSide(
+                                            color: primaryColor,
 
-                                  ),
-                                ) ,
-                                focusedBorder:OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12.r),
-                                  borderSide: const BorderSide(
-                                    color: primaryColor,
-                                  ),
-                                ),
-                              ),
+                                          ),
+                                        ) ,
+                                        focusedBorder:OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(12.r),
+                                          borderSide: const BorderSide(
+                                            color: primaryColor,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
                             )),
                         7.width,
-                        provider.isOpenDoc==false?       Container(
-                          height: 42.h,
-                          width: 58.w,
-                          decoration: BoxDecoration(
-                              color: primaryColor,
-                              borderRadius: BorderRadius.circular(10.r),
-                              image: const DecorationImage(image: AssetImage(AppAssets.sendIcon),scale: 3)
-                          ),
+                        provider.isOpenDoc==false?
+                        Consumer<ChatSocketProvider>(
+                          builder: (context, chatProvider, child) {
+                            return GestureDetector(
+                              onTap: () async {
+                                // Note: This view needs receiverId to be passed or stored
+                                // For now, we'll get senderId and leave receiverId empty
+                                // The actual implementation should get receiverId from route args or provider
+                                final senderId = await getUserId();
+                                
+                                if (senderId != null) {
+                                  // Get receiverId from provider's current conversation or route args
+                                  // For now, using empty string - this needs to be fixed based on app flow
+                                  final receiverId = chatProvider.currentReceiverId ?? '';
+                                  
+                                  if (receiverId.isNotEmpty && (chatProvider.hasPendingAttachment || chatProvider.messageController.text.trim().isNotEmpty)) {
+                                    chatProvider.sendMessage(receiverId, senderId);
+                                    chatProvider.messageController.clear();
+                                  } else if (receiverId.isEmpty) {
+                                    // Show error if receiverId is not available
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Receiver ID not available')),
+                                    );
+                                  }
+                                }
+                              },
+                              child: Container(
+                                height: 42.h,
+                                width: 58.w,
+                                decoration: BoxDecoration(
+                                    color: primaryColor,
+                                    borderRadius: BorderRadius.circular(10.r),
+                                    image: const DecorationImage(image: AssetImage(AppAssets.sendIcon),scale: 3)
+                                ),
+                              ),
+                            );
+                          },
                         ):const SizedBox(),
                       ],
                     ),
@@ -253,44 +410,7 @@ class ChatWithOwnerView extends StatelessWidget {
                             MyText(text: "Photos",size: 10.sp,fontWeight: FontWeight.w500,color: const Color(0xff545454),)
                           ],
                         ),
-                        GestureDetector(
-                          onTap: () {
-                            provider.toggle(); // Close the options menu
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const CustomerAllProductsView(),
-                              ),
-                            );
-                          },
-                          child: Column(
-                            spacing: 10.h,
-                            children: [
-                              Image.asset(AppAssets.productChatImg,scale: 3,),
-                              MyText(text: "Products",size: 10.sp,fontWeight: FontWeight.w500,color: const Color(0xff545454),)
-                            ],
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: () {
-                            provider.toggle(); // Close the options menu
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const CustomerToReceiveOrderView(),
-                              ),
-                            );
-                          },
-                          child: Column(
-                            spacing: 10.h,
-                            children: [
-                              Image.asset(AppAssets.ordersChatImg,scale: 3,),
-                              MyText(text: "Orders",size: 10.sp,fontWeight: FontWeight.w500,color: const Color(0xff545454),)
-                            ],
-                          ),
-                        )
-
-                        ,                    ],
+                      ],
                     ):const SizedBox()
                   ],
                 ),

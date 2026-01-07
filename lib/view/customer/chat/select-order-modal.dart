@@ -109,8 +109,12 @@ class SelectOrderModal extends StatelessWidget {
 
     return GestureDetector(
       onTap: () {
+        // Call callback first, then close modal
         onOrderSelected(order);
-        Navigator.pop(context);
+        // Use Navigator.of(context) to ensure we only pop the modal
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        }
       },
       child: Container(
         margin: EdgeInsets.only(bottom: 15.h),

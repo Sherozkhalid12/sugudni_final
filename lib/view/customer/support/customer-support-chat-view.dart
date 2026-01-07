@@ -428,7 +428,8 @@ class _CustomerSupportChatViewState extends State<CustomerSupportChatView> {
                       GestureDetector(
                         onTap: () {
                           if (provider.image == null) {
-                            if (chatProvider.messageController.text.trim().isNotEmpty) {
+                            // Allow sending if there's a pending attachment or message text is not empty
+                            if (chatProvider.hasPendingAttachment || chatProvider.messageController.text.trim().isNotEmpty) {
                               chatProvider.sendMessage(adminUserId, currentUserId!);
                               chatProvider.messageController.clear();
                             }
@@ -510,42 +511,6 @@ class _CustomerSupportChatViewState extends State<CustomerSupportChatView> {
                             ],
                           ),
                         ),
-                        GestureDetector(
-                          onTap: () {
-                            provider.toggle(); // Close bottom sheet
-                            _showProductSelectionModal(context);
-                          },
-                          child: Column(
-                            spacing: 10.h,
-                            children: [
-                              Image.asset(AppAssets.productChatImg, scale: 3),
-                              MyText(
-                                text: AppLocalizations.of(context)!.products,
-                                size: 10.sp,
-                                fontWeight: FontWeight.w500,
-                                color: const Color(0xff545454),
-                              ),
-                            ],
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: () {
-                            provider.toggle(); // Close bottom sheet
-                            _showOrderSelectionModal(context);
-                          },
-                          child: Column(
-                            spacing: 10.h,
-                            children: [
-                              Image.asset(AppAssets.ordersChatImg, scale: 3),
-                              MyText(
-                                text: AppLocalizations.of(context)!.orders,
-                                size: 10.sp,
-                                fontWeight: FontWeight.w500,
-                                color: const Color(0xff545454),
-                              ),
-                            ],
-                          ),
-                        ),
                       ],
                     ),
                   ],
@@ -561,26 +526,28 @@ class _CustomerSupportChatViewState extends State<CustomerSupportChatView> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => SelectOrderModal(
+      builder: (modalContext) => SelectOrderModal(
         onOrderSelected: (order) {
-          final chatProvider = context.read<ChatSocketProvider>();
-          // Ensure message controller is clear for attachment
-          chatProvider.messageController.clear();
+          // Close modal using modalContext, not the outer context
+          Navigator.pop(modalContext);
           
-          // Create attachment data
+          final chatProvider = context.read<ChatSocketProvider>();
+          
+          // Create attachment data - include full order object
           Map<String, dynamic> attachmentData = {
             'attachmentType': 'order',
-            'orderid': order.id,
+            'orderid': order.toJson(), // Send full order object
+            'productid': '', // Empty string when sending order
           };
           
-          customPrint('Sending order attachment - orderId: ${order.id}');
+          customPrint('Order selected - orderId: ${order.id}');
+          customPrint('Order attachment data keys: ${attachmentData.keys}');
           
-          chatProvider.sendMessage(
-            adminUserId,
-            currentUserId!,
-            attachment: true,
-            attachmentData: attachmentData,
-          );
+          // Set as pending attachment - will be sent when user taps send button
+          chatProvider.setPendingAttachment(attachmentData);
+          
+          // Don't clear message controller - let user type a message if they want
+          // The attachment will be sent when they tap send button
         },
       ),
     );
@@ -602,27 +569,46 @@ class _CustomerSupportChatViewState extends State<CustomerSupportChatView> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => SelectProductModal(
-        onProductSelected: (orderId, productId) {
-          final chatProvider = context.read<ChatSocketProvider>();
-          // Ensure message controller is clear for attachment
-          chatProvider.messageController.clear();
+      builder: (modalContext) => SelectProductModal(
+        onProductSelected: (orderId, productId, product, order) {
+          // Close modal using modalContext, not the outer context
+          Navigator.pop(modalContext);
           
-          // Create attachment data
+          final chatProvider = context.read<ChatSocketProvider>();
+          
+          // Create attachment data - include full product and order objects
+          // Use proper serialization for category and sellerId
           Map<String, dynamic> attachmentData = {
             'attachmentType': 'product',
-            'orderid': orderId,
-            'productid': productId,
+            'orderid': order.toJson(), // Send full order object
+            'productid': {
+              '_id': product.id,
+              'title': product.title,
+              'imgCover': product.imgCover,
+              'price': product.price,
+              'description': product.description ?? '',
+              'weight': product.weight,
+              'color': product.color,
+              'size': product.size,
+              'images': product.images,
+              'quantity': product.quantity,
+              'sold': product.sold,
+              'status': product.status,
+              // Convert category and sellerId to Maps
+              'category': product.category != null ? product.category!.toJson() : null,
+              'sellerid': product.sellerId.toJson(),
+              'sellerId': product.sellerId.toJson(),
+            }, // Send full product object
           };
           
-          customPrint('Sending product attachment - orderId: $orderId, productId: $productId');
+          customPrint('Product selected - orderId: $orderId, productId: $productId');
+          customPrint('Product attachment data keys: ${attachmentData.keys}');
           
-          chatProvider.sendMessage(
-            adminUserId,
-            currentUserId!,
-            attachment: true,
-            attachmentData: attachmentData,
-          );
+          // Set as pending attachment - will be sent when user taps send button
+          chatProvider.setPendingAttachment(attachmentData);
+          
+          // Don't clear message controller - let user type a message if they want
+          // The attachment will be sent when they tap send button
         },
       ),
     );

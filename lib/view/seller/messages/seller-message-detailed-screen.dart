@@ -24,12 +24,15 @@ import '../orders/seller-orders-view.dart';
 import '../../customer/chat/select-order-modal.dart';
 import '../../customer/chat/select-product-modal.dart';
 import '../../customer/chat/chat-attachment-card.dart';
-import '../../../models/orders/GetAllOrdersCutomerModel.dart';
+import '../../customer/chat/chat-attachment-preview.dart';
+import '../../../models/orders/GetAllOrdersCutomerModel.dart' as CustomerOrderModel;
 import '../../../repositories/orders/customer-order-repository.dart';
 import 'select-seller-product-modal.dart';
 import 'select-seller-order-modal.dart';
-import '../../../models/orders/GetAllOrderSellerResponseModel.dart';
+import '../../../models/orders/GetAllOrderSellerResponseModel.dart' as SellerOrderModel;
 import '../../../repositories/orders/seller-order-repository.dart';
+import '../../../models/products/SellerProductListResponse.dart';
+import '../../../models/products/SimpleProductModel.dart';
 
 class SellerMessageDetailView extends StatefulWidget {
   final String receiverName;
@@ -42,9 +45,9 @@ class SellerMessageDetailView extends StatefulWidget {
 }
 
 class _SellerMessageDetailViewState extends State<SellerMessageDetailView> {
-  GetCustomerAllOrderResponseModel? _cachedOrders;
+  CustomerOrderModel.GetCustomerAllOrderResponseModel? _cachedOrders;
   bool _ordersLoaded = false;
-  GetAllOrderSellerResponse? _cachedSellerOrders;
+  SellerOrderModel.GetAllOrderSellerResponse? _cachedSellerOrders;
   bool _sellerOrdersLoaded = false;
   // Note: _cachedOrders is kept for compatibility but not loaded for sellers
 
@@ -94,40 +97,112 @@ class _SellerMessageDetailViewState extends State<SellerMessageDetailView> {
     }
   }
 
+  // Helper method to convert Order to Map for attachmentData
+  // Converts seller order format to customer order format for compatibility
+  Map<String, dynamic> _orderToMap(SellerOrderModel.Order order) {
+    return {
+      '_id': order.id,
+      'orderId': order.orderId,
+      'userId': order.userId != null ? order.userId!.id : '',
+      'sellerId': order.sellerId,
+      'driverId': order.driverId,
+      'driverPicked': order.driverPicked,
+      'cartItem': order.cartItem.where((item) => item.product != null).map((item) {
+        // Convert seller cartItem format to customer cartItem format
+        // Customer model expects productId (not product) and specific structure
+        // Only include items with valid products
+        final productMap = {
+          '_id': item.product!.id,
+          'title': item.product!.title,
+          'imgCover': item.product!.imgCover,
+          'price': item.product!.price,
+          'description': item.product!.description ?? '',
+          'category': item.product!.category ?? '',
+          'sellerId': item.product!.sellerId ?? '',
+        };
+        
+        return {
+          'productId': productMap, // Customer model expects productId (never null)
+          'quantity': item.quantity,
+          'price': item.price,
+          'totalProductDiscount': item.totalProductDiscount,
+        };
+      }).toList(),
+      'status': order.trackingStatus, // Customer model uses 'status', seller uses 'trackingStatus'
+      'trackingStatus': order.trackingStatus, // Keep both for compatibility
+      'trackingId': order.trackingId,
+      'isDelivered': order.isDelivered,
+      'amount': order.amount,
+      'paymentMethod': order.paymentMethod,
+      'isPaid': order.isPaid,
+      'totalPrice': order.totalPrice,
+      'totalPriceAfterDiscount': order.totalPriceAfterDiscount,
+      'itemsCount': order.itemsCount,
+      'createdAt': order.createdAt.toIso8601String(),
+      'updatedAt': order.updatedAt.toIso8601String(),
+    };
+  }
+
   void _showOrderSelectionModal(BuildContext context) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => SelectSellerOrderModal(
+      builder: (modalContext) => SelectSellerOrderModal(
         onOrderSelected: (order) {
+          // Don't pop here - let the modal handle it in its onTap
           final chatProvider = context.read<ChatSocketProvider>();
           final mediaProvider = context.read<SellerChatAddDocProvider>();
           
-          // Close bottom sheet
-          mediaProvider.reset();
-          
-          // Ensure message controller is clear for attachment
-          chatProvider.messageController.clear();
-          
-          // Create attachment data - for order, orderid is the actual order id, productid is empty string
+          // Create attachment data - include full order object
           Map<String, dynamic> attachmentData = {
             'attachmentType': 'order',
-            'orderid': order.id,
+            'orderid': _orderToMap(order), // Send full order object
             'productid': '', // Empty string when sending order
           };
           
-          customPrint('Sending order attachment - orderId: ${order.id}');
+          customPrint('Order selected - orderId: ${order.id}');
+          customPrint('Order attachment data keys: ${attachmentData.keys}');
           
-          chatProvider.sendMessage(
-            widget.receiverId,
-            widget.senderId,
-            attachment: true,
-            attachmentData: attachmentData,
-          );
+          // Set as pending attachment - will be sent when user taps send button
+          chatProvider.setPendingAttachment(attachmentData);
+          
+          // Ensure bottom sheet is closed
+          if (mediaProvider.isOpenDoc) {
+            mediaProvider.toggle();
+          }
+          mediaProvider.reset();
+          
+          // Don't clear message controller - let user type a message if they want
+          // The attachment will be sent when they tap send button
         },
       ),
     );
+  }
+
+  // Helper method to convert Product to Map for attachmentData
+  // Properly serializes nested objects (category, sellerId) to Maps
+  Map<String, dynamic> _productToMap(Product product) {
+    return {
+      '_id': product.id,
+      'title': product.title,
+      'imgCover': product.imgCover,
+      'price': product.price,
+      'description': product.description ?? '',
+      'weight': product.weight,
+      'color': product.color,
+      'size': product.size,
+      'images': product.images,
+      'quantity': product.quantity,
+      'sold': product.sold,
+      'status': product.status,
+      // Convert category object to Map if it exists (Product.fromJson expects 'category' key)
+      'category': product.category != null ? product.category!.toJson() : null,
+      // Convert sellerId object to Map (Product.fromJson expects 'sellerid' lowercase)
+      'sellerid': product.sellerId.toJson(),
+      // Also include sellerId for compatibility
+      'sellerId': product.sellerId.toJson(),
+    };
   }
 
   void _showProductSelectionModal(BuildContext context) {
@@ -135,32 +210,33 @@ class _SellerMessageDetailViewState extends State<SellerMessageDetailView> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => SelectSellerProductModal(
+      builder: (modalContext) => SelectSellerProductModal(
         onProductSelected: (productId, product) {
+          // Don't pop here - let the modal handle it in its onTap
           final chatProvider = context.read<ChatSocketProvider>();
           final mediaProvider = context.read<SellerChatAddDocProvider>();
           
-          // Close bottom sheet
-          mediaProvider.reset();
-          
-          // Ensure message controller is clear for attachment
-          chatProvider.messageController.clear();
-          
-          // Create attachment data - for product, productid is the actual product id, orderid is empty string
+          // Create attachment data - include full product object
           Map<String, dynamic> attachmentData = {
             'attachmentType': 'product',
             'orderid': '', // Empty string when sending product
-            'productid': productId,
+            'productid': _productToMap(product), // Send full product object
           };
           
-          customPrint('Sending product attachment - productId: $productId');
+          customPrint('Product selected - productId: $productId');
+          customPrint('Product attachment data keys: ${attachmentData.keys}');
           
-          chatProvider.sendMessage(
-            widget.receiverId,
-            widget.senderId,
-            attachment: true,
-            attachmentData: attachmentData,
-          );
+          // Set as pending attachment - will be sent when user taps send button
+          chatProvider.setPendingAttachment(attachmentData);
+          
+          // Ensure bottom sheet is closed
+          if (mediaProvider.isOpenDoc) {
+            mediaProvider.toggle();
+          }
+          mediaProvider.reset();
+          
+          // Don't clear message controller - let user type a message if they want
+          // The attachment will be sent when they tap send button
         },
       ),
     );
@@ -481,52 +557,57 @@ class _SellerMessageDetailViewState extends State<SellerMessageDetailView> {
                             // Hide text field and send button when bottom sheet is open
                             if (!provider.isOpenDoc) ...[
                               Flexible(
-                                  child: TextFormField(
-                                    controller: chatProvider.messageController,
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.w500,
-                                        fontSize: 10.sp,
-                                        color: const Color(0xff545454)
-                                    ),
-                                    decoration: InputDecoration(
-                                      hintText: AppLocalizations.of(context)!.typeyourmessage,
-                                      //suffixIcon: Image.asset(AppAssets.emojiIcon,scale: 2,),
-                                      hintStyle: TextStyle(
-                                          fontWeight: FontWeight.w500,color: const Color(0xff545454)
-                                    ),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12.r),
-                                        borderSide: const BorderSide(
-                                          color: primaryColor,
-
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      // Show preview of pending attachment
+                                      const ChatAttachmentPreview(),
+                                      TextFormField(
+                                        controller: chatProvider.messageController,
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.w500,
+                                            fontSize: 10.sp,
+                                            color: const Color(0xff545454)
+                                        ),
+                                        decoration: InputDecoration(
+                                          hintText: AppLocalizations.of(context)!.typeyourmessage,
+                                          //suffixIcon: Image.asset(AppAssets.emojiIcon,scale: 2,),
+                                          hintStyle: TextStyle(
+                                              fontWeight: FontWeight.w500,color: const Color(0xff545454)
+                                          ),
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(12.r),
+                                            borderSide: const BorderSide(
+                                              color: primaryColor,
+                                            ),
+                                          ),
+                                          enabledBorder:OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(12.r),
+                                            borderSide: const BorderSide(
+                                              color: primaryColor,
+                                            ),
+                                          ) ,
+                                          focusedBorder:OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(12.r),
+                                            borderSide: const BorderSide(
+                                              color: primaryColor,
+                                            ),
+                                          ),
                                         ),
                                       ),
-                                      enabledBorder:OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12.r),
-                                        borderSide: const BorderSide(
-                                          color: primaryColor,
-
-                                        ),
-                                      ) ,
-                                      focusedBorder:OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12.r),
-                                        borderSide: const BorderSide(
-                                          color: primaryColor,
-                                        ),
-                                      ),
-                                    ),
+                                    ],
                                   )),
                               7.width,
                               GestureDetector(
                                 onTap: (){
                                   if(mediaProvider.image==null){
-                                     chatProvider.sendMessage(widget.receiverId, widget.senderId);
-
+                                    // Allow sending if there's a pending attachment or message text is not empty
+                                    if(chatProvider.hasPendingAttachment || chatProvider.messageController.text.trim().isNotEmpty){
+                                      chatProvider.sendMessage(widget.receiverId, widget.senderId);
+                                    }
                                   }else{
                                     chatProvider.sendMedia(widget.receiverId, widget.senderId, context);
-
                                   }
-
                                 },
                                 child: Container(
                                   height: 42.h,
@@ -545,7 +626,7 @@ class _SellerMessageDetailViewState extends State<SellerMessageDetailView> {
                         // Hide media options for support chat
                         (!isSupportChat && provider.isOpenDoc)
                         ? Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
                             GestureDetector(
                               onTap: (){

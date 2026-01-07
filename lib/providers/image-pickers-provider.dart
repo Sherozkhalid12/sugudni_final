@@ -27,10 +27,10 @@ class ImagePickerProviders extends ChangeNotifier{
       notifyListeners();
     }
   }
-  Future<bool> pickSellerImage() async {
+  Future<bool> pickSellerImage(ImageSource source) async {
     final ImagePicker picker = ImagePicker();
     final XFile? pickedFile =
-    await picker.pickImage(source: ImageSource.gallery);
+    await picker.pickImage(source: source);
     if (pickedFile != null) {
       sellerProfilePic = File(pickedFile.path);
       notifyListeners();

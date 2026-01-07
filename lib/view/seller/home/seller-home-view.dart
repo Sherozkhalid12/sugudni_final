@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:sugudeni/api/api-endpoints.dart';
 import 'package:sugudeni/providers/image-pickers-provider.dart';
@@ -323,7 +324,7 @@ class _SellerInfoWidgetState extends State<SellerInfoWidget> {
                 child: GestureDetector(
                   onTap: () async {
                     // Pick image and wait for completion
-                    final picked = await provider.pickSellerImage();
+                    final picked = await provider.pickSellerImage(ImageSource.gallery);
                     // If image was picked, upload it
                     if (picked && context.mounted) {
                       await provider.uploadSellerProfilePicture(context);

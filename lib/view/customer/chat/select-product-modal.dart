@@ -10,7 +10,7 @@ import 'package:sugudeni/utils/customWidgets/cached-network-image.dart';
 import 'package:sugudeni/models/products/SimpleProductModel.dart';
 
 class SelectProductModal extends StatelessWidget {
-  final Function(String orderId, String productId) onProductSelected;
+  final Function(String orderId, String productId, Product product, Order order) onProductSelected;
 
   const SelectProductModal({
     super.key,
@@ -139,8 +139,12 @@ class SelectProductModal extends StatelessWidget {
 
     return GestureDetector(
       onTap: () {
-        onProductSelected(orderId, productId);
-        Navigator.pop(context);
+        // Call callback first, then close modal
+        onProductSelected(orderId, productId, product, order);
+        // Use Navigator.of(context) to ensure we only pop the modal
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        }
       },
       child: Container(
         margin: EdgeInsets.only(bottom: 15.h),

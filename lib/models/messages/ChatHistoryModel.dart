@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:sugudeni/utils/global-functions.dart';
 
 class ChatHistoryResponse {
@@ -58,11 +59,47 @@ class ChatMessage {
   });
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) {
-    final attachmentData = json['attachmentData'] != null
-        ? (json['attachmentData'] is Map
-            ? Map<String, dynamic>.from(json['attachmentData'] as Map)
-            : null)
-        : null;
+    // Try multiple possible field names for attachmentData
+    Map<String, dynamic>? attachmentData;
+    
+    // First try 'attachmentData' (standard)
+    if (json['attachmentData'] != null) {
+      if (json['attachmentData'] is Map) {
+        attachmentData = Map<String, dynamic>.from(json['attachmentData'] as Map);
+      } else if (json['attachmentData'] is String) {
+        // Try parsing as JSON string
+        try {
+          final decoded = jsonDecode(json['attachmentData'] as String);
+          if (decoded is Map) {
+            attachmentData = Map<String, dynamic>.from(decoded);
+          }
+        } catch (e) {
+          customPrint('Error parsing attachmentData as JSON string: $e');
+        }
+      }
+    }
+    
+    // Also check for camelCase version
+    if (attachmentData == null && json['attachment_data'] != null) {
+      if (json['attachment_data'] is Map) {
+        attachmentData = Map<String, dynamic>.from(json['attachment_data'] as Map);
+      }
+    }
+    
+    // Log attachment parsing for debugging
+    final isAttachment = json['attachment'] == true || json['attachment'] == 'true';
+    if (isAttachment) {
+      customPrint('Parsing ChatMessage with attachment - id: ${json['_id']}, hasAttachmentData: ${attachmentData != null}');
+      if (attachmentData != null) {
+        customPrint('  - attachmentType: ${attachmentData['attachmentType']}');
+        customPrint('  - attachmentData keys: ${attachmentData.keys.toList()}');
+      } else {
+        customPrint('  - ✗✗✗ WARNING: attachment=true but attachmentData is null or not a Map ✗✗✗');
+        customPrint('  - attachmentData value: ${json['attachmentData']}, type: ${json['attachmentData']?.runtimeType}');
+        customPrint('  - All JSON keys: ${json.keys.toList()}');
+        customPrint('  - This means the server is NOT returning attachmentData in the API response!');
+      }
+    }
     
     return ChatMessage(
       id: json['_id'] as String,

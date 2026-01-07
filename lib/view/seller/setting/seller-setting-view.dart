@@ -1,9 +1,14 @@
+import 'dart:io';
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:sugudeni/api/api-endpoints.dart';
 import 'package:sugudeni/models/user/UpdateSellerModel.dart';
+import 'package:sugudeni/providers/image-pickers-provider.dart';
 import 'package:sugudeni/providers/loading-provider.dart';
 import 'package:sugudeni/repositories/user-repository.dart';
 import 'package:sugudeni/utils/constants/app-assets.dart';
@@ -34,15 +39,13 @@ class _SellerAccountSettingViewState extends State<SellerAccountSettingView> {
   final nameController=TextEditingController();
   final emailController=TextEditingController();
   final phoneController=TextEditingController();
-  final passwordController=TextEditingController();
-
-  bool _showPassword = false;
 
   // Store original values to detect changes
   String originalEmail = '';
   String originalPhone = '';
+  String profilePicture = '';
   
-  void fetchData()async{
+  Future<void> fetchData()async{
     customPrint("Init ===============================================");
     var data=await UserRepository.getSellerData(context);
     customPrint("Init data===============================================${data.user!.email}");
@@ -50,14 +53,17 @@ class _SellerAccountSettingViewState extends State<SellerAccountSettingView> {
     nameController.text=data.user!.name;
     emailController.text=data.user!.email;
     phoneController.text=data.user!.phone;
+    profilePicture = data.user!.profilePic ?? '';
     
     // Store original values
     originalEmail = data.user!.email;
     originalPhone = data.user!.phone;
     
-    setState(() {
+    if (mounted) {
+      setState(() {
 
-    });
+      });
+    }
   }
 
   @override
@@ -70,6 +76,7 @@ class _SellerAccountSettingViewState extends State<SellerAccountSettingView> {
   Widget build(BuildContext context) {
     final sellerProvider=Provider.of<UserProfileProvider>(context,listen: false);
     final loadingProvider=Provider.of<LoadingProvider>(context,listen: false);
+    final imagePickerProvider=Provider.of<ImagePickerProviders>(context,listen: false);
     return Scaffold(
       appBar: AppBar(
         toolbarHeight: 80.h,
@@ -95,6 +102,74 @@ class _SellerAccountSettingViewState extends State<SellerAccountSettingView> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 40.height,
+                // Profile Image Section - Centered
+                Center(
+                  child: SizedBox(
+                    height: 90.h,
+                    width: 90.w,
+                    child: Stack(
+                      children: [
+                        Consumer<ImagePickerProviders>(builder: (context, imageProvider, child) {
+                          final hasLocalPic = imageProvider.sellerProfilePic != null;
+                          final hasApiPic = profilePicture.isNotEmpty;
+                          
+                          return Positioned(
+                            top: 0,
+                            left: 0,
+                            child: Container(
+                              height: 80.h,
+                              width: 80.w,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: !hasLocalPic && !hasApiPic ? Colors.orange.shade400 : whiteColor,
+                                image: hasLocalPic
+                                    ? DecorationImage(
+                                        image: FileImage(File(imageProvider.sellerProfilePic!.path)),
+                                        fit: BoxFit.cover,
+                                      )
+                                    : hasApiPic
+                                        ? DecorationImage(
+                                            image: NetworkImage("${ApiEndpoints.productUrl}/$profilePicture"),
+                                            fit: BoxFit.cover,
+                                          )
+                                        : null,
+                              ),
+                              child: !hasLocalPic && !hasApiPic
+                                  ? Icon(
+                                      Icons.person,
+                                      color: whiteColor,
+                                      size: 40.sp,
+                                    )
+                                  : null,
+                            ),
+                          );
+                        }),
+                        Positioned(
+                          right: 0,
+                          bottom: 0,
+                          child: GestureDetector(
+                            onTap: () {
+                              _showImagePickerBottomSheet(context);
+                            },
+                            child: Container(
+                              height: 28.h,
+                              width: 28.w,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: primaryColor,
+                                border: Border.all(color: whiteColor, width: 3)
+                              ),
+                              child: Center(
+                                child: Icon(Icons.edit, color: whiteColor, size: 12.sp),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                30.height,
                 MyText(text: AppLocalizations.of(context)!.name,size: 12.sp,fontWeight: FontWeight.w500,),
                 5.height,
                 CustomTextFiled(
@@ -136,27 +211,6 @@ class _SellerAccountSettingViewState extends State<SellerAccountSettingView> {
                   prefixImgUrl: AppAssets.callIcon,
 
                 ),
-                10.height,
-                MyText(text: AppLocalizations.of(context)!.password,size: 12.sp,fontWeight: FontWeight.w500,),
-                5.height,
-                CustomTextFiled(
-                  key: ValueKey(_showPassword),
-                  controller: passwordController,
-                  borderRadius: 15.r,
-                  isShowPrefixIcon: true,
-                  isBorder: true,
-                  isFilled: true,
-                  hintText: AppLocalizations.of(context)!.enteryourpassword,
-                  isShowPrefixImage: true,
-                  isPassword: true,
-                  isObscure: !_showPassword,
-                  passwordFunction: () {
-                    setState(() {
-                      _showPassword = !_showPassword;
-                    });
-                  },
-                  prefixImgUrl: AppAssets.passwordIcon,
-                ),
                 150.height,
                 RoundButton(
                     isLoad: true,
@@ -175,13 +229,23 @@ class _SellerAccountSettingViewState extends State<SellerAccountSettingView> {
                           name: nameController.text.trim(),
                           email: emailChanged ? emailController.text.trim() : null,
                           phone: phoneChanged ? phoneController.text.trim() : null,
-                          password: passwordController.text.isNotEmpty ? passwordController.text.trim() : null,
                       );
                     try{
                       loadingProvider.setLoading(true);
+                      // Upload profile picture if changed
+                      if (imagePickerProvider.sellerProfilePic != null) {
+                        await imagePickerProvider.uploadSellerProfilePicture(context);
+                        // Refresh profile picture after upload
+                        await fetchData();
+                        // Clear the local image so API image shows
+                        imagePickerProvider.sellerProfilePic = null;
+                        imagePickerProvider.notifyListeners();
+                      }
                       await UserRepository.updateSellerSetting(model, context).then((v){
                         loadingProvider.setLoading(false);
                         showSnackbar(context, AppLocalizations.of(context)!.informationupdatedsuccessfully,color: greenColor);
+                        // Refresh data to show updated profile picture
+                        fetchData();
                       });
                     }catch(e){
                       loadingProvider.setLoading(false);
@@ -281,6 +345,86 @@ class _SellerAccountSettingViewState extends State<SellerAccountSettingView> {
         );
       }),
 
+    );
+  }
+
+  void _showImagePickerBottomSheet(BuildContext context) {
+    final imagePickerProvider = Provider.of<ImagePickerProviders>(context, listen: false);
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return Container(
+          decoration: BoxDecoration(
+            color: whiteColor,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(20.r),
+              topRight: Radius.circular(20.r),
+            ),
+          ),
+          padding: EdgeInsets.symmetric(vertical: 20.h, horizontal: 20.w),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Cancel button
+              Align(
+                alignment: Alignment.centerRight,
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.pop(context);
+                  },
+                  child: Padding(
+                    padding: EdgeInsets.only(bottom: 10.h),
+                    child: Icon(Icons.close, size: 24.sp),
+                  ),
+                ),
+              ),
+              // Options
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.pop(context);
+                      imagePickerProvider.pickSellerImage(ImageSource.camera);
+                    },
+                    child: Column(
+                      spacing: 10.h,
+                      children: [
+                        Image.asset(AppAssets.cameraImg, scale: 3),
+                        MyText(
+                          text: AppLocalizations.of(context)!.camera,
+                          size: 10.sp,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xff545454),
+                        ),
+                      ],
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.pop(context);
+                      imagePickerProvider.pickSellerImage(ImageSource.gallery);
+                    },
+                    child: Column(
+                      spacing: 10.h,
+                      children: [
+                        Image.asset(AppAssets.photosImg, scale: 3),
+                        MyText(
+                          text: AppLocalizations.of(context)!.photos,
+                          size: 10.sp,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xff545454),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

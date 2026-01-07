@@ -121,8 +121,12 @@ class SelectSellerOrderModal extends StatelessWidget {
       onTap: () {
         // Verify that the order belongs to the current seller
         // This is a client-side check - server will also verify
+        // Call callback first, then close modal
         onOrderSelected(order);
-        Navigator.pop(context);
+        // Use Navigator.of(context) to ensure we only pop the modal
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        }
       },
       child: Container(
         margin: EdgeInsets.only(bottom: 15.h),

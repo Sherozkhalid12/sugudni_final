@@ -111,7 +111,10 @@ final phoneController=TextEditingController();
 
         loadingProvider.setLoading(false);
         if (context.mounted) {
-          //clearResources();
+          // Clear local file after successful upload so API pic shows
+          customerProfilePic = null;
+          isChangePicture = false;
+          notifyListeners();
           showSnackbar(context, AppLocalizations.of(context)!.successfullyaddedprofile, color: greenColor);
         }
       } else if (response.statusCode == 500) {

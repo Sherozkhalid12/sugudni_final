@@ -113,8 +113,12 @@ class SelectSellerProductModal extends StatelessWidget {
         // Verify that the product belongs to the current seller
         // This is a client-side check - server will also verify
         // Pass both productId and full product object for immediate display
+        // Call callback first, then close modal
         onProductSelected(product.id, product);
-        Navigator.pop(context);
+        // Use Navigator.of(context) to ensure we only pop the modal
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        }
       },
       child: Container(
         margin: EdgeInsets.only(bottom: 15.h),

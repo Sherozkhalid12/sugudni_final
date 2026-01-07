@@ -19,12 +19,18 @@ final ScrollController scrollController = ScrollController();
 TextEditingController messageController = TextEditingController();
 String? errorMessage;
 SellerThreadResponse? sellerThreads;
-String? _currentReceiverId;
-String? _currentSenderId;
+  String? _currentReceiverId;
+  String? _currentSenderId;
+  String? get currentReceiverId => _currentReceiverId;
+  String? get currentSenderId => _currentSenderId;
 // Track processed message IDs to avoid duplicates
-final Set<String> _processedMessageIds = <String>{};
-// Track pending text messages: localId -> receiverId
-final Map<String, String> _pendingTextMessages = <String, String>{};
+  final Set<String> _processedMessageIds = <String>{};
+  // Track pending text messages: localId -> receiverId
+  final Map<String, String> _pendingTextMessages = <String, String>{};
+  // Track pending attachment (product/order) - only send when user taps send button
+  Map<String, dynamic>? _pendingAttachment;
+  bool get hasPendingAttachment => _pendingAttachment != null;
+  Map<String, dynamic>? get pendingAttachment => _pendingAttachment;
 
 Future<void> fetchThreads(BuildContext context) async {
   try {
@@ -65,23 +71,143 @@ getChatHistory(BuildContext context,String receiverId,String senderId, {bool for
   _currentReceiverId = receiverId;
   _currentSenderId = senderId;
   
+  // Preserve optimistic messages with attachmentData before fetching
+  final optimisticMessages = chatHistoryResponse?.chat
+      .where((msg) => (msg.id.startsWith('local-attachment-') || msg.id.startsWith('local-text-')) && 
+                      msg.attachment == true && 
+                      msg.attachmentData != null)
+      .toList() ?? [];
+  
+  customPrint('Preserving ${optimisticMessages.length} optimistic attachment messages before fetching chat history');
+  
   isLoading=true;
   notifyListeners();
   try {
     final history = await SellerMessagesRepository.getChatHistory(context, receiverId, senderId);
     
+    // Log attachment messages in fetched history
+    final attachmentMessages = history.chat.where((msg) => msg.attachment == true).toList();
+    customPrint('Fetched chat history - total messages: ${history.chat.length}, attachment messages: ${attachmentMessages.length}');
+    for (var msg in attachmentMessages) {
+      customPrint('Attachment message from server - id: ${msg.id}, hasAttachmentData: ${msg.attachmentData != null}');
+      if (msg.attachmentData != null) {
+        customPrint('  - attachmentType: ${msg.attachmentData!['attachmentType']}');
+      } else {
+        customPrint('  - ✗✗✗ CRITICAL WARNING: Attachment message but attachmentData is null! ✗✗✗');
+        customPrint('  - This means the server is NOT storing/returning attachmentData in the API response');
+        customPrint('  - The attachment cannot be displayed without this data');
+        customPrint('  - Server needs to be fixed to store and return attachmentData');
+      }
+    }
+    
+    // CRITICAL: Filter out attachment messages without attachmentData
+    // These are useless and will cause errors in the UI
+    final validMessages = history.chat.where((msg) {
+      if (msg.attachment == true && msg.attachmentData == null) {
+        customPrint('Filtering out attachment message without attachmentData - id: ${msg.id}');
+        return false; // Don't include messages with attachment=true but no attachmentData
+      }
+      return true;
+    }).toList();
+    
+    customPrint('After filtering - valid messages: ${validMessages.length}, filtered out: ${history.chat.length - validMessages.length}');
+    
+    // Update history with filtered messages
+    history.chat.clear();
+    history.chat.addAll(validMessages);
+    
+    // Merge optimistic messages with server messages
+    // CRITICAL: Never lose optimistic messages with attachmentData
+    final mergedChat = <ChatMessage>[];
+    final serverMessageIds = history.chat.map((m) => m.id).toSet();
+    
+    // Add all server messages first
+    mergedChat.addAll(history.chat);
+    
+    // Process optimistic messages - preserve them if server doesn't have attachmentData
+    for (var optimisticMsg in optimisticMessages) {
+      bool foundServerEquivalent = false;
+      bool serverHasAttachmentData = false;
+      
+      // Look for server message with same sender/receiver and similar timestamp
+      for (var serverMsg in history.chat) {
+        if (serverMsg.senderId == optimisticMsg.senderId &&
+            serverMsg.receiverId == optimisticMsg.receiverId &&
+            serverMsg.attachment == true) {
+          // Check if timestamps are close (within 10 seconds to be safe)
+          final timeDiff = (serverMsg.createdAt.difference(optimisticMsg.createdAt)).abs();
+          if (timeDiff.inSeconds < 10) {
+            foundServerEquivalent = true;
+            serverHasAttachmentData = serverMsg.attachmentData != null;
+            
+            // If server message doesn't have attachmentData but optimistic does, UPDATE server message
+            if (!serverHasAttachmentData && optimisticMsg.attachmentData != null) {
+              customPrint('CRITICAL: Server message missing attachmentData, updating with optimistic data - serverId: ${serverMsg.id}');
+              // Update server message with optimistic attachmentData
+              final updatedMsg = ChatMessage(
+                id: serverMsg.id,
+                senderId: serverMsg.senderId,
+                receiverId: serverMsg.receiverId,
+                message: serverMsg.message,
+                likedBy: serverMsg.likedBy,
+                replyOf: serverMsg.replyOf,
+                read: serverMsg.read,
+                delivered: serverMsg.delivered,
+                seen: serverMsg.seen,
+                createdAt: serverMsg.createdAt,
+                updatedAt: serverMsg.updatedAt,
+                contentURL: serverMsg.contentURL,
+                contentType: serverMsg.contentType,
+                liked: serverMsg.liked,
+                attachment: serverMsg.attachment,
+                attachmentData: Map<String, dynamic>.from(optimisticMsg.attachmentData!),
+              );
+              // Replace in mergedChat
+              final index = mergedChat.indexWhere((m) => m.id == serverMsg.id);
+              if (index != -1) {
+                mergedChat[index] = updatedMsg;
+                customPrint('Updated server message with optimistic attachmentData');
+              }
+            } else if (serverHasAttachmentData) {
+              customPrint('Server message has attachmentData, using server version');
+            }
+            break;
+          }
+        }
+      }
+      
+      // If no server equivalent found OR server doesn't have attachmentData, KEEP the optimistic message
+      if (!foundServerEquivalent || !serverHasAttachmentData) {
+        if (!foundServerEquivalent) {
+          customPrint('Keeping optimistic message (no server equivalent) - id: ${optimisticMsg.id}');
+        } else {
+          customPrint('Keeping optimistic message (server missing attachmentData) - id: ${optimisticMsg.id}');
+        }
+        // Only add if not already in mergedChat (avoid duplicates)
+        if (!mergedChat.any((m) => m.id == optimisticMsg.id)) {
+          mergedChat.add(optimisticMsg);
+        }
+      }
+    }
+    
     // Mark all loaded messages as processed to avoid duplicates
-    for (var msg in history.chat) {
+    for (var msg in mergedChat) {
       if (msg.id.isNotEmpty && !msg.id.startsWith('local-') && !msg.id.startsWith('temp-')) {
         _processedMessageIds.add(msg.id);
       }
     }
     
-    chatHistoryResponse = history;
+    chatHistoryResponse = ChatHistoryResponse(chat: mergedChat);
+    customPrint('Merged chat history - total messages: ${mergedChat.length}');
   } catch (e) {
-    // If chat history fails (e.g., new chat with no history), initialize with empty list
-    chatHistoryResponse = ChatHistoryResponse(chat: []);
-    customPrint('Error loading chat history, initializing empty: $e');
+    // If chat history fails (e.g., new chat with no history), keep optimistic messages
+    if (optimisticMessages.isNotEmpty) {
+      chatHistoryResponse = ChatHistoryResponse(chat: optimisticMessages);
+      customPrint('Error loading chat history, keeping ${optimisticMessages.length} optimistic messages: $e');
+    } else {
+      chatHistoryResponse = ChatHistoryResponse(chat: []);
+      customPrint('Error loading chat history, initializing empty: $e');
+    }
   }
   isLoading=false;
   WidgetsBinding.instance
@@ -180,6 +306,19 @@ void setupSocketListeners(String? currentUserId,BuildContext context) {
 
   // Now, add fresh listeners
   socket!.on('newMessage', (data) async {
+    customPrint('Received newMessage event - data keys: ${data is Map ? (data as Map).keys.toList() : 'not a map'}');
+    if (data is Map && data['attachment'] == true) {
+      customPrint('Received attachment message - hasAttachmentData: ${data.containsKey('attachmentData')}');
+      if (data['attachmentData'] != null) {
+        customPrint('AttachmentData type: ${data['attachmentData'].runtimeType}');
+        if (data['attachmentData'] is Map) {
+          customPrint('AttachmentData keys: ${(data['attachmentData'] as Map).keys.toList()}');
+        }
+      } else {
+        customPrint('WARNING: Received attachment message but attachmentData is null!');
+      }
+    }
+    
     final messageId = data['_id']?.toString();
     
     // Skip if message already processed (avoid duplicates)
@@ -197,6 +336,7 @@ void setupSocketListeners(String? currentUserId,BuildContext context) {
     final partnerId = isSent ? messageReceiverId : messageSenderId;
     
     // Only process if this message is for the current conversation
+    // BUT: Always process attachment messages to ensure they're not lost
     bool belongsToCurrentConversation = false;
     if (_currentReceiverId != null && _currentSenderId != null) {
       belongsToCurrentConversation = 
@@ -204,8 +344,24 @@ void setupSocketListeners(String? currentUserId,BuildContext context) {
           (messageSenderId == _currentSenderId && messageReceiverId == _currentReceiverId);
     }
     
-    if (!belongsToCurrentConversation) {
+    // Log conversation check for debugging
+    final isAttachmentMessage = data['attachment'] == true;
+    customPrint('Message conversation check - senderId: $messageSenderId, receiverId: $messageReceiverId, currentReceiverId: $_currentReceiverId, currentSenderId: $_currentSenderId, belongsToConversation: $belongsToCurrentConversation, isAttachment: $isAttachmentMessage');
+    
+    // CRITICAL: Always process attachment messages even if conversation check fails
+    // This ensures receiver gets the attachment
+    if (!belongsToCurrentConversation && !isAttachmentMessage) {
+      customPrint('Message not for current conversation and not attachment, skipping');
       return;
+    }
+    
+    if (!belongsToCurrentConversation && isAttachmentMessage) {
+      customPrint('WARNING: Attachment message not for current conversation, but processing anyway to prevent loss');
+      // Update current conversation IDs to match this attachment message
+      // This ensures the receiver can see the attachment
+      _currentReceiverId = messageReceiverId;
+      _currentSenderId = messageSenderId;
+      customPrint('Updated conversation IDs to match attachment message - receiverId: $_currentReceiverId, senderId: $_currentSenderId');
     }
     
     // Initialize chatHistoryResponse if null
@@ -225,17 +381,25 @@ void setupSocketListeners(String? currentUserId,BuildContext context) {
         }
       }
       
-      // If not found in text messages, check for optimistic attachment messages
+          // If not found in text messages, check for optimistic attachment messages
       if (foundLocalId == null && data['attachment'] == true) {
         // Find optimistic attachment message for this conversation
+        // Sort by createdAt to get the most recent
         final attachmentMessages = chatHistoryResponse!.chat
             .where((m) => m.id.startsWith('local-attachment-') && 
                           m.senderId == messageSenderId && 
-                          m.receiverId == messageReceiverId)
+                          m.receiverId == messageReceiverId &&
+                          m.attachment == true &&
+                          m.attachmentData != null)
             .toList();
+        
         if (attachmentMessages.isNotEmpty) {
-          // Get the most recent one (last in sorted list)
-          foundLocalId = attachmentMessages.last.id;
+          // Sort by createdAt and get the most recent one
+          attachmentMessages.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          foundLocalId = attachmentMessages.first.id;
+          customPrint('Found optimistic attachment message to replace - id: $foundLocalId');
+        } else {
+          customPrint('No optimistic attachment message found for replacement');
         }
       }
       
@@ -267,6 +431,38 @@ void setupSocketListeners(String? currentUserId,BuildContext context) {
           }
           
           // Replace optimistic message with real one
+          // Preserve attachmentData from optimistic message if server doesn't send it back
+          Map<String, dynamic>? finalAttachmentData;
+          final optimisticMsg = chatHistoryResponse!.chat[msgIndex];
+          
+          if (data['attachmentData'] != null) {
+            try {
+              finalAttachmentData = Map<String, dynamic>.from(data['attachmentData']);
+              customPrint('Server sent attachmentData, using it - type: ${finalAttachmentData['attachmentType']}');
+            } catch (e) {
+              customPrint('Error parsing server attachmentData: $e');
+              // Fallback to optimistic data
+              if (optimisticMsg.attachmentData != null) {
+                finalAttachmentData = Map<String, dynamic>.from(optimisticMsg.attachmentData!);
+                customPrint('Using optimistic attachmentData as fallback');
+              }
+            }
+          } else if (optimisticMsg.attachment == true && optimisticMsg.attachmentData != null) {
+            // CRITICAL: Optimistic message has attachment data - ALWAYS preserve it
+            // Even if server says attachment=false, we know it's an attachment from optimistic message
+            finalAttachmentData = Map<String, dynamic>.from(optimisticMsg.attachmentData!);
+            customPrint('✓✓✓ CRITICAL: Server didn\'t send attachmentData, preserving from optimistic message ✓✓✓');
+            customPrint('✓ Preserved attachmentType: ${finalAttachmentData['attachmentType']}');
+            customPrint('✓ Server attachment flag: ${data['attachment']}, but optimistic says: ${optimisticMsg.attachment}');
+            customPrint('✓ This ensures attachment data is NEVER lost even if server doesn\'t store it');
+          } else if (data['attachment'] == true) {
+            customPrint('✗✗✗ ERROR: Server says attachment=true but no attachmentData AND no optimistic data! ✗✗✗');
+          }
+          
+          // Determine final attachment flag - if optimistic says attachment=true, it's an attachment
+          // Even if server says false, we trust the optimistic message
+          final finalAttachment = (optimisticMsg.attachment == true) || (data['attachment'] == true);
+          
           chatHistoryResponse!.chat[msgIndex] = ChatMessage(
             id: messageId,
             senderId: data['senderid'],
@@ -282,11 +478,16 @@ void setupSocketListeners(String? currentUserId,BuildContext context) {
             contentURL: data['media'] as String? ?? '',
             contentType: data['contentType'] as String? ?? '',
             liked: data['liked'] as bool? ?? false,
-            attachment: data['attachment'] as bool? ?? false,
-            attachmentData: data['attachmentData'] != null 
-                ? Map<String, dynamic>.from(data['attachmentData'])
-                : null,
+            attachment: finalAttachment, // Use optimistic attachment flag if available
+            attachmentData: finalAttachmentData,
           );
+          
+          customPrint('✓✓✓ Replaced optimistic message - finalAttachment: $finalAttachment, hasData: ${finalAttachmentData != null} ✓✓✓');
+          if (finalAttachmentData != null) {
+            customPrint('✓ Final attachmentType: ${finalAttachmentData['attachmentType']}');
+          } else {
+            customPrint('✗ WARNING: Final message has no attachmentData!');
+          }
           
           // Mark as processed
           _processedMessageIds.add(messageId);
@@ -328,6 +529,44 @@ void setupSocketListeners(String? currentUserId,BuildContext context) {
       updatedAt = DateTime.now();
     }
     
+    // Handle attachmentData - ensure it's properly parsed
+    Map<String, dynamic>? parsedAttachmentData;
+    if (data['attachment'] == true) {
+      customPrint('Processing incoming attachment message (receiver side)...');
+      if (data['attachmentData'] != null) {
+        try {
+          // Deep copy the attachmentData to ensure it's properly preserved
+          final rawAttachmentData = data['attachmentData'];
+          if (rawAttachmentData is Map) {
+            parsedAttachmentData = Map<String, dynamic>.from(rawAttachmentData);
+            customPrint('Received attachment message with attachmentData - type: ${parsedAttachmentData['attachmentType']}');
+            customPrint('AttachmentData keys: ${parsedAttachmentData.keys.toList()}');
+            
+            // Log the actual data for debugging
+            if (parsedAttachmentData['attachmentType'] == 'product') {
+              customPrint('Product attachment - productid type: ${parsedAttachmentData['productid'].runtimeType}');
+              if (parsedAttachmentData['productid'] is Map) {
+                customPrint('Product data keys: ${(parsedAttachmentData['productid'] as Map).keys.toList()}');
+              }
+            } else if (parsedAttachmentData['attachmentType'] == 'order') {
+              customPrint('Order attachment - orderid type: ${parsedAttachmentData['orderid'].runtimeType}');
+              if (parsedAttachmentData['orderid'] is Map) {
+                customPrint('Order data keys: ${(parsedAttachmentData['orderid'] as Map).keys.toList()}');
+              }
+            }
+          } else {
+            customPrint('WARNING: attachmentData is not a Map, it is: ${rawAttachmentData.runtimeType}');
+          }
+        } catch (e, stackTrace) {
+          customPrint('Error parsing attachmentData: $e');
+          customPrint('Stack trace: $stackTrace');
+        }
+      } else {
+        customPrint('WARNING: Received attachment message but attachmentData is null!');
+        customPrint('Data keys: ${data is Map ? (data as Map).keys.toList() : 'not a map'}');
+      }
+    }
+    
     final newMessage = ChatMessage(
       id: messageId ?? 'temp-${DateTime.now().millisecondsSinceEpoch}',
       senderId: data['senderid'],
@@ -344,18 +583,42 @@ void setupSocketListeners(String? currentUserId,BuildContext context) {
       contentType: data['contentType'] as String? ?? '',
       liked: data['liked'] as bool? ?? false,
       attachment: data['attachment'] as bool? ?? false,
-      attachmentData: data['attachmentData'] != null 
-          ? Map<String, dynamic>.from(data['attachmentData'])
-          : null,
+      attachmentData: parsedAttachmentData,
     );
+    
+    if (data['attachment'] == true) {
+      customPrint('Created new attachment message (receiver) - hasData: ${parsedAttachmentData != null}, messageId: ${newMessage.id}');
+      if (parsedAttachmentData != null) {
+        customPrint('AttachmentData preserved in message - type: ${parsedAttachmentData['attachmentType']}');
+      } else {
+        customPrint('ERROR: Attachment message created but attachmentData is null!');
+      }
+    }
     
     // Check if message already exists (avoid duplicates)
     if (chatHistoryResponse!.chat.any((msg) => msg.id == newMessage.id)) {
+      customPrint('Message ${newMessage.id} already exists, skipping duplicate');
       return;
+    }
+    
+    // CRITICAL: Final check for attachment messages - log warning if attachmentData is missing
+    if (newMessage.attachment == true && newMessage.attachmentData == null) {
+      customPrint('✗✗✗ CRITICAL WARNING: Attachment message received but attachmentData is null! ✗✗✗');
+      customPrint('✗ Message ID: ${newMessage.id}, senderId: ${newMessage.senderId}, receiverId: ${newMessage.receiverId}');
+      customPrint('✗ Server should have sent attachmentData but it is null');
+      customPrint('✗ Message will still be added, but attachment cannot be displayed');
+      customPrint('✗ This usually means the server is not storing/sending attachmentData correctly');
+      // Still add the message - the UI will show an error message
     }
     
     // Add the new message
     chatHistoryResponse!.chat.add(newMessage);
+    customPrint('Added new message to chat history - messageId: ${newMessage.id}, attachment: ${newMessage.attachment}, hasAttachmentData: ${newMessage.attachmentData != null}');
+    if (newMessage.attachment == true && newMessage.attachmentData != null) {
+      customPrint('✓✓✓ Attachment message added successfully ✓✓✓');
+      customPrint('✓ Type: ${newMessage.attachmentData!['attachmentType']}');
+      customPrint('✓ Message will be displayed in chat');
+    }
     // Sort messages by createdAt to maintain chronological order
     chatHistoryResponse!.chat.sort((a, b) => a.createdAt.compareTo(b.createdAt));
     // Notify listeners immediately to update UI
@@ -541,7 +804,33 @@ Future<void> updateLastMessage(String threadId, String newMessage)async {
     }
   }
 }
+// Set pending attachment (product/order) - will be sent when user taps send button
+void setPendingAttachment(Map<String, dynamic> attachmentData) {
+  _pendingAttachment = Map<String, dynamic>.from(attachmentData);
+  customPrint('Pending attachment set - type: ${_pendingAttachment!['attachmentType']}');
+  notifyListeners();
+}
+
+// Clear pending attachment
+void clearPendingAttachment() {
+  _pendingAttachment = null;
+  customPrint('Pending attachment cleared');
+  notifyListeners();
+}
+
 Future<void> sendMessage(String receiverId, String senderId, {bool? attachment, Map<String, dynamic>? attachmentData}) async {
+  // Check if there's a pending attachment to send
+  Map<String, dynamic>? finalAttachmentData = attachmentData;
+  bool finalAttachment = attachment == true;
+  
+  if (_pendingAttachment != null) {
+    customPrint('Found pending attachment, using it for this message');
+    finalAttachmentData = Map<String, dynamic>.from(_pendingAttachment!);
+    finalAttachment = true;
+    _pendingAttachment = null; // Clear after using
+    notifyListeners();
+  }
+  
   // Allow sending even if message is empty (for attachments)
   String message = messageController.text;
   
@@ -552,9 +841,12 @@ Future<void> sendMessage(String receiverId, String senderId, {bool? attachment, 
   
   // Add optimistic message for both text messages and attachments
   String? localMessageId;
-  if (attachment == true && attachmentData != null) {
+  if (finalAttachment == true && finalAttachmentData != null) {
     // Generate unique local ID for optimistic attachment message
     localMessageId = 'local-attachment-${DateTime.now().millisecondsSinceEpoch}-${senderId}';
+    
+    customPrint('Creating optimistic attachment message - type: ${finalAttachmentData['attachmentType']}');
+    customPrint('Optimistic attachment data keys: ${finalAttachmentData.keys}');
     
     final optimisticMessage = ChatMessage(
       id: localMessageId,
@@ -572,8 +864,10 @@ Future<void> sendMessage(String receiverId, String senderId, {bool? attachment, 
       contentType: '',
       liked: false,
       attachment: true,
-      attachmentData: attachmentData,
+      attachmentData: Map<String, dynamic>.from(finalAttachmentData!), // Ensure it's a copy
     );
+    
+    customPrint('Optimistic attachment message created with ID: $localMessageId');
     
     chatHistoryResponse!.chat.add(optimisticMessage);
     // Sort messages by createdAt to maintain chronological order
@@ -630,23 +924,66 @@ Future<void> sendMessage(String receiverId, String senderId, {bool? attachment, 
       notifyListeners();
     }
   } else {
-    _sendMessageToSocket(receiverId, senderId, message, attachment: attachment, attachmentData: attachmentData);
+    // CRITICAL: Log before sending to verify parameters
+    customPrint('About to call _sendMessageToSocket - finalAttachment: $finalAttachment, finalAttachmentData: ${finalAttachmentData != null ? 'present (${finalAttachmentData.keys.length} keys)' : 'null'}');
+    if (finalAttachment == true && finalAttachmentData != null) {
+      customPrint('✓ Parameters verified - attachment: true, attachmentData has ${finalAttachmentData.keys.length} keys');
+    } else {
+      customPrint('✗ WARNING: Parameters might be incorrect - attachment: $finalAttachment, attachmentData: ${finalAttachmentData != null ? 'present' : 'null'}');
+    }
+    _sendMessageToSocket(receiverId, senderId, message, attachment: finalAttachment, attachmentData: finalAttachmentData);
   }
 }
 
 void _sendMessageToSocket(String receiverId, String senderId, String message, {bool? attachment, Map<String, dynamic>? attachmentData}) {
+  customPrint('_sendMessageToSocket called - attachment: $attachment, attachmentData: ${attachmentData != null ? 'present' : 'null'}');
+  if (attachmentData != null) {
+    customPrint('attachmentData keys: ${attachmentData.keys.toList()}');
+    customPrint('attachmentData type: ${attachmentData['attachmentType']}');
+  }
+  
   Map<String, dynamic> messageData = {
     'senderid': senderId,
     'receiverid': receiverId,
     'message': message,
   };
   
-  // Add attachment data if present - send exactly as provided (server will handle it)
-  if (attachment == true && attachmentData != null) {
+  // CRITICAL: Add attachment data if present - ALWAYS check both conditions
+  // Use explicit boolean check to handle null cases
+  final isAttachment = attachment == true;
+  final hasAttachmentDataParam = attachmentData != null && attachmentData.isNotEmpty;
+  
+  customPrint('Attachment check - isAttachment: $isAttachment, hasAttachmentDataParam: $hasAttachmentDataParam');
+  
+  if (isAttachment && hasAttachmentDataParam) {
     messageData['attachment'] = true;
-    messageData['attachmentData'] = attachmentData;
+    // Deep copy attachmentData to ensure it's sent correctly
+    messageData['attachmentData'] = Map<String, dynamic>.from(attachmentData!);
+    customPrint('✓✓✓ Sending attachment message to socket ✓✓✓');
+    customPrint('✓ attachmentType: ${attachmentData['attachmentType']}');
+    customPrint('✓ Attachment data keys: ${attachmentData.keys.toList()}');
+    customPrint('✓ Full message data keys: ${messageData.keys.toList()}');
+    customPrint('✓ messageData[attachment]: ${messageData['attachment']}');
+    customPrint('✓ messageData has attachmentData: ${messageData.containsKey('attachmentData')}');
+  } else if (isAttachment && !hasAttachmentDataParam) {
+    customPrint('✗✗✗ CRITICAL ERROR: attachment is true but attachmentData is null or empty! ✗✗✗');
+    customPrint('✗ attachmentData value: $attachmentData');
+    customPrint('✗ This message will be sent WITHOUT attachment data!');
+  } else {
+    customPrint('Not an attachment message (attachment: $attachment)');
   }
   
+  // Final verification before sending
+  final hasAttachment = messageData['attachment'] == true;
+  final hasAttachmentDataInMessage = messageData.containsKey('attachmentData') && messageData['attachmentData'] != null;
+  customPrint('Final check before emit - hasAttachment: $hasAttachment, hasAttachmentDataInMessage: $hasAttachmentDataInMessage');
+  
+  if (attachment == true && (!hasAttachment || !hasAttachmentDataInMessage)) {
+    customPrint('✗✗✗ CRITICAL ERROR: Attachment message but data not properly set! ✗✗✗');
+    customPrint('✗✗✗ This message will be sent WITHOUT attachment data! ✗✗✗');
+  }
+  
+  customPrint('Emitting sendMessage - messageData keys: ${messageData.keys.toList()}');
   socket!.emit('sendMessage', messageData);
   socket!.emit('newThread', {
     'receiverid': receiverId

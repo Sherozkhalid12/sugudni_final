@@ -31,8 +31,28 @@ class ChatAttachmentCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Check if message has attachment and attachmentData is not null
-    if (message.attachment != true || message.attachmentData == null) {
+    if (message.attachment != true) {
+      customPrint('ChatAttachmentCard: message.attachment is not true, returning empty');
       return const SizedBox.shrink();
+    }
+    
+    if (message.attachmentData == null) {
+      customPrint('ChatAttachmentCard: message.attachment is true but attachmentData is null!');
+      customPrint('Message ID: ${message.id}, senderId: ${message.senderId}');
+      // Show error message instead of empty
+      return Container(
+        padding: EdgeInsets.all(12.w),
+        decoration: BoxDecoration(
+          color: Colors.red.shade50,
+          borderRadius: BorderRadius.circular(8.r),
+          border: Border.all(color: Colors.red.shade200),
+        ),
+        child: MyText(
+          text: 'Attachment data missing',
+          size: 12.sp,
+          color: Colors.red.shade700,
+        ),
+      );
     }
 
     // Safely extract attachment data
@@ -139,8 +159,16 @@ class ChatAttachmentCard extends StatelessWidget {
               orderJson['cartItem'] = [];
             } else {
               // Normalize cartItem entries - handle nested sellerId and productId
+              // Filter out items with null or invalid productId
               final cartItems = orderJson['cartItem'] as List;
-              orderJson['cartItem'] = cartItems.map((item) {
+              orderJson['cartItem'] = cartItems.where((item) {
+                // Filter out items with null productId
+                if (item is Map) {
+                  final productId = item['productId'];
+                  return productId != null && productId is Map;
+                }
+                return false;
+              }).map((item) {
                 if (item is Map) {
                   Map<String, dynamic> normalizedItem = Map<String, dynamic>.from(item);
                   // Normalize sellerId if it's a Map
@@ -150,10 +178,14 @@ class ChatAttachmentCard extends StatelessWidget {
                   } else if (normalizedItem['sellerId'] == null) {
                     normalizedItem['sellerId'] = '';
                   }
+                  // Ensure productId is a valid Map (not null) - already filtered above but double-check
+                  if (normalizedItem['productId'] == null || normalizedItem['productId'] is! Map) {
+                    return null; // Skip this item
+                  }
                   return normalizedItem;
                 }
-                return item;
-              }).toList();
+                return null;
+              }).where((item) => item != null).cast<Map<String, dynamic>>().toList();
             }
             
             // Handle createdAt - must be a parseable string
@@ -204,7 +236,20 @@ class ChatAttachmentCard extends StatelessWidget {
               orderJson['itemsCount'] = 0;
             }
             
+            // Final validation: Ensure all cartItems have valid productId before parsing
+            if (orderJson['cartItem'] is List) {
+              final cartItems = orderJson['cartItem'] as List;
+              orderJson['cartItem'] = cartItems.where((item) {
+                if (item is Map) {
+                  final productId = item['productId'];
+                  return productId != null && productId is Map && (productId as Map).isNotEmpty;
+                }
+                return false;
+              }).toList();
+            }
+            
             customPrint('Attempting to parse order from JSON...');
+            customPrint('CartItem count after filtering: ${(orderJson['cartItem'] as List).length}');
             order = Order.fromJson(orderJson);
             customPrint('Successfully parsed order from attachmentData: ${order.id}');
           } catch (e, stackTrace) {
@@ -291,10 +336,62 @@ class ChatAttachmentCard extends StatelessWidget {
         // Parse product from attachmentData if it's a Map
         if (productIdValue is Map) {
           try {
-            product = Product.fromJson(Map<String, dynamic>.from(productIdValue));
+            // Normalize the product data before parsing
+            Map<String, dynamic> productJson = Map<String, dynamic>.from(productIdValue);
+            
+            // Ensure category is a Map or null (not an object instance)
+            if (productJson['category'] != null && productJson['category'] is! Map) {
+              // If category is not a Map, try to convert it or set to null
+              if (productJson['category'].toString().contains('Instance of')) {
+                customPrint('Category is an object instance, setting to null');
+                productJson['category'] = null;
+              } else {
+                productJson['category'] = null;
+              }
+            }
+            
+            // Ensure sellerId is a Map (required field)
+            if (productJson['sellerId'] != null && productJson['sellerId'] is! Map) {
+              // If sellerId is not a Map, try to convert it or create a minimal one
+              if (productJson['sellerId'].toString().contains('Instance of')) {
+                customPrint('SellerId is an object instance, creating minimal sellerId');
+                productJson['sellerId'] = {
+                  '_id': productJson['_id'] ?? '',
+                  'firstname': '',
+                  'lastname': '',
+                };
+              } else {
+                // Try to extract ID if it's a string
+                productJson['sellerId'] = {
+                  '_id': productJson['sellerId'].toString(),
+                  'firstname': '',
+                  'lastname': '',
+                };
+              }
+            } else if (productJson['sellerId'] == null) {
+              // Create minimal sellerId if null
+              productJson['sellerId'] = {
+                '_id': productJson['_id'] ?? '',
+                'firstname': '',
+                'lastname': '',
+              };
+            }
+            
+            // Also check for 'sellerid' (lowercase) as alternative - Product.fromJson expects 'sellerid'
+            if (productJson.containsKey('sellerid') && productJson['sellerid'] is Map) {
+              // Keep sellerid (lowercase) as that's what Product.fromJson expects
+              // Don't overwrite it with sellerId
+            } else if (productJson.containsKey('sellerId') && productJson['sellerId'] is Map) {
+              // If only sellerId (camelCase) exists, copy it to sellerid (lowercase)
+              productJson['sellerid'] = productJson['sellerId'];
+            }
+            
+            product = Product.fromJson(productJson);
             customPrint('Successfully parsed product from attachmentData (productIdValue is Map)');
-          } catch (e) {
+          } catch (e, stackTrace) {
             customPrint('Error parsing product from attachmentData: $e');
+            customPrint('Stack trace: $stackTrace');
+            customPrint('Product data keys: ${productIdValue is Map ? (productIdValue as Map).keys.toList() : 'not a map'}');
           }
         }
         
